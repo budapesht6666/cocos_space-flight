@@ -28,23 +28,40 @@ Playwright MCP runs with a 390×844 viewport and `vision` caps (`.mcp.json`).
 ## 3. Drive it
 
 - Move: `browser_mouse_drag_xy` (mouse drags arrive as touches; relative drag moves the ship by the same fraction of the screen).
-- Tap (restart after game over): `browser_mouse_click_xy` with `delay: 60`.
+- Tap (play again on the results screen): `browser_mouse_click_xy` with `delay: 60`.
+- On-screen buttons (CSS px at 390×844): pause ≈ (357, 53), NOVA ≈ (330, 765); pause panel RESUME ≈ (195, 406), RESTART ≈ (195, 470). Keys: `Space` = Nova Bomb, `Escape`/`P` = pause, `Enter` = tap.
+- URL flags (CLAUDE.md «Отладка»): `mission=s1m1`, `difficulty=hard`, `t=<sec>` (mission clock, skips the intro), `god=1`, `power=1..4`, `seed=7`, `slowmo=0.05..4`.
 - Force situations from the page — the live systems are reachable through the `GameWorld` component:
   ```js
   const gw = cc.director.getScene().getChildByName('World').getComponent('GameWorld');
-  gw.s.fx.explode(-1.5, -2, 'medium');     // effects
-  gw.s.player.damage(1);                     // hits (reset gw.s.player.invulnerable = 0 between hits)
-  gw.s.ctx.bus.on('playerHit', e => ...);    // observe events over time
-  gw.state, gw.score, gw.s.director.elapsed  // state
+  const s = gw.s;
+  s.fx.explode(-1.5, -2, 'medium');                  // effects
+  s.player.vitals.invulnerable = 0; s.player.hit();   // one hit (shield first, then hull)
+  s.pickups.spawn('power', 0, -2);                    // pickups: credit, bigCredit, power, repair, shield, energy
+  gw.specialQueued = true;                            // Nova Bomb
+  s.ctx.bus.on('shieldHit', e => ...);                // observe events: enemyKilled, playerHit, graze, pickupCollected, novaBomb, banner…
+  s.mission.phase, s.mission.timeline.time, s.mission.timeline.holding, s.mission.result
+  s.score.stats, s.player.vitals, s.enemies.boss, s.enemyBullets.count
+  gw.freeze = 999;                                    // freeze the simulation (rendering continues) for a clean screenshot
   ```
-  In page scripts use component class names as strings (`getComponent('cc.MeshRenderer')`) — the page's global `cc` doesn't expose every class.
-- Short-lived effects disappear before a screenshot lands — use `?slowmo=0.25`.
+  In page scripts use component class names as strings (`getComponent('cc.MeshRenderer')`) — the page's global `cc` doesn't expose every class. Wait for `gw.s` before touching it (boot loads models asynchronously).
+- **Whole mission in ~40 s:** `?god=1&slowmo=4&debug=1` plus an autopilot that keeps the ship under the lowest enemy, then poll until `s.mission.phase === 'results'` and read `s.mission.result`:
+  ```js
+  setInterval(() => {
+    const p = s.player; if (p.mode !== 'control') return;
+    let best = null;
+    for (const e of s.enemies.active) if (!e.dead && e.z < p.z - 1 && e.z > s.playfield.topZ && (!best || e.z > best.z)) best = e;
+    p.targetX = best ? Math.max(-4, Math.min(4, best.x)) : 0;
+  }, 50);
+  ```
+  Compare enemy pool sizes with `missionNeeds` (`Array.from(s.enemies.pools).map(([id, p]) => id + ':' + p.totalCreated)`): growth means a mid-game `instantiate`.
+- Short-lived effects disappear before a screenshot lands — use `?slowmo=0.25` or `gw.freeze = 999`.
 
 ## 4. Check
 
 - `browser_console_messages` level `warning`: any error you caused is a failure.
   Known preview-only noise: `[Physics] PhysicsSystem initDefaultMaterial() Failed to load builtinMaterial` (physics module is disabled in the project; the editor's preview engine still pokes it).
-- With `?debug=1`: the engine stats panel (FPS, draw calls, instances, triangles) and our label (enemies / bullets / fx, wave time, power). Desktop numbers are a sanity check only — the real target is an iPhone.
+- With `?debug=1`: the engine stats panel (FPS, draw calls, instances, triangles) and our label (enemies, player/enemy shots, pickups, fx; mission, difficulty, clock, phase/hold, Power). Desktop numbers are a sanity check only — the real target is an iPhone.
 - Pixel colours: crop a screenshot with `sharp` (root devDependency) to check colours objectively.
 
 ## 5. Report

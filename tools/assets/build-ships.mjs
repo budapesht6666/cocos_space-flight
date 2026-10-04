@@ -27,6 +27,8 @@ const SHIPS = [
   { ship: 'Spitfire', color: 'Orange', out: 'spitfire_orange' },
   { ship: 'Bob', color: 'Red', out: 'bob_red' },
   { ship: 'Dispatcher', color: 'Red', out: 'dispatcher_red' },
+  { ship: 'Challenger', color: 'Purple', out: 'challenger_purple' },
+  { ship: 'Challenger', color: 'Red', out: 'challenger_red' },
 ];
 
 async function buildShip({ ship, color, out }) {

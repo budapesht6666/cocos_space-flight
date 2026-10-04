@@ -1,12 +1,12 @@
 // Spawn offsets for enemy formations, relative to the formation anchor. Engine-free.
 // Offsets are in world units on the XZ plane; negative dz means "further up the screen".
 
-export type FormationKind = 'single' | 'line' | 'v' | 'column';
+export type FormationKind = 'single' | 'line' | 'v' | 'column' | 'trail';
 
 export interface FormationSpec {
   kind: FormationKind;
   count: number;
-  /** Distance between neighbours, world units. */
+  /** Distance between neighbours, world units (unused by 'trail', which staggers in time). */
   spacing: number;
 }
 
@@ -17,13 +17,21 @@ export interface Offset {
   index: number;
 }
 
+export function formationSize(spec: FormationSpec): number {
+  return spec.kind === 'single' ? 1 : Math.max(1, spec.count);
+}
+
 export function formationOffsets(spec: FormationSpec): Offset[] {
   const out: Offset[] = [];
-  const n = spec.kind === 'single' ? 1 : Math.max(1, spec.count);
+  const n = formationSize(spec);
   for (let i = 0; i < n; i++) {
     switch (spec.kind) {
       case 'single':
         out.push({ dx: 0, dz: 0, index: 0 });
+        break;
+      case 'trail':
+        // Same spot for everyone: members spawn one after another (SpawnEvent.stagger).
+        out.push({ dx: 0, dz: 0, index: i });
         break;
       case 'line':
         out.push({ dx: (i - (n - 1) / 2) * spec.spacing, dz: 0, index: i });

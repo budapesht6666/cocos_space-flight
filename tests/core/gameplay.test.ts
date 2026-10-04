@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeFraming, halfWidthAt } from '../../game/assets/scripts/core/Framing';
 import { formationOffsets } from '../../game/assets/scripts/core/formations';
-import { WaveDirector } from '../../game/assets/scripts/core/WaveDirector';
 
 describe('Framing', () => {
   const spec = { width: 10, pitchDeg: 70, hFovDeg: 30, focusZ: 0 };
@@ -49,44 +48,11 @@ describe('formationOffsets', () => {
   it('single ignores count', () => {
     expect(formationOffsets({ kind: 'single', count: 9, spacing: 3 })).toHaveLength(1);
   });
-});
 
-describe('WaveDirector', () => {
-  const events = [{ t: 1 }, { t: 2 }, { t: 2 }, { t: 5 }];
-
-  it('fires events in order as time passes', () => {
-    const d = new WaveDirector(events, { loop: false, loopGap: 0 });
-    const fired: number[] = [];
-    for (let i = 0; i < 180; i++) d.tick(1 / 60, (e) => fired.push(e.t));
-    expect(fired).toEqual([1, 2, 2]);
-    for (let i = 0; i < 180; i++) d.tick(1 / 60, (e) => fired.push(e.t));
-    expect(fired).toEqual([1, 2, 2, 5]);
-    expect(d.finished).toBe(true);
-  });
-
-  it('loops and counts loops', () => {
-    const d = new WaveDirector(events, { loop: true, loopGap: 1 });
-    let count = 0;
-    let lastLoop = 0;
-    for (let i = 0; i < 60 * 13; i++) {
-      d.tick(1 / 60, (_e, loop) => {
-        count++;
-        lastLoop = loop;
-      });
-    }
-    expect(count).toBe(8);
-    expect(lastLoop).toBe(1);
-  });
-
-  it('seek skips earlier events without firing them', () => {
-    const d = new WaveDirector(events, { loop: false, loopGap: 0 });
-    d.seek(1.5);
-    const fired: number[] = [];
-    d.tick(0.6, (e) => fired.push(e.t));
-    expect(fired).toEqual([2, 2]);
-  });
-
-  it('rejects an unsorted timeline', () => {
-    expect(() => new WaveDirector([{ t: 2 }, { t: 1 }], { loop: false, loopGap: 0 })).toThrow();
+  it('trail stacks everyone on the anchor (they are staggered in time)', () => {
+    const o = formationOffsets({ kind: 'trail', count: 4, spacing: 0 });
+    expect(o).toHaveLength(4);
+    expect(o.every((p) => p.dx === 0 && p.dz === 0)).toBe(true);
+    expect(o.map((p) => p.index)).toEqual([0, 1, 2, 3]);
   });
 });

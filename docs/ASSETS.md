@@ -44,7 +44,7 @@
 | **Striker** | Открываемый корабль игрока (перехватчик) | ✅ выбран пользователем |
 | Bob | Scout (мясо, формации), Red | ✅ подтверждено |
 | Dispatcher | Dart (камикадзе: силуэт-игла), Red | ✅ подтверждено |
-| Challenger | Gunship, Purple | ✅ подтверждено |
+| Challenger | Gunship, Purple; Red и крупнее — мини-босс Marauder (s1m1, временно) | ✅ подтверждено |
 | Omen | Splitter, Purple | ✅ подтверждено |
 | Zenith | Lancer (снайпер: длинный ствол), Red | ✅ подтверждено |
 | Pancake | Spinner (тарелка с кольцами пуль), Purple | ✅ подтверждено |
@@ -124,6 +124,8 @@
 
 | Ассет | Автор | Источник | Лицензия | Где в проекте |
 |---|---|---|---|---|
-| Ultimate Spaceships Pack: Spitfire (Orange), Bob (Red), Dispatcher (Red) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
+| Ultimate Spaceships Pack: Spitfire (Orange), Bob (Red), Dispatcher (Red), Challenger (Purple — Gunship; Red — мини-босс Marauder) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
 
-Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения и кольца (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`).
+Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`).
+
+**Плейсхолдеры этапа 2** (ждут выбора пользователя): астероиды — процедурный low-poly камень (`core/rock.ts`); станции и турели — кубы и цилиндры (`data/setPieces.ts`, `entities/EnemyView.ts`); значки пикапов P/R/S/E — буквы 5×7 на круге (`core/glyphs.ts`), кредиты — золотые кубики. Кандидаты на замену: Kenney Space Kit (станции, камни), Quaternius Ultimate Space Kit (камни, пикапы).

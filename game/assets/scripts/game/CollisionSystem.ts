@@ -1,5 +1,6 @@
-// Circle collisions on the XZ plane: player bullets vs enemies (via a spatial grid) and
-// enemies vs the player's body. Entities are only marked dead here; their systems sweep them.
+// Circle collisions on the XZ plane: player bullets vs enemies (via a spatial grid), enemy bullets
+// vs the ship's hitbox and graze ring, and enemies ramming the ship. Entities are only marked dead
+// here; their systems sweep them.
 
 import { circlesOverlap } from '../core/math';
 import { SpatialGrid } from '../core/SpatialGrid';
@@ -13,46 +14,86 @@ export class CollisionSystem {
   private bullet: Bullet | null = null;
   private hitEnemy: Enemy | null = null;
   private readonly visitEnemy = (index: number): void => this.checkBulletAgainst(index);
+  private readonly hitEvent = { x: 0, z: 0 };
+  private readonly grazeEvent = { x: 0, z: 0 };
 
   constructor(
     private readonly ctx: GameContext,
     private readonly player: PlayerSystem,
     private readonly playerBullets: BulletSystem,
+    private readonly enemyBullets: BulletSystem,
     private readonly enemies: EnemySystem,
   ) {}
 
   tick(): void {
+    this.playerBulletsVsEnemies();
+    this.enemyBulletsVsShip();
+    this.ramming();
+    this.playerBullets.sweep();
+    this.enemyBullets.sweep();
+    this.enemies.sweep();
+  }
+
+  private playerBulletsVsEnemies(): void {
     const list = this.enemies.active;
     this.grid.clear();
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (!e.dead) this.grid.insert(i, e.x, e.z, e.def.radius);
     }
-
     const bullets = this.playerBullets.active;
     for (let i = 0; i < bullets.length; i++) {
       const b = bullets[i];
       if (b.dead) continue;
       const enemy = this.findHit(b);
-      if (enemy) {
+      if (!enemy) continue;
+      b.dead = true;
+      if (!this.enemies.damage(enemy, b.damage)) {
+        this.hitEvent.x = b.x;
+        this.hitEvent.z = enemy.z + enemy.def.radius * 0.6;
+        this.ctx.bus.emit('enemyHit', this.hitEvent);
+      }
+    }
+  }
+
+  private enemyBulletsVsShip(): void {
+    const p = this.player;
+    if (!p.vulnerable) return;
+    const bullets = this.enemyBullets.active;
+    for (let i = 0; i < bullets.length; i++) {
+      const b = bullets[i];
+      if (b.dead) continue;
+      const dx = b.x - p.x;
+      const dz = b.z - p.z;
+      const d2 = dx * dx + dz * dz;
+      const hit = p.hitboxRadius + b.radius;
+      if (d2 <= hit * hit) {
         b.dead = true;
-        if (!this.enemies.damage(enemy, b.damage)) this.ctx.bus.emit('enemyHit', { x: b.x, z: enemy.z + enemy.def.radius * 0.6 });
+        p.hit();
+        return; // invulnerable from here on
+      }
+      const graze = p.grazeRadius + b.radius;
+      if (!b.grazed && d2 <= graze * graze) {
+        b.grazed = true;
+        this.grazeEvent.x = b.x;
+        this.grazeEvent.z = b.z;
+        this.ctx.bus.emit('graze', this.grazeEvent);
       }
     }
+  }
 
-    if (this.player.alive && !this.player.isInvulnerable) {
-      const r = this.player.bodyRadius;
-      for (let i = 0; i < list.length; i++) {
-        const e = list[i];
-        if (e.dead || !circlesOverlap(this.player.x, this.player.z, r, e.x, e.z, e.def.radius)) continue;
-        this.enemies.kill(e);
-        this.player.damage(e.def.contactDamage);
-        break; // invulnerability starts after the first hit
-      }
+  private ramming(): void {
+    const p = this.player;
+    if (!p.vulnerable) return;
+    const list = this.enemies.active;
+    const r = p.bodyRadius;
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      if (e.dead || e.def.ground || !circlesOverlap(p.x, p.z, r, e.x, e.z, e.def.radius)) continue;
+      this.enemies.ram(e);
+      p.hit();
+      return;
     }
-
-    this.playerBullets.sweep();
-    this.enemies.sweep();
   }
 
   /** First live enemy the bullet overlaps, or null. */

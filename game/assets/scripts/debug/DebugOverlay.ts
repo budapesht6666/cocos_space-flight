@@ -5,6 +5,8 @@ import { Label, profiler } from 'cc';
 export interface EntityCounts {
   enemies: number;
   bullets: number;
+  enemyBullets: number;
+  pickups: number;
   fx: number;
 }
 
@@ -24,6 +26,6 @@ export class DebugOverlay {
     if (this.timer > 0) return;
     this.timer = 0.25;
     const c = this.counts();
-    this.label.string = `enemies ${c.enemies}  bullets ${c.bullets}  fx ${c.fx}\n${this.extra()}`;
+    this.label.string = `enemies ${c.enemies}  shots ${c.bullets}/${c.enemyBullets}  pickups ${c.pickups}  fx ${c.fx}\n${this.extra()}`;
   }
 }

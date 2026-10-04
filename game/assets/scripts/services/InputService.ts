@@ -1,20 +1,34 @@
 // Collects player input between simulation steps.
 // Touch drags give relative movement in UI units (design resolution, y up); desktop mouse drags
 // arrive as touches too (the engine simulates them). Arrow keys / WASD give a direction.
+// On-screen buttons are hit-tested here: a touch that starts on a button presses it and never
+// moves the ship, so one thumb can steer while another taps Special.
 
 import { EventKeyboard, EventTouch, Input, KeyCode, Vec2, input } from 'cc';
+
+export type ButtonId = 'special' | 'pause' | 'resume' | 'restart';
+
+/** Returns the button under a UI-space point, or null. */
+export type ButtonHitTest = (x: number, y: number) => ButtonId | null;
 
 export class InputService {
   /** Accumulated drag since the last `consumeDrag`, UI units. */
   private dragX = 0;
   private dragY = 0;
-  private touching = false;
+  private touches = 0;
+  /** Travel of the current steering touch, to tell taps from drags. */
   private touchTravel = 0;
   private tapped = false;
+  private readonly pressed = new Set<ButtonId>();
+  /** Touch ids that started on a button: their moves are ignored. */
+  private readonly buttonTouches = new Set<number>();
   private readonly keys = new Set<KeyCode>();
   private readonly delta = new Vec2();
+  private readonly location = new Vec2();
+  private hitTest: ButtonHitTest = () => null;
 
-  attach(): void {
+  attach(hitTest: ButtonHitTest): void {
+    this.hitTest = hitTest;
     input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
     input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
     input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
@@ -50,37 +64,76 @@ export class InputService {
     return out;
   }
 
-  /** True once after a short tap (or Space / Enter), then resets. */
+  /** True once after a short tap away from buttons (or Enter), then resets. */
   consumeTap(): boolean {
     const tapped = this.tapped;
     this.tapped = false;
     return tapped;
   }
 
-  get isTouching(): boolean {
-    return this.touching;
+  /** True once after the button was pressed (touch or its key), then resets. */
+  consumePress(button: ButtonId): boolean {
+    if (!this.pressed.has(button)) return false;
+    this.pressed.delete(button);
+    return true;
   }
 
-  private onTouchStart(): void {
-    this.touching = true;
+  /** Drops queued presses, taps and drags (e.g. when the game state changes under them). */
+  flush(): void {
+    this.pressed.clear();
+    this.tapped = false;
+    this.dragX = 0;
+    this.dragY = 0;
+  }
+
+  get isTouching(): boolean {
+    return this.touches > 0;
+  }
+
+  private onTouchStart(event: EventTouch): void {
+    event.getUILocation(this.location);
+    const button = this.hitTest(this.location.x, this.location.y);
+    const id = event.getID() ?? 0;
+    if (button) {
+      this.pressed.add(button);
+      this.buttonTouches.add(id);
+      return;
+    }
+    this.touches++;
     this.touchTravel = 0;
   }
 
   private onTouchMove(event: EventTouch): void {
+    if (this.buttonTouches.has(event.getID() ?? 0)) return;
     event.getUIDelta(this.delta);
     this.dragX += this.delta.x;
     this.dragY += this.delta.y;
     this.touchTravel += Math.abs(this.delta.x) + Math.abs(this.delta.y);
   }
 
-  private onTouchEnd(): void {
-    if (this.touching && this.touchTravel < 12) this.tapped = true;
-    this.touching = false;
+  private onTouchEnd(event: EventTouch): void {
+    const id = event.getID() ?? 0;
+    if (this.buttonTouches.delete(id)) return;
+    if (this.touches > 0) {
+      if (this.touchTravel < 12) this.tapped = true;
+      this.touches--;
+    }
   }
 
   private onKeyDown(event: EventKeyboard): void {
     this.keys.add(event.keyCode);
-    if (event.keyCode === KeyCode.SPACE || event.keyCode === KeyCode.ENTER) this.tapped = true;
+    switch (event.keyCode) {
+      case KeyCode.SPACE:
+        this.pressed.add('special');
+        break;
+      case KeyCode.ESCAPE:
+      case KeyCode.KEY_P:
+        this.pressed.add('pause');
+        break;
+      case KeyCode.ENTER:
+        this.tapped = true;
+        break;
+    }
   }
 
   private onKeyUp(event: EventKeyboard): void {

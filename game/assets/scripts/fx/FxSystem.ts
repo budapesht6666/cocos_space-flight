@@ -5,7 +5,7 @@ import { Material, MeshRenderer, Node, Color } from 'cc';
 import { Pool, swapRemove } from '../core/Pool';
 import { lerp } from '../core/math';
 import type { ExplosionSize, Rgb } from '../data/types';
-import { COLORS, EXPLOSIONS } from '../data/visuals';
+import { BOSS_FX, COLORS, EXPLOSIONS, NOVA_FX } from '../data/visuals';
 import type { GameContext } from '../game/GameContext';
 import { toColor } from './RenderKit';
 
@@ -19,6 +19,18 @@ enum Kind {
   Flash,
   Fireball,
   Debris,
+  Cyan,
+  Pop,
+}
+
+const KINDS = [Kind.SparkHot, Kind.SparkFire, Kind.HitSpark, Kind.Flash, Kind.Fireball, Kind.Debris, Kind.Cyan, Kind.Pop];
+
+/** Explosion scheduled for later (boss death chains). */
+interface Delayed {
+  t: number;
+  x: number;
+  z: number;
+  size: ExplosionSize;
 }
 
 interface Particle {
@@ -61,6 +73,7 @@ export class FxSystem {
   private readonly pools: Pool<Particle>[] = [];
   private readonly ringPool: Pool<Ring>;
   private readonly ringColor: Rgb = COLORS.sparkHot;
+  private readonly delayed: Delayed[] = [];
 
   constructor(private readonly ctx: GameContext) {
     this.root = new Node('Fx');
@@ -74,8 +87,10 @@ export class FxSystem {
       [Kind.Flash]: kit.glow(COLORS.sparkHot, 3.2),
       [Kind.Fireball]: kit.glow(COLORS.sparkFire, 1.5),
       [Kind.Debris]: kit.solid(COLORS.debris),
+      [Kind.Cyan]: kit.glow(COLORS.shield, 2.4),
+      [Kind.Pop]: kit.glow(COLORS.bulletPop, 2.2),
     };
-    for (const kind of [Kind.SparkHot, Kind.SparkFire, Kind.HitSpark, Kind.Flash, Kind.Fireball, Kind.Debris]) {
+    for (const kind of KINDS) {
       const mesh = kind === Kind.Debris ? kit.cube : kit.plane;
       const pool = new Pool<Particle>(
         () => {
@@ -93,7 +108,7 @@ export class FxSystem {
           p.node.setPosition(0, PARK_Y, 0);
         },
       );
-      pool.prewarm(kind === Kind.Flash ? 4 : kind === Kind.Fireball ? 12 : 24);
+      pool.prewarm(kind === Kind.Flash ? 4 : kind === Kind.Fireball ? 12 : kind === Kind.Pop ? 60 : 24);
       this.pools[kind] = pool;
     }
     this.ringPool = new Pool<Ring>(() => {
@@ -110,13 +125,31 @@ export class FxSystem {
     }, (r) => {
       r.node.setPosition(0, PARK_Y, 0);
     });
-    this.ringPool.prewarm(4);
+    this.ringPool.prewarm(6);
 
-    ctx.bus.on('enemyKilled', (e) => this.explode(e.x, e.z, e.explosion));
+    ctx.bus.on('enemyKilled', (e) => {
+      this.explode(e.x, e.z, e.def.explosion);
+      if (e.boss) this.bossChain(e.x, e.z);
+    });
     ctx.bus.on('enemyHit', (e) => this.hitSparks(e.x, e.z));
     ctx.bus.on('playerHit', (e) => {
       this.explode(e.x, e.z, 'small');
       ctx.shake(0.45);
+    });
+    ctx.bus.on('shieldHit', (e) => {
+      this.ring(e.x, e.z, 0.6, 2.6, 0.28, COLORS.shield);
+      this.burst(Kind.Cyan, e.x, e.z, 8, 6);
+      ctx.shake(0.25);
+    });
+    ctx.bus.on('graze', (e) => this.burst(Kind.HitSpark, e.x, e.z, 1, 3));
+    ctx.bus.on('pickupCollected', (e) => this.burst(Kind.SparkHot, e.x, e.z, 3, 3));
+    ctx.bus.on('novaBomb', (e) => {
+      this.ring(e.x, e.z, 0.5, NOVA_FX.ringSize, NOVA_FX.time, COLORS.nova);
+      this.ring(e.x, e.z, 0.5, NOVA_FX.ringSize * 0.6, NOVA_FX.time * 0.8, COLORS.shield);
+      this.emit(Kind.Flash, e.x, 0.3, e.z, 0, 0, 0, 0.25, 7, 0);
+      this.burst(Kind.Cyan, e.x, e.z, 24, 12);
+      ctx.shake(NOVA_FX.shake);
+      ctx.hitstop(NOVA_FX.hitstop);
     });
     ctx.bus.on('playerDied', (e) => {
       this.explode(e.x, e.z, 'large');
@@ -169,6 +202,21 @@ export class FxSystem {
     if (size !== 'small') this.ctx.hitstop(size === 'medium' ? 0.035 : 0.08);
   }
 
+  /** An enemy bullet erased by a Nova Bomb or a boss death. */
+  bulletPop(x: number, z: number): void {
+    const rng = this.ctx.rng;
+    this.emit(Kind.Pop, x, 0.35, z, rng.range(-1, 1), 0, rng.range(-1, 1), rng.range(0.2, 0.35), rng.range(0.35, 0.55), 2);
+  }
+
+  /** Big blast plus follow-up explosions around it (boss death). */
+  bossChain(x: number, z: number): void {
+    for (const c of BOSS_FX.chain) {
+      if (this.delayed.length >= 16) break;
+      this.delayed.push({ t: c.t, x: x + c.dx, z: z + c.dz, size: c.size });
+    }
+    this.ctx.hitstop(BOSS_FX.hitstop);
+  }
+
   hitSparks(x: number, z: number): void {
     const rng = this.ctx.rng;
     for (let i = 0; i < 3; i++) {
@@ -179,6 +227,14 @@ export class FxSystem {
   }
 
   tick(dt: number): void {
+    for (let i = this.delayed.length - 1; i >= 0; i--) {
+      const d = this.delayed[i];
+      d.t -= dt;
+      if (d.t <= 0) {
+        swapRemove(this.delayed, i);
+        this.explode(d.x, d.z, d.size);
+      }
+    }
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt;
@@ -236,6 +292,7 @@ export class FxSystem {
   }
 
   clear(): void {
+    this.delayed.length = 0;
     for (let i = this.particles.length - 1; i >= 0; i--) this.pools[this.particles[i].kind].release(swapRemove(this.particles, i));
     for (let i = this.rings.length - 1; i >= 0; i--) this.ringPool.release(swapRemove(this.rings, i));
   }
@@ -268,8 +325,21 @@ export class FxSystem {
     return p;
   }
 
-  private ring(x: number, z: number, from: number, to: number, life: number): void {
+  /** `count` sparks of one kind flying out in all directions. */
+  private burst(kind: Kind, x: number, z: number, count: number, speed: number): void {
+    const rng = this.ctx.rng;
+    for (let i = 0; i < count; i++) {
+      const angle = rng.range(0, Math.PI * 2);
+      const v = speed * rng.range(0.4, 1);
+      this.emit(kind, x, 0.3, z, Math.cos(angle) * v, 0, Math.sin(angle) * v, rng.range(0.15, 0.35), rng.range(0.16, 0.3), 5);
+    }
+  }
+
+  private ring(x: number, z: number, from: number, to: number, life: number, rgb: Rgb = COLORS.sparkHot): void {
     const r = this.ringPool.acquire();
+    r.color.r = Math.round(rgb[0] * 255);
+    r.color.g = Math.round(rgb[1] * 255);
+    r.color.b = Math.round(rgb[2] * 255);
     r.from = from;
     r.to = to;
     r.life = r.maxLife = life;
