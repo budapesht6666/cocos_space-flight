@@ -23,3 +23,6 @@ Thumbs.db
 
 # Claude Code local overrides
 .claude/settings.local.json
+
+# Raw third-party art downloads (re-fetch per docs/ASSETS.md; processed copies live in game/assets)
+art-source/

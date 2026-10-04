@@ -114,7 +114,7 @@
    - Масштаб: корабль игрока около 1 юнита, враги 0.6–2, боссы 4–8.
    - Бюджет треугольников — в [ARCHITECTURE.md §13](ARCHITECTURE.md#13-бюджеты-производительности-iphone-safari-60-fps).
    - Материалы из пака заменяем своими (палитра и emissive).
-3. **Текстуры:** ≤ 1024², PNG; UI собираем в атлас.
+3. **Текстуры:** ≤ 1024², UI собираем в атлас. Текстуры кораблей — 512² JPEG (корабль занимает ~150 px на экране телефона), это делает `npm run build:ships`.
 4. **Аудио:** `.mp3` (надёжно для Safari и iOS). SFX моно, короткие; музыка 128–160 kbps.
 5. **Размещение:** `game/assets/models/<source>/…`, `game/assets/audio/<sfx|music>/…`, `game/assets/textures/<source>/…`. Импорт выполняет редактор (появляется `.meta`), `.meta` коммитим вместе с файлом.
 6. **Credits:** строка в таблице ниже. Для CC-BY — ещё и в экран Credits в игре.
@@ -124,4 +124,6 @@
 
 | Ассет | Автор | Источник | Лицензия | Где в проекте |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| Ultimate Spaceships Pack: Spitfire (Orange), Bob (Red), Dispatcher (Red) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
+
+Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения и кольца (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`).

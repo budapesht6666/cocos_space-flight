@@ -1,0 +1,143 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "709fddaf-4fae-4884-b838-5a928e20d29c",
+  "files": [],
+  "subMetas": {
+    "45f73": {
+      "importer": "gltf-mesh",
+      "uuid": "709fddaf-4fae-4884-b838-5a928e20d29c@45f73",
+      "displayName": "",
+      "id": "45f73",
+      "name": "Cube.005.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 938
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "53f39": {
+      "importer": "gltf-embeded-image",
+      "uuid": "709fddaf-4fae-4884-b838-5a928e20d29c@53f39",
+      "displayName": "",
+      "id": "53f39",
+      "name": "bob_red_albedo.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": false,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".jpg",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "e39f7": {
+      "importer": "texture",
+      "uuid": "709fddaf-4fae-4884-b838-5a928e20d29c@e39f7",
+      "displayName": "",
+      "id": "e39f7",
+      "name": "UnnamedTexture.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "linear",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "709fddaf-4fae-4884-b838-5a928e20d29c@53f39"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "e1741": {
+      "importer": "gltf-material",
+      "uuid": "709fddaf-4fae-4884-b838-5a928e20d29c@e1741",
+      "displayName": "",
+      "id": "e1741",
+      "name": "bob_red_mat.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "8fe75": {
+      "importer": "gltf-scene",
+      "uuid": "709fddaf-4fae-4884-b838-5a928e20d29c@8fe75",
+      "displayName": "",
+      "id": "8fe75",
+      "name": "bob_red.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "bob_red_albedo",
+        "uri": "709fddaf-4fae-4884-b838-5a928e20d29c@53f39"
+      }
+    ],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "709fddaf-4fae-4884-b838-5a928e20d29c@45f73"
+      ],
+      "skeletons": [],
+      "textures": [
+        "709fddaf-4fae-4884-b838-5a928e20d29c@e39f7"
+      ],
+      "materials": [
+        "709fddaf-4fae-4884-b838-5a928e20d29c@e1741"
+      ],
+      "scenes": [
+        "709fddaf-4fae-4884-b838-5a928e20d29c@8fe75"
+      ]
+    }
+  }
+}

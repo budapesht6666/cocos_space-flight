@@ -6,9 +6,13 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p game/tsconfig.json"
+    "typecheck": "tsc --noEmit -p game/tsconfig.json",
+    "build:ships": "node tools/assets/build-ships.mjs"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "sharp": "^0.35.5",
     "typescript": "~5.9.0",
     "vitest": "^5.0.3"
   }

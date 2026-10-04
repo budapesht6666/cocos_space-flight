@@ -1,0 +1,68 @@
+{
+  "platform": "web-mobile",
+  "taskName": "web-mobile",
+  "outputName": "web-mobile",
+  "buildPath": "project://build",
+  "debug": false,
+  "md5Cache": true,
+  "sourceMaps": false,
+  "startScene": "d694bcb3-3c7a-4ef1-bc3d-a9cc5776f9f2",
+  "scenes": [
+    {
+      "url": "db://assets/scenes/Game.scene",
+      "uuid": "d694bcb3-3c7a-4ef1-bc3d-a9cc5776f9f2"
+    }
+  ],
+  "mainBundleCompressionType": "merge_dep",
+  "packages": {
+    "adsense-h5g-plugin": {
+      "enableAdsense": false,
+      "enableTestAd": false
+    },
+    "web-mobile": {
+      "useWebGPU": false,
+      "orientation": "portrait",
+      "embedWebDebugger": false
+    }
+  },
+  "name": "game",
+  "server": "",
+  "engineModulesConfigKey": "defaultConfig",
+  "buildMode": "normal",
+  "mangleProperties": false,
+  "skipCompressTexture": false,
+  "overwriteProjectSettings": {
+    "includeModules": {
+      "gfx-webgl2": "on",
+      "physics": "inherit-project-setting",
+      "physics-2d": "inherit-project-setting"
+    },
+    "macroConfig": {
+      "cleanupImageCache": "inherit-project-setting"
+    }
+  },
+  "nativeCodeBundleMode": "both",
+  "polyfills": {
+    "asyncFunctions": true
+  },
+  "experimentalEraseModules": false,
+  "startSceneAssetBundle": false,
+  "bundleConfigs": [],
+  "inlineEnum": true,
+  "useBuiltinServer": false,
+  "md5CacheOptions": {
+    "excludes": [],
+    "includes": [],
+    "replaceOnly": [],
+    "handleTemplateMd5Link": true
+  },
+  "mainBundleIsRemote": false,
+  "useSplashScreen": true,
+  "bundleCommonChunk": false,
+  "packAutoAtlas": true,
+  "wasmCompressionMode": false,
+  "binGroupConfig": {
+    "threshold": 16,
+    "enable": false
+  }
+}

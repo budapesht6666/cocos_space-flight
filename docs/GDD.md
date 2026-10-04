@@ -287,9 +287,9 @@ Title → Main Menu ─┬─ Campaign → Sector Map → Mission (медали 
 ```
 
 **HUD (с учётом safe area):**
-- Сверху: очки и комбо, кнопка паузы слева, полоса HP босса.
-- Снизу слева: сегменты корпуса и полоса щита.
+- Сверху: очки и комбо по центру, корпус и щит слева, пауза справа, полоса HP босса.
 - Снизу справа: кнопка Special с зарядами и кольцом Energy.
+- Корпус и щит — **наверху**: низ экрана закрыт большим пальцем (подтвердил плейтест на iPhone).
 
 **Settings:** Music, SFX, Sensitivity, Pause on release, Handedness, Graphics quality (Low/Medium/High: bloom, плотность частиц, render scale), Show FPS.
 
