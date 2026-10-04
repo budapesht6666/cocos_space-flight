@@ -18,6 +18,10 @@ export const COLORS = {
   nova: [0.7, 0.9, 1.0] as Rgb,
   /** Erased enemy bullets pop in their own colour family. */
   bulletPop: [1.0, 0.4, 0.65] as Rgb,
+  /** Sparks off armour that soaks the hit. */
+  deflect: [0.6, 0.65, 0.75] as Rgb,
+  /** Escape pods and rescues. */
+  rescue: [0.45, 1.0, 0.6] as Rgb,
 };
 
 export const STARFIELD = {
@@ -81,4 +85,7 @@ export const BOSS_FX = {
     { t: 0.6, dx: 0, dz: 0, size: 'large' },
   ] as const,
   hitstop: 0.18,
+  /** Slow motion after a boss dies: time scale and how long it lasts (real seconds, eased back). */
+  slowmoScale: 0.3,
+  slowmoTime: 1.6,
 };

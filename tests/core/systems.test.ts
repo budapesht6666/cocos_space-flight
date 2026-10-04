@@ -220,6 +220,9 @@ class Host implements LevelHost {
   spawnSetPiece(): void {
     this.log.push('piece');
   }
+  startDecor(): void {
+    this.log.push('decor');
+  }
   warnBoss(): void {
     this.log.push('warning');
   }

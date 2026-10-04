@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "534ad219-0012-4273-a300-962f83f9084d",
+  "files": [],
+  "subMetas": {
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "534ad219-0012-4273-a300-962f83f9084d@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 264
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "22cf2": {
+      "importer": "gltf-material",
+      "uuid": "534ad219-0012-4273-a300-962f83f9084d@22cf2",
+      "displayName": "",
+      "id": "22cf2",
+      "name": "station_hauler_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "7eaaf": {
+      "importer": "gltf-scene",
+      "uuid": "534ad219-0012-4273-a300-962f83f9084d@7eaaf",
+      "displayName": "",
+      "id": "7eaaf",
+      "name": "station_hauler.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "534ad219-0012-4273-a300-962f83f9084d@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "534ad219-0012-4273-a300-962f83f9084d@22cf2"
+      ],
+      "scenes": [
+        "534ad219-0012-4273-a300-962f83f9084d@7eaaf"
+      ]
+    }
+  }
+}

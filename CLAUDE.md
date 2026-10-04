@@ -4,7 +4,7 @@
 Разработка web-first: игра собирается как `web-mobile`, тестируется в браузере и на iPhone через Safari.
 
 **Бюджет — $0** (пет-проект). Никаких платных сервисов, подписок, ассетов и аккаунтов.
-- Основной релиз — **PWA** на бесплатном хостинге.
+- Основной релиз — **PWA** на своём VPS пользователя (уже оплачен под другие проекты): https://spaceflight.p1gog.duckdns.org/
 - Нативная iOS — **только на свой iPhone**: облачный macOS (бесплатные минуты) собирает неподписанный `.ipa`, Sideloadly ставит его с обычным Apple ID.
 - App Store и TestFlight ($99/год) **вне рамок**. Фичи, требующие платного Apple-аккаунта (Game Center, push, iCloud), не используем.
 
@@ -29,6 +29,7 @@
 - **Ассеты и визуальные решения** (стиль, модели, звук, музыка) предлагаем вариантами (2–4, со ссылками и лицензиями), выбирает пользователь. Без его выбора в проект попадают только плейсхолдеры из примитивов.
 - Ассеты только **бесплатные** с разрешающей лицензией (см. ASSETS.md).
 - Коммиты — по запросу пользователя, **прямо в `main`**, без веток. В конце этапа предлагай коммит. Push — только по просьбе.
+- **Коммит в `main`, который трогает `game/` или `build-configs/`, сразу выкатывает игру на сайт** (git-хук `post-commit`, ~40 с; PLATFORMS.md «PWA»). Перед таким коммитом — typecheck, тесты, плейтест. Разово без выкатки: `SKIP_DEPLOY=1 git commit …`.
 
 ## Окружение
 
@@ -37,6 +38,8 @@
 - Проект Cocos лежит в `game/`. Корень репозитория — документация, тулинг (`package.json`, `vitest.config.ts`), `tests/`, `tools/`, `build-configs/`.
 - `game/tsconfig.json` — наш (strict, `skipLibCheck`: `cc.d.ts` ссылается на WebGPU-типы, которых нет). `game/temp/tsconfig.cocos.json` генерирует редактор, не трогать.
 - Cocos при создании проекта делает свой `git init` в `game/`. Вложенный `.git` удалён: репозиторий один, в корне.
+- Терминал VS Code (и Claude Code в нём) выставляет `ELECTRON_RUN_AS_NODE=1` — с ней `CocosCreator.exe` из командной строки стартует как Node (`bad option: --project`). Для CLI снимать переменную.
+- Сцены: `Menu` (стартовая в сборке, `ui/StartScreen.ts`) и `Game`. Превью играет сцену, открытую в редакторе; из Menu ссылка с `?mission=` сразу запускает игру.
 
 ## Команды
 
@@ -46,9 +49,11 @@
 | Typecheck | `npm run typecheck` (= `tsc --noEmit -p game/tsconfig.json`; нужен `game/temp/`, который создаёт редактор) |
 | Превью | Редактор открыт → `http://localhost:7456` (сервер превью живёт, пока открыт редактор) |
 | На iPhone | QR у IP-адреса в тулбаре редактора, та же Wi‑Fi |
-| Релизная сборка (редактор открыт) | cocos MCP, контекст `editor`: `Editor.Message.request('builder', 'add-task', options)`, где `options` — содержимое `build-configs/web-mobile.json`; прогресс — `'query-tasks-info'`. Около 2 мин, результат в `game/build/web-mobile` (≈5.5 MB) |
-| Релизная сборка (редактор закрыт) | `"C:\ProgramData\cocos\editors\Creator\3.8.8\CocosCreator.exe" --project game --build "configPath=../build-configs/web-mobile.json"` (CLI ещё не проверялся) |
-| Раздать сборку на iPhone | в `game/build/web-mobile`: `python -m http.server 8080 --bind 0.0.0.0` (Python 3.12 разрешён брандмауэром); на телефоне `http://192.168.1.43:8080/?debug=1` |
+| Релизная сборка (редактор открыт) | cocos MCP, контекст `editor`: `Editor.Message.request('builder', 'add-task', args.options)`, где `options` — содержимое `build-configs/web-mobile.json`, переданное через `args` (safety checks MCP не пускают читать файлы вне `game/`); прогресс — `'query-tasks-info'`. ~20 с, результат в `game/build/web-mobile` (≈8 MB, с PWA-шаблоном из `game/build-templates/web-mobile`) |
+| Релизная сборка (CLI) | без `ELECTRON_RUN_AS_NODE`: `"C:\ProgramData\cocos\editors\Creator\3.8.8\CocosCreator.exe" --project game --build "configPath=<абсолютный путь>\build-configs\web-mobile.json"`. Код выхода **36 = успех**. Не на проекте, открытом в редакторе (проверено на копии) |
+| Выкатить на сервер | само при коммите в `main` (хук `tools/hooks/post-commit`, на новом клоне — `npm run hooks:install`). Вручную: `npm run release:web` (CLI-сборка на зеркале `.cache/cli-game` + выкатка) или `npm run deploy:web` (выкатить сборку из редактора). → https://spaceflight.p1gog.duckdns.org/, `ssh vps`; устройство — PLATFORMS.md «PWA», скилл `vps-ops` |
+| CLI-сборка без выкатки | `npm run build:web` → `.cache/cli-game/build/web-mobile` (редактор может быть открыт) |
+| Раздать сборку на iPhone по Wi‑Fi | в `game/build/web-mobile`: `python -m http.server 8080 --bind 0.0.0.0` (Python 3.12 разрешён брандмауэром); на телефоне `http://192.168.1.43:8080/?debug=1` |
 | Модели кораблей | `npm run build:ships` (`tools/assets/build-ships.mjs`; исходники пака — в `art-source/`, вне git) |
 | Пропсы: станции, турели, иконки пикапов | `npm run build:props` (`tools/assets/build-props.mjs`: вершинные цвета, один меш на модель; исходники — в `art-source/`) |
 
@@ -85,6 +90,7 @@
 
 - У каждого ассета есть `.meta` с UUID. Коммитить вместе с ассетом, UUID руками не править.
 - Переименование и перемещение ассетов — только через редактор или MCP, иначе ломаются ссылки.
+- Ссылки на ассеты в свойствах компонентов (шрифт, эффект) ставить через `Editor.Message.request('scene', 'set-property', { uuid, path: '__comps__.N.prop', dump: { type: 'cc.TTFFont', value: { uuid } } })`, затем `save-scene`. `set_component_property` из MCP пишет `{ "uuid" }` вместо `__uuid__` — такая ссылка не работает.
 - `.scene`, `.prefab`, `.anim`, `.mtl` — сериализованный JSON со ссылками по UUID. Правим **через MCP или редактор**. Ручная правка — крайняя мера, с проверкой открытием в редакторе.
 - Не трогать сгенерированное: `game/library/`, `game/temp/`, `game/local/`, `game/build/`, `game/profiles/`.
 - Новый сторонний ассет — сразу строка в Credits ([docs/ASSETS.md](docs/ASSETS.md)). Порядок — скилл `add-asset`.
@@ -108,8 +114,9 @@
 
 ## Отладка (URL-параметры превью и debug-сборок)
 
-`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1`, `?difficulty=hard` (normal, hard, insane, nightmare).
-Клавиши в превью: стрелки/WASD, Space — Nova Bomb, Esc/P — пауза, Enter — тап. Держать список актуальным здесь и в ARCHITECTURE §12.
+`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1` (s1m1–s1m3; из Menu — сразу в игру), `?difficulty=hard` (normal, hard, insane, nightmare), `?elite=1` / `?elite=volatile` (каждый враг волны — элита).
+Прогоны с `god`, `t`, `power`, `elite`, `slowmo` — practice: рекорды и медали не пишутся (localStorage `spaceflight.records`).
+Клавиши в превью: стрелки/WASD, Space — Nova Bomb, Esc/P — пауза, Enter — тап и RETRY на результатах; в меню 1–3 — миссия, ←/→ — сложность. Держать список актуальным здесь и в ARCHITECTURE §12.
 
 ## Рендер — грабли, на которые уже наступили
 
@@ -124,3 +131,6 @@
 - Текстуры, запечённые сверху вниз, на нашей плоскости выходят перевёрнутыми: строки переворачивать при загрузке (`flipRows` в `RenderKit`).
 - Светлые альбедо (серый 0.4) под HDR-солнцем уходят в белое — для своих lit-материалов и палитр пропсов брать тёмные тона (0.1–0.2).
 - Вершинные цвета `builtin-standard` трактует как sRGB (`SRGBToLinear` в шейдере) — палитры в `build-props.mjs` задаются в sRGB.
+- Вспышка попадания на сборке из многих модулей (Warden) красит весь босс: у боссов и их частей она приглушённая (`FLASH_BOSS`).
+- md5Cache переименовывает и файлы из `build-templates` (`sw.<hash>.js`) и сам правит ссылки в `index.html`, включая строку в inline-скрипте. Руками не переименовывать.
+- Глубина в данных (`zAt`) линейна по миру, а экран в перспективе: верх сжат, поэтому «0.25 высоты» на экране выглядит выше. Высокие экраны (iPhone 19.5:9) показывают ~24 юнита по высоте, 16:9 — ~18.

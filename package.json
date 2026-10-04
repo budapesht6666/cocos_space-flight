@@ -8,7 +8,11 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p game/tsconfig.json",
     "build:ships": "node tools/assets/build-ships.mjs",
-    "build:props": "node tools/assets/build-props.mjs"
+    "build:props": "node tools/assets/build-props.mjs",
+    "deploy:web": "node tools/deploy-web.mjs",
+    "build:web": "node tools/build-web.mjs",
+    "release:web": "node tools/build-web.mjs && node tools/deploy-web.mjs --from .cache/cli-game/build/web-mobile",
+    "hooks:install": "git config core.hooksPath tools/hooks"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",

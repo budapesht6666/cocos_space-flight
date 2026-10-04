@@ -14,4 +14,6 @@ export const SCORE = {
   shieldBonus: 500,
   /** Mission clear without hull damage. */
   noDamageBonus: 5000,
+  /** Each escape pod picked up. */
+  podRescue: 1000,
 };

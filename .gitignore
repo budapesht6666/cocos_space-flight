@@ -1,6 +1,8 @@
 # Node / tooling
 node_modules/
 coverage/
+# CLI build mirror and release logs (tools/build-web.mjs)
+.cache/
 
 # Playwright MCP screenshots and traces
 .playwright-mcp/

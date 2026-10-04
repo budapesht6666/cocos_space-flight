@@ -22,6 +22,9 @@ export interface DifficultyDef {
   credits: number;
   /** Caps the hull (Nightmare: one segment). */
   maxHull?: number;
+  /** Chance that a wave enemy spawns as an elite (GDD §9), and optional weight overrides. */
+  eliteChance: number;
+  eliteWeights?: Partial<Record<EliteId, number>>;
 }
 
 export interface WorldDef {
@@ -70,6 +73,8 @@ export interface PlayerShipDef {
   bankFullSpeed: number;
   /** Start position as a fraction of the visible height from the top. */
   startHeight: number;
+  /** Engine nozzles on the normalised model: [x across, z towards the tail]. */
+  engines: readonly (readonly [number, number])[];
 }
 
 /** What the player brings into a mission. The hangar (stage 4) will build it from upgrades. */
@@ -138,7 +143,17 @@ export type PatternId =
   | 'turretFan'
   | 'marauderFan'
   | 'marauderRing'
-  | 'marauderSpiral';
+  | 'marauderSpiral'
+  | 'volatileRing'
+  | 'dreadnoughtGun'
+  | 'dreadnoughtBroadside'
+  | 'dreadnoughtLance'
+  | 'dreadnoughtBarrage'
+  | 'wardenPod'
+  | 'wardenAimed'
+  | 'wardenRings'
+  | 'wardenFlower'
+  | 'wardenSpiral';
 
 /**
  * A bullet emitter (BulletML-lite). A volley is `count` bullets fanned `gapDeg` apart around a base
@@ -189,7 +204,9 @@ export type MoveSpec =
   /** Drifts down with a random sideways component and tumbles (asteroids). */
   | { kind: 'drift'; speed: number; spreadX: number; spin: number }
   /** Moves with the level's ground (turrets on set pieces). */
-  | { kind: 'ground' };
+  | { kind: 'ground' }
+  /** A destructible part riding on its parent (EnemyDef.parts); placed by the enemy system. */
+  | { kind: 'attached' };
 
 /** Props built by tools/assets/build-props.mjs: one vertex-coloured mesh each (models/props/<id>). */
 export type PropId =
@@ -199,6 +216,15 @@ export type PropId =
   | 'station_generator'
   | 'station_dish'
   | 'station_frame'
+  | 'station_dome'
+  | 'station_hub'
+  | 'station_hangarLarge'
+  | 'station_pad'
+  | 'station_tank'
+  | 'station_pipe'
+  | 'station_lattice'
+  | 'station_ore'
+  | 'station_hauler'
   | 'turret_single'
   | 'turret_double'
   | 'pickup_power'
@@ -212,9 +238,59 @@ export type EnemyLook =
   /** A prop (shared vertex-colour material); `aim` names the child node that turns towards the player. */
   | { kind: 'prop'; prop: PropId; size: number; aim?: string }
   /** Procedural low-poly rock. */
-  | { kind: 'rock'; size: number };
+  | { kind: 'rock'; size: number }
+  /** Station modules put together (boss hulls); `size` scales the whole assembly. */
+  | { kind: 'assembly'; size: number; modules: readonly AssemblyModule[]; lights: readonly GlowSpot[] };
 
-export type EnemyId = 'scout' | 'dart' | 'gunship' | 'asteroid' | 'rock' | 'turret' | 'turretHeavy' | 'marauder';
+/** A station module inside an assembly, world units relative to the centre (+Z = down the screen). */
+export interface AssemblyModule {
+  prop: PropId;
+  x: number;
+  z: number;
+  y?: number;
+  /** Turn around Y, degrees. */
+  rot?: number;
+  /** Horizontal scale of the pack's tile units (default STATION_TILE) and vertical squash (default 0.6). */
+  scale?: number;
+  height?: number;
+}
+
+export interface GlowSpot {
+  x: number;
+  z: number;
+  y?: number;
+  size: number;
+  color: Rgb;
+}
+
+export type EnemyId =
+  | 'scout'
+  | 'dart'
+  | 'gunship'
+  | 'asteroid'
+  | 'rock'
+  | 'turret'
+  | 'turretHeavy'
+  | 'marauder'
+  | 'dreadnought'
+  | 'dreadnoughtGun'
+  | 'warden'
+  | 'wardenPod';
+
+export interface HitCircle {
+  x: number;
+  z: number;
+  r: number;
+}
+
+/** A destructible part of a bigger enemy, offset from its centre in world units (x right, z down the screen). */
+export interface PartRef {
+  enemy: EnemyId;
+  x: number;
+  z: number;
+  /** Height above the parent, so parts sit on top of its hull. */
+  y?: number;
+}
 
 export type ExplosionSize = 'small' | 'medium' | 'large';
 
@@ -252,12 +328,41 @@ export interface EnemyDef {
   obstacle?: boolean;
   /** Breaks into smaller enemies on death. */
   split?: { enemy: EnemyId; count: number; speed: number };
+  /** Extra hit circles for long hulls, relative to the centre; replaces `radius` for hits (which stays the bounding radius). */
+  hull?: readonly HitCircle[];
+  /** Destructible parts (turret pods of a boss); they die with the parent. */
+  parts?: readonly PartRef[];
+  /** Damage multiplier while any part is alive (an armoured core). */
+  armor?: number;
+  /** How much it rolls into sideways movement (1 = default, 0 = stays level, e.g. platforms). */
+  bank?: number;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Elites (GDD §9): modifiers rolled on wave enemies from Hard up.
+
+export type EliteId = 'armored' | 'swift' | 'volatile' | 'shielded';
+
+export interface EliteDef {
+  id: EliteId;
+  hp: number;
+  /** Movement time scale. */
+  speed: number;
+  /** Energy shield as a fraction of max HP, soaked before the hull. */
+  shield: number;
+  /** Fired once when it dies ("revenge bullets"). */
+  revenge?: PatternId;
+  score: number;
+  /** Marker ring colour. */
+  color: Rgb;
+  /** Relative chance among elites. */
+  weight: number;
 }
 
 // ---------------------------------------------------------------------------------------------
 // Pickups
 
-export type PickupKind = 'credit' | 'bigCredit' | 'power' | 'repair' | 'shield' | 'energy';
+export type PickupKind = 'credit' | 'bigCredit' | 'power' | 'repair' | 'shield' | 'energy' | 'pod';
 
 export interface PickupDef {
   kind: PickupKind;
@@ -268,13 +373,16 @@ export interface PickupDef {
   color: Rgb;
   /** 3D icon; credits are spinning cubes instead. */
   prop?: PropId;
+  /** Escape pod: a procedural capsule that has to be flown over — the magnet ignores it (GDD §8). */
+  pod?: boolean;
 }
 
 // ---------------------------------------------------------------------------------------------
 // Levels
 
-export type MissionId = 's1m1';
-export type SetPieceId = 'outpost' | 'relay';
+export type MissionId = 's1m1' | 's1m2' | 's1m3';
+export type SetPieceId = 'outpost' | 'relay' | 'refinery' | 'depot' | 'bastion';
+export type DecorFieldId = 'asteroidField' | 'denseField' | 'debris';
 
 export interface SpawnEvent {
   t: number;
@@ -316,7 +424,15 @@ export interface BossEvent {
   x: number;
 }
 
-export type LevelEvent = SpawnEvent | SetPieceEvent | WaitClearEvent | BossEvent;
+/** Background scenery (asteroid fields) drifting past for `duration` seconds; purely visual. */
+export interface DecorEvent {
+  t: number;
+  type: 'decor';
+  field: DecorFieldId;
+  duration: number;
+}
+
+export type LevelEvent = SpawnEvent | SetPieceEvent | WaitClearEvent | BossEvent | DecorEvent;
 
 export interface MissionDef {
   id: MissionId;
@@ -343,6 +459,32 @@ export interface SetPieceDef {
   /** Extent along Z, world units. */
   length: number;
   modules: readonly SetPieceModule[];
-  lights: readonly { x: number; z: number; size: number; color: Rgb }[];
+  lights: readonly GlowSpot[];
   turrets: readonly { enemy: EnemyId; x: number; z: number }[];
+  /** Escape pods launched from (x, z) once every turret on the piece is destroyed (GDD §8). */
+  pods?: { count: number; x: number; z: number };
+}
+
+/** Background scenery: rocks drifting below the flight plane. */
+export interface DecorFieldDef {
+  id: DecorFieldId;
+  /** Rocks per second. */
+  rate: number;
+  /** Depth range (y, negative = below the flight plane). */
+  depth: readonly [number, number];
+  size: readonly [number, number];
+  /** Speed as a multiple of the mission scroll speed. */
+  speed: number;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Medals (GDD §12)
+
+export type MedalId = 'hunter' | 'exterminator' | 'rescuer' | 'untouchable';
+
+export interface MedalDef {
+  id: MedalId;
+  name: string;
+  /** One line for the results screen. */
+  hint: string;
 }

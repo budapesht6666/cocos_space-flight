@@ -12,6 +12,7 @@ describe('parseDebugFlags', () => {
       slowmo: 1,
       mission: null,
       difficulty: null,
+      elite: null,
     });
   });
 
@@ -25,6 +26,7 @@ describe('parseDebugFlags', () => {
       slowmo: 1,
       mission: 's1m1',
       difficulty: 'hard',
+      elite: null,
     });
   });
 
@@ -33,5 +35,11 @@ describe('parseDebugFlags', () => {
     expect(parseDebugFlags('?power=9&t=abc&god=0').t).toBe(0);
     expect(parseDebugFlags('?god=0').god).toBe(false);
     expect(parseDebugFlags('?difficulty=extreme').difficulty).toBeNull();
+  });
+
+  it('forces elites: a named one or random', () => {
+    expect(parseDebugFlags('?elite=Volatile').elite).toBe('volatile');
+    expect(parseDebugFlags('?elite=1').elite).toBe('random');
+    expect(parseDebugFlags('?elite=0').elite).toBeNull();
   });
 });

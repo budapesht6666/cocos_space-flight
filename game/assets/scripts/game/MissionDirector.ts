@@ -4,11 +4,13 @@
 
 import { formationOffsets, formationSize, type Offset } from '../core/formations';
 import { LevelTimeline, type LevelHost } from '../core/LevelTimeline';
+import { earnedMedals, killRate } from '../core/medals';
+import { countPods } from '../core/missionNeeds';
 import { atLeast } from '../data/difficulty';
 import { ENEMIES } from '../data/enemies';
 import { BOSS_WARNING_TIME } from '../data/missions';
 import { SHIP_FLIGHT } from '../data/player';
-import type { BossEvent, MissionDef, PickupKind, SetPieceEvent, SpawnEvent } from '../data/types';
+import type { BossEvent, DecorEvent, MissionDef, PickupKind, SetPieceEvent, SpawnEvent } from '../data/types';
 import type { EnemySystem } from './EnemySystem';
 import type { GameContext } from './GameContext';
 import type { PickupSystem } from './PickupSystem';
@@ -29,6 +31,12 @@ export interface MissionResult {
   hullLost: number;
   shieldBonus: number;
   noDamageBonus: number;
+  /** Escape pods picked up, of those the mission offers. */
+  pods: number;
+  podsTotal: number;
+  killRate: number;
+  /** Medals earned by this run (bit mask, core/medals.ts). */
+  medals: number;
   /** Mission clock at the end, seconds. */
   time: number;
 }
@@ -49,11 +57,14 @@ export class MissionDirector implements LevelHost {
   phase: MissionPhase = 'intro';
   result: MissionResult | null = null;
   readonly timeline: LevelTimeline;
+  /** Escape pods this mission offers. */
+  readonly podsTotal: number;
   private phaseTime = 0;
   private outroStarted = false;
   private readonly offsets = new Map<SpawnEvent, Offset[]>();
   private readonly groups: Group[] = [];
   private readonly freeGroups: number[] = [];
+  private readonly decorEvent: { field: DecorEvent['field']; duration: number } = { field: 'asteroidField', duration: 0 };
 
   constructor(
     private readonly ctx: GameContext,
@@ -65,6 +76,7 @@ export class MissionDirector implements LevelHost {
     private readonly score: ScoreSystem,
   ) {
     this.timeline = new LevelTimeline(mission.events, BOSS_WARNING_TIME);
+    this.podsTotal = countPods(mission);
     for (const e of mission.events) if (e.type === 'spawn') this.offsets.set(e, formationOffsets(e.formation));
 
     ctx.bus.on('enemyKilled', (e) => {
@@ -139,11 +151,18 @@ export class MissionDirector implements LevelHost {
     const field = this.ctx.playfield;
     const x = field.contentX(event.mirror ? -event.x : event.x);
     const offset = (this.offsets.get(event) as Offset[])[member];
-    this.enemies.spawn(def, event.move ?? def.move, x, field.spawnZ, offset, event.mirror === true, group);
+    const e = this.enemies.spawn(def, event.move ?? def.move, x, field.spawnZ, offset, event.mirror === true, group);
+    this.enemies.rollElite(e);
   }
 
   spawnSetPiece(event: SetPieceEvent): void {
     this.setPieces.spawn(event);
+  }
+
+  startDecor(event: DecorEvent): void {
+    this.decorEvent.field = event.field;
+    this.decorEvent.duration = event.duration;
+    this.ctx.bus.emit('decor', this.decorEvent);
   }
 
   warnBoss(event: BossEvent): void {
@@ -178,17 +197,22 @@ export class MissionDirector implements LevelHost {
     const v = this.player.vitals;
     const bonus = complete ? this.score.missionBonus(v.shield, v.hullLost) : { shield: 0, noDamage: 0 };
     const s = this.score.stats;
+    const spawned = this.enemies.spawnedTally;
     this.result = {
       complete,
       score: s.score,
       credits: s.credits,
       kills: s.kills,
-      spawned: this.enemies.spawnedTally,
+      spawned,
       grazes: s.grazes,
       bestMultiplier: s.bestMultiplier,
       hullLost: v.hullLost,
       shieldBonus: bonus.shield,
       noDamageBonus: bonus.noDamage,
+      pods: s.pods,
+      podsTotal: this.podsTotal,
+      killRate: killRate(s.kills, spawned),
+      medals: earnedMedals({ complete, kills: s.kills, spawned, pods: s.pods, podsTotal: this.podsTotal, hullLost: v.hullLost }),
       time: this.timeline.time,
     };
     this.setPhase('results');

@@ -4,7 +4,7 @@
 // is announced and alive, so later events stay relative to the end of the hold. Staggered members
 // of a spawn group run on real time, so a hold never waits for its own clock.
 
-import type { BossEvent, LevelEvent, SetPieceEvent, SpawnEvent } from '../data/types';
+import type { BossEvent, DecorEvent, LevelEvent, SetPieceEvent, SpawnEvent } from '../data/types';
 import { formationSize } from './formations';
 
 export interface LevelHost {
@@ -14,6 +14,8 @@ export interface LevelHost {
   openGroup(event: SpawnEvent): number;
   spawnMember(event: SpawnEvent, member: number, group: number): void;
   spawnSetPiece(event: SetPieceEvent): void;
+  /** Background scenery starts drifting past. */
+  startDecor(event: DecorEvent): void;
   /** Boss announced (WARNING); it spawns `bossWarning` seconds later. */
   warnBoss(event: BossEvent): void;
   spawnBoss(event: BossEvent): void;
@@ -113,6 +115,9 @@ export class LevelTimeline {
           break;
         case 'setPiece':
           host.spawnSetPiece(e);
+          break;
+        case 'decor':
+          host.startDecor(e);
           break;
         case 'waitClear':
           this.beginHold('clear', e.t);

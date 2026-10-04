@@ -1,6 +1,6 @@
 // Circle collisions on the XZ plane: player bullets vs enemies (via a spatial grid), enemy bullets
-// vs the ship's hitbox and graze ring, and enemies ramming the ship. Entities are only marked dead
-// here; their systems sweep them.
+// vs the ship's hitbox and graze ring, and enemies ramming the ship. Long hulls use several circles
+// (EnemyDef.hull). Entities are only marked dead here; their systems sweep them.
 
 import { circlesOverlap } from '../core/math';
 import { SpatialGrid } from '../core/SpatialGrid';
@@ -14,7 +14,7 @@ export class CollisionSystem {
   private bullet: Bullet | null = null;
   private hitEnemy: Enemy | null = null;
   private readonly visitEnemy = (index: number): void => this.checkBulletAgainst(index);
-  private readonly hitEvent = { x: 0, z: 0 };
+  private readonly hitEvent = { x: 0, z: 0, armored: false };
   private readonly grazeEvent = { x: 0, z: 0 };
 
   constructor(
@@ -48,9 +48,11 @@ export class CollisionSystem {
       const enemy = this.findHit(b);
       if (!enemy) continue;
       b.dead = true;
+      const armored = this.enemies.isArmored(enemy);
       if (!this.enemies.damage(enemy, b.damage)) {
         this.hitEvent.x = b.x;
-        this.hitEvent.z = enemy.z + enemy.def.radius * 0.6;
+        this.hitEvent.z = enemy.def.hull ? b.z : enemy.z + enemy.def.radius * 0.6;
+        this.hitEvent.armored = armored;
         this.ctx.bus.emit('enemyHit', this.hitEvent);
       }
     }
@@ -89,7 +91,7 @@ export class CollisionSystem {
     const r = p.bodyRadius;
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
-      if (e.dead || e.def.ground || !circlesOverlap(p.x, p.z, r, e.x, e.z, e.def.radius)) continue;
+      if (e.dead || e.def.ground || !touches(e, p.x, p.z, r)) continue;
       this.enemies.ram(e);
       p.hit();
       return;
@@ -110,6 +112,17 @@ export class CollisionSystem {
     const e = this.enemies.active[index];
     if (e.dead) return;
     const b = this.bullet;
-    if (circlesOverlap(b.x, b.z, b.radius, e.x, e.z, e.def.radius)) this.hitEnemy = e;
+    if (touches(e, b.x, b.z, b.radius)) this.hitEnemy = e;
   }
+}
+
+/** Circle (x, z, r) against the enemy's body: its radius, or its hull circles. */
+function touches(e: Enemy, x: number, z: number, r: number): boolean {
+  const hull = e.def.hull;
+  if (!hull) return circlesOverlap(x, z, r, e.x, e.z, e.def.radius);
+  for (let i = 0; i < hull.length; i++) {
+    const c = hull[i];
+    if (circlesOverlap(x, z, r, e.x + c.x, e.z + c.z, c.r)) return true;
+  }
+  return false;
 }

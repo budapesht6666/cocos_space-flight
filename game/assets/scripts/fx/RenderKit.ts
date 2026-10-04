@@ -76,6 +76,11 @@ export class RenderKit {
     });
   }
 
+  /** Additive ring (shared, instanced): elite markers. */
+  ringGlow(rgb: Rgb, intensity = 1): Material {
+    return this.cached(`ring:${rgb}:${intensity}`, () => this.additive(this.ringTexture, rgb, intensity));
+  }
+
   /** Additive ring material — NOT shared: rings fade individually via mainColor alpha. */
   ringInstance(rgb: Rgb, intensity = 1): Material {
     return this.additive(this.ringTexture, rgb, intensity, false);

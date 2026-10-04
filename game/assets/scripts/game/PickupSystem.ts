@@ -1,10 +1,11 @@
 // Pickups: dropped with a little burst, sink down the screen, get pulled in by the magnet and
 // collected by the ship. Effects are applied by whoever listens to `pickupCollected`.
+// Escape pods are the exception: the magnet ignores them, the ship has to fly over them.
 
 import { MeshRenderer, Node, Prefab, instantiate } from 'cc';
 import { Pool, swapRemove } from '../core/Pool';
 import { PICKUP_MOTION, PICKUPS } from '../data/pickups';
-import type { DropSpec, PickupDef, PickupKind, PropId } from '../data/types';
+import type { DropSpec, PickupDef, PickupKind, PropId, Rgb } from '../data/types';
 import { WORLD } from '../data/world';
 import type { GameContext } from './GameContext';
 
@@ -21,10 +22,14 @@ interface Pickup {
   node: Node;
   /** 3D icon that wobbles (null for credits, which spin as a whole). */
   icon: Node | null;
+  /** Blinking beacon of an escape pod. */
+  beacon: Node | null;
 }
 
 const PARK_Y = -1000;
-const KINDS: readonly PickupKind[] = ['credit', 'bigCredit', 'power', 'repair', 'shield', 'energy'];
+const KINDS: readonly PickupKind[] = ['credit', 'bigCredit', 'power', 'repair', 'shield', 'energy', 'pod'];
+const POD_HULL: Rgb = [0.32, 0.35, 0.4];
+const POD_BEACON: Rgb = [0.6, 1.0, 0.7];
 /** Icons are modelled facing +Z; tip them back so they face the tilted camera (pitch 70°). */
 const ICON_TILT = -70;
 
@@ -35,6 +40,7 @@ export class PickupSystem {
   private readonly pools = new Map<PickupKind, Pool<Pickup>>();
   private readonly root: Node;
   private readonly collected = { kind: 'credit' as PickupKind, x: 0, z: 0 };
+  private readonly lost = { x: 0, z: 0 };
 
   constructor(
     private readonly ctx: GameContext,
@@ -51,7 +57,7 @@ export class PickupSystem {
           p.node.setPosition(0, PARK_Y, 0);
         },
       );
-      pool.prewarm(def.prop ? 2 : 24);
+      pool.prewarm(def.prop ? 2 : def.pod ? 4 : 24);
       this.pools.set(kind, pool);
     }
     ctx.bus.on('enemyKilled', (e) => this.drop(e.def.drops, e.x, e.z));
@@ -73,6 +79,24 @@ export class PickupSystem {
     this.active.push(p);
   }
 
+  /** Escape pods fly up out of their station, fanned out, then drift down slowly. */
+  launchPods(count: number, x: number, z: number): void {
+    const rng = this.ctx.rng;
+    for (let i = 0; i < count; i++) {
+      const p = this.pools.get('pod')!.acquire();
+      const side = count > 1 ? (i / (count - 1)) * 2 - 1 : 0;
+      p.x = x;
+      p.z = z;
+      p.vx = side * 2.2 + rng.range(-0.4, 0.4);
+      p.vz = -PICKUP_MOTION.podLaunchSpeed * rng.range(0.8, 1.1);
+      p.t = rng.range(0, 10);
+      p.pulled = false;
+      p.dead = false;
+      p.node.setPosition(x, WORLD.heights.pickups, z);
+      this.active.push(p);
+    }
+  }
+
   /** Drops an enemy's loot (credits scaled by difficulty) plus the optional extra. */
   drop(drops: DropSpec, x: number, z: number): void {
     const rng = this.ctx.rng;
@@ -91,7 +115,9 @@ export class PickupSystem {
       const dx = shipX - p.x;
       const dz = shipZ - p.z;
       const dist = Math.hypot(dx, dz);
-      if (canCollect && !p.pulled && (this.collectAll || dist < magnetRadius)) p.pulled = true;
+      const pod = p.def.pod === true;
+      const reach = pod ? PICKUP_MOTION.podCatchRadius : magnetRadius;
+      if (canCollect && !p.pulled && (this.collectAll || dist < reach)) p.pulled = true;
       if (p.pulled && canCollect) {
         // Accelerate towards the ship.
         const speed = PICKUP_MOTION.magnetSpeed * Math.min(1, 0.35 + p.t * 0.1);
@@ -104,7 +130,8 @@ export class PickupSystem {
         p.vx *= drag;
         p.vz *= drag;
         p.x += p.vx * dt;
-        p.z += (p.vz + PICKUP_MOTION.fallSpeed) * dt;
+        p.z += (p.vz + (pod ? PICKUP_MOTION.podFallSpeed : PICKUP_MOTION.fallSpeed)) * dt;
+        if (pod) p.x = Math.max(-field.halfWidth(p.z) + 0.6, Math.min(field.halfWidth(p.z) - 0.6, p.x));
       }
       if (canCollect && dist < pickupRadius) {
         p.dead = true;
@@ -115,6 +142,11 @@ export class PickupSystem {
         this.ctx.bus.emit('pickupCollected', c);
       } else if (p.z > field.despawnZ) {
         p.dead = true;
+        if (pod) {
+          this.lost.x = p.x;
+          this.lost.z = p.z;
+          this.ctx.bus.emit('podLost', this.lost);
+        }
       }
     }
     for (let i = this.active.length - 1; i >= 0; i--) {
@@ -129,8 +161,13 @@ export class PickupSystem {
       const p = this.active[i];
       const bob = Math.sin(p.t * 4) * 0.06;
       p.node.setPosition(p.x, y + bob, p.z);
-      // Credits tumble; icons wobble (a full spin would show their thin side) and pulse.
-      if (!p.icon) p.node.setRotationFromEuler(p.t * 160, p.t * 220, 35);
+      // Credits tumble; icons wobble (a full spin would show their thin side) and pulse; pods
+      // rock gently and blink their beacon.
+      if (p.beacon) {
+        p.node.setRotationFromEuler(0, Math.sin(p.t * 1.3) * 25, Math.sin(p.t * 2.1) * 12);
+        const blink = Math.sin(p.t * 7) > 0.2 ? 0.55 : 0.22;
+        p.beacon.setScale(blink, 1, blink);
+      } else if (!p.icon) p.node.setRotationFromEuler(p.t * 160, p.t * 220, 35);
       else {
         p.icon.setRotationFromEuler(0, Math.sin(p.t * 2.6) * 35, 0);
         const s = p.def.size * (1 + 0.06 * Math.sin(p.t * 6));
@@ -157,7 +194,18 @@ export class PickupSystem {
     node.layer = this.root.layer;
     this.root.addChild(node);
     let icon: Node | null = null;
-    if (def.prop) {
+    let beacon: Node | null = null;
+    if (def.pod) {
+      // Capsule lying across the screen: hull, a green halo and a blinking beacon on top.
+      const halo = kit.meshNode('halo', node, kit.plane, kit.glow(def.color, 1.4));
+      halo.setScale(def.size * 2.6, 1, def.size * 2.6);
+      const hull = kit.meshNode('hull', node, kit.cylinder, kit.solid(POD_HULL, 0.6, 0.35, [0.05, 0.12, 0.08]));
+      hull.setRotationFromEuler(0, 0, 90);
+      hull.setScale(def.size * 0.55, def.size * 1.1, def.size * 0.55);
+      hull.setPosition(0, 0.1, 0);
+      beacon = kit.meshNode('beacon', node, kit.plane, kit.glow(POD_BEACON, 2.6));
+      beacon.setPosition(0, 0.45, 0);
+    } else if (def.prop) {
       const prefab = this.props.get(def.prop);
       if (!prefab) throw new Error(`prop ${def.prop} was not loaded`);
       const halo = kit.meshNode('halo', node, kit.plane, kit.glow(def.color, 1.5));
@@ -178,6 +226,6 @@ export class PickupSystem {
       cube.setScale(def.size, def.size, def.size);
     }
     node.setPosition(0, PARK_Y, 0);
-    return { def, x: 0, z: 0, vx: 0, vz: 0, t: 0, pulled: false, dead: false, node, icon };
+    return { def, x: 0, z: 0, vx: 0, vz: 0, t: 0, pulled: false, dead: false, node, icon, beacon };
   }
 }

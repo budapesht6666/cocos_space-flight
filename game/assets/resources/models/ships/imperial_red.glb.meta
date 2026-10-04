@@ -1,0 +1,143 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "3dc49000-8500-4af8-aec4-0fab3eb40e4f",
+  "files": [],
+  "subMetas": {
+    "80176": {
+      "importer": "gltf-material",
+      "uuid": "3dc49000-8500-4af8-aec4-0fab3eb40e4f@80176",
+      "displayName": "",
+      "id": "80176",
+      "name": "imperial_red_mat.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "cce37": {
+      "importer": "gltf-mesh",
+      "uuid": "3dc49000-8500-4af8-aec4-0fab3eb40e4f@cce37",
+      "displayName": "",
+      "id": "cce37",
+      "name": "Cube.028.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 2642
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "4d567": {
+      "importer": "gltf-embeded-image",
+      "uuid": "3dc49000-8500-4af8-aec4-0fab3eb40e4f@4d567",
+      "displayName": "",
+      "id": "4d567",
+      "name": "imperial_red_albedo.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": false,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".jpg",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "e39f7": {
+      "importer": "texture",
+      "uuid": "3dc49000-8500-4af8-aec4-0fab3eb40e4f@e39f7",
+      "displayName": "",
+      "id": "e39f7",
+      "name": "UnnamedTexture.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "linear",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "3dc49000-8500-4af8-aec4-0fab3eb40e4f@4d567"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "03758": {
+      "importer": "gltf-scene",
+      "uuid": "3dc49000-8500-4af8-aec4-0fab3eb40e4f@03758",
+      "displayName": "",
+      "id": "03758",
+      "name": "imperial_red.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "imperial_red_albedo",
+        "uri": "3dc49000-8500-4af8-aec4-0fab3eb40e4f@4d567"
+      }
+    ],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "3dc49000-8500-4af8-aec4-0fab3eb40e4f@cce37"
+      ],
+      "skeletons": [],
+      "textures": [
+        "3dc49000-8500-4af8-aec4-0fab3eb40e4f@e39f7"
+      ],
+      "materials": [
+        "3dc49000-8500-4af8-aec4-0fab3eb40e4f@80176"
+      ],
+      "scenes": [
+        "3dc49000-8500-4af8-aec4-0fab3eb40e4f@03758"
+      ]
+    }
+  }
+}

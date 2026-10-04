@@ -2,11 +2,12 @@
 // Touch drags give relative movement in UI units (design resolution, y up); desktop mouse drags
 // arrive as touches too (the engine simulates them). Arrow keys / WASD give a direction.
 // On-screen buttons are hit-tested here: a touch that starts on a button presses it and never
-// moves the ship, so one thumb can steer while another taps Special.
+// moves the ship, so one thumb can steer while another taps Special. Keys: Space = Special,
+// Esc/P = pause, Enter = tap (and Retry on the results screen).
 
 import { EventKeyboard, EventTouch, Input, KeyCode, Vec2, input } from 'cc';
 
-export type ButtonId = 'special' | 'pause' | 'resume' | 'restart';
+export type ButtonId = 'special' | 'pause' | 'resume' | 'restart' | 'menu' | 'retry' | 'next';
 
 /** Returns the button under a UI-space point, or null. */
 export type ButtonHitTest = (x: number, y: number) => ButtonId | null;
@@ -132,6 +133,7 @@ export class InputService {
         break;
       case KeyCode.ENTER:
         this.tapped = true;
+        this.pressed.add('retry');
         break;
     }
   }

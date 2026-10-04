@@ -6,8 +6,12 @@
   "debug": false,
   "md5Cache": true,
   "sourceMaps": false,
-  "startScene": "d694bcb3-3c7a-4ef1-bc3d-a9cc5776f9f2",
+  "startScene": "ebbcce14-b58f-41c1-a7d2-3e89e1dfe927",
   "scenes": [
+    {
+      "url": "db://assets/scenes/Menu.scene",
+      "uuid": "ebbcce14-b58f-41c1-a7d2-3e89e1dfe927"
+    },
     {
       "url": "db://assets/scenes/Game.scene",
       "uuid": "d694bcb3-3c7a-4ef1-bc3d-a9cc5776f9f2"

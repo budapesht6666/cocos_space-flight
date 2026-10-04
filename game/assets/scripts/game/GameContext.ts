@@ -3,7 +3,7 @@
 import type { Node } from 'cc';
 import type { EventBus } from '../core/EventBus';
 import type { Rng } from '../core/Rng';
-import type { Difficulty, DifficultyDef, EnemyDef, PickupKind } from '../data/types';
+import type { DecorFieldId, Difficulty, DifficultyDef, EliteDef, EnemyDef, PickupKind } from '../data/types';
 import type { DebugFlags } from '../debug/DebugFlags';
 import type { RenderKit } from '../fx/RenderKit';
 import type { Playfield } from './Playfield';
@@ -14,7 +14,12 @@ export interface EnemyKilledEvent {
   def: EnemyDef;
   /** Spawn group id, or -1. */
   group: number;
+  /** Set piece instance it stood on, or -1 (escape pods). */
+  site: number;
   boss: boolean;
+  /** A destructible part of a bigger enemy. */
+  part: boolean;
+  elite: EliteDef | null;
 }
 
 export type BannerStyle = 'title' | 'warning' | 'success';
@@ -22,8 +27,13 @@ export type BannerStyle = 'title' | 'warning' | 'success';
 export interface GameEvents {
   enemyKilled: EnemyKilledEvent;
   /** Left the field alive (flew off screen). */
-  enemyEscaped: { group: number };
-  enemyHit: { x: number; z: number };
+  enemyEscaped: { group: number; site: number };
+  /** `armored`: the hit was soaked by armour (core with live parts). */
+  enemyHit: { x: number; z: number; armored: boolean };
+  /** An elite's energy shield collapsed. */
+  enemyShieldBroken: { x: number; z: number };
+  /** A boss lost its last part: the core is exposed. */
+  armorBroken: { x: number; z: number };
   /** A hull segment lost. */
   playerHit: { x: number; z: number; hull: number };
   shieldHit: { x: number; z: number; shield: number };
@@ -34,18 +44,28 @@ export interface GameEvents {
   scoreBonus: { amount: number };
   novaBomb: { x: number; z: number };
   banner: { text: string; sub: string; style: BannerStyle; time: number };
+  /** Background scenery starts drifting past. */
+  decor: { field: DecorFieldId; duration: number };
+  /** Escape pods launched by a station whose guns were all destroyed. */
+  podsLaunched: { count: number; x: number; z: number };
+  /** A pod fell off the screen. */
+  podLost: { x: number; z: number };
 }
 
-export interface GameContext {
-  readonly bus: EventBus<GameEvents>;
+/** What background systems (nebula, stars) need; the start screen builds one without a game. */
+export interface BackdropContext {
   readonly rng: Rng;
   readonly playfield: Playfield;
   readonly kit: RenderKit;
+  /** Parent for all 3D nodes. */
+  readonly worldRoot: Node;
+}
+
+export interface GameContext extends BackdropContext {
+  readonly bus: EventBus<GameEvents>;
   readonly debug: DebugFlags;
   readonly difficulty: Difficulty;
   readonly tuning: DifficultyDef;
-  /** Parent for all 3D gameplay nodes. */
-  readonly worldRoot: Node;
   /** Freezes the simulation for a few frames to sell big impacts. */
   hitstop(seconds: number): void;
   /** Adds camera shake trauma (0..1). */

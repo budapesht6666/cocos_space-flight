@@ -15,6 +15,10 @@ export const SPITFIRE: PlayerShipDef = {
   bankMaxDeg: 32,
   bankFullSpeed: 12,
   startHeight: 0.8,
+  engines: [
+    [-0.42, 0.18],
+    [0.42, 0.18],
+  ],
 };
 
 /** Starting loadout until the hangar exists (stage 4). */

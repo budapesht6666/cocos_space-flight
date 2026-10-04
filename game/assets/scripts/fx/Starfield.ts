@@ -4,7 +4,7 @@
 import { Node } from 'cc';
 import { wrap } from '../core/math';
 import { COLORS, STARFIELD } from '../data/visuals';
-import type { GameContext } from '../game/GameContext';
+import type { BackdropContext } from '../game/GameContext';
 
 interface Star {
   node: Node;
@@ -27,7 +27,7 @@ export class Starfield {
   private readonly layers: Layer[] = [];
 
   constructor(
-    private readonly ctx: GameContext,
+    private readonly ctx: BackdropContext,
     private readonly scrollSpeed: number,
   ) {
     this.root = new Node('Starfield');

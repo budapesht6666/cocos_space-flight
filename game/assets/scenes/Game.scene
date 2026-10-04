@@ -597,6 +597,10 @@
       "__uuid__": "c8f66d17-351a-48da-a12c-0212d28575c4",
       "__expectedType__": "cc.EffectAsset"
     },
+    "titleFont": {
+      "__uuid__": "fecf74c3-83fb-4805-905b-2cba81505b7d",
+      "__expectedType__": "cc.TTFFont"
+    },
     "_id": "d9fEF26QRGKaLWxtGzUiSQ"
   },
   {

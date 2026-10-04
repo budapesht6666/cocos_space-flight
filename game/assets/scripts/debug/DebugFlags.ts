@@ -1,9 +1,10 @@
 // URL parameters for previews and debug builds, e.g. ?debug=1&god=1&power=4&t=20&slowmo=0.25.
 // Engine-free so it can be unit-tested; the caller passes `location.search`.
 
-import type { Difficulty } from '../data/types';
+import type { Difficulty, EliteId } from '../data/types';
 
 const DIFFICULTIES: readonly Difficulty[] = ['normal', 'hard', 'insane', 'nightmare'];
+const ELITES: readonly EliteId[] = ['armored', 'swift', 'volatile', 'shielded'];
 
 export interface DebugFlags {
   /** FPS / draw calls / entity counts overlay. */
@@ -21,6 +22,8 @@ export interface DebugFlags {
   /** Mission id to open (validated by the game), or null for the default. */
   mission: string | null;
   difficulty: Difficulty | null;
+  /** Every wave enemy becomes this elite (`?elite=volatile`), or a random one (`?elite=1`). */
+  elite: EliteId | 'random' | null;
 }
 
 export function parseDebugFlags(search: string): DebugFlags {
@@ -37,6 +40,7 @@ export function parseDebugFlags(search: string): DebugFlags {
   const seed = num('seed', NaN);
   const power = num('power', NaN);
   const difficulty = (params.get('difficulty') ?? '').toLowerCase();
+  const elite = (params.get('elite') ?? '').toLowerCase();
   return {
     overlay: flag('debug'),
     god: flag('god'),
@@ -46,6 +50,7 @@ export function parseDebugFlags(search: string): DebugFlags {
     slowmo: Math.min(4, Math.max(0.05, num('slowmo', 1))),
     mission: params.get('mission') || null,
     difficulty: DIFFICULTIES.indexOf(difficulty as Difficulty) >= 0 ? (difficulty as Difficulty) : null,
+    elite: ELITES.indexOf(elite as EliteId) >= 0 ? (elite as EliteId) : flag('elite') ? 'random' : null,
   };
 }
 

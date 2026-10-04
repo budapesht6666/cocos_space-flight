@@ -1,0 +1,26 @@
+#!/bin/sh
+# Deploy on commit to main. Other apps on the VPS deploy from GitHub (push → `vps deploy` builds on
+# the server), but this game is built by Cocos Creator, which only runs on this machine — so the
+# release happens here, right after the commit: CLI build on a mirror (the editor may stay open),
+# then upload. Commits that don't touch the game (docs, tests, tools) are skipped.
+# Enable once per clone: npm run hooks:install. Skip once: SKIP_DEPLOY=1 git commit ...
+
+[ "$SKIP_DEPLOY" = "1" ] && exit 0
+[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || exit 0
+if ! git diff-tree --no-commit-id --name-only -r HEAD | grep -qE '^(game/|build-configs/)'; then
+  echo "[deploy] commit doesn't touch the game — not deploying"
+  exit 0
+fi
+if [ -n "$(git status --porcelain -- game build-configs)" ]; then
+  echo "[deploy] warning: uncommitted changes in game/ will be in the build too"
+fi
+
+mkdir -p .cache
+echo "[deploy] building and uploading (1-2 min), log: .cache/release-web.log"
+if npm run --silent release:web > .cache/release-web.log 2>&1; then
+  grep -E '^(build |uploaded|live)' .cache/release-web.log
+else
+  echo "[deploy] FAILED — the commit is fine, the site still has the previous build:"
+  tail -n 15 .cache/release-web.log
+fi
+exit 0

@@ -44,11 +44,11 @@
 | **Striker** | Открываемый корабль игрока (перехватчик) | ✅ выбран пользователем |
 | Bob | Scout (мясо, формации), Red | ✅ подтверждено |
 | Dispatcher | Dart (камикадзе: силуэт-игла), Red | ✅ подтверждено |
-| Challenger | Gunship, Purple; Red и крупнее — мини-босс Marauder (s1m1, временно) | ✅ подтверждено |
+| Challenger | Gunship, Purple; Red и крупнее — мини-босс Marauder (s1m1) | ✅ подтверждено |
 | Omen | Splitter, Purple | ✅ подтверждено |
 | Zenith | Lancer (снайпер: длинный ствол), Red | ✅ подтверждено |
 | Pancake | Spinner (тарелка с кольцами пуль), Purple | ✅ подтверждено |
-| Imperial | Carrier и Frigate, Red | ✅ подтверждено |
+| Imperial | Мини-босс Dreadnought (s1m2, этап 3); позже Carrier и Frigate, Red | ✅ выбран пользователем (этап 3) |
 | Insurgent | Bulwark (тяжёлый, 8.3k треугольников), Purple | ✅ подтверждено |
 
 Враги — только в Red и Purple, игрок — в Orange, Blue и Green (см. GDD §6).
@@ -75,7 +75,7 @@
 | Статус | Источник | Что внутри | Лицензия |
 |---|---|---|---|
 | 🟡 рекомендую | [Kenney — UI Pack Sci-Fi](https://kenney.nl/assets/ui-pack-sci-fi) | 130 элементов sci-fi интерфейса | CC0 |
-| 🟡 рекомендую | [Google Fonts](https://fonts.google.com): Orbitron, Exo 2, Rajdhani, Audiowide | Шрифты для заголовков и HUD | SIL OFL |
+| ✅ выбран (Orbitron) | [Google Fonts](https://fonts.google.com): Orbitron, Exo 2, Rajdhani, Audiowide | Шрифты для заголовков и HUD | SIL OFL |
 
 ### Звук
 
@@ -124,8 +124,9 @@
 
 | Ассет | Автор | Источник | Лицензия | Где в проекте |
 |---|---|---|---|---|
-| Ultimate Spaceships Pack: Spitfire (Orange), Bob (Red), Dispatcher (Red), Challenger (Purple — Gunship; Red — мини-босс Marauder) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
-| Space Kit: platform_large, hangar_smallA, corridor_detailed, machine_generatorLarge, satelliteDish_large, structure_detailed, turret_single, turret_double | Kenney | [kenney.nl](https://kenney.nl/assets/space-kit) | CC0 | `game/assets/resources/models/props/station_*.glb`, `turret_*.glb` (обработаны `tools/assets/build-props.mjs`) |
+| Ultimate Spaceships Pack: Spitfire (Orange), Bob (Red), Dispatcher (Red), Challenger (Purple — Gunship; Red — мини-босс Marauder), Imperial (Orange, перекрашен в красный — мини-босс Dreadnought) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
+| Space Kit: platform_large, hangar_smallA, corridor_detailed, machine_generatorLarge, satelliteDish_large, structure_detailed, turret_single, turret_double; этап 3: hangar_roundGlass, hangar_roundA, hangar_largeA, platform_high, machine_barrelLarge, pipe_ring, supports_high, rock_crystalsLargeA, craft_cargoA | Kenney | [kenney.nl](https://kenney.nl/assets/space-kit) | CC0 | `game/assets/resources/models/props/station_*.glb`, `turret_*.glb` (обработаны `tools/assets/build-props.mjs`) |
+| Orbitron (Bold 700, Black 900; латиница) | The Orbitron Project Authors (Matt McInerney) | [Google Fonts](https://fonts.google.com/specimen/Orbitron), файлы с [Fontsource](https://fontsource.org/fonts/orbitron) | SIL OFL 1.1 | `game/assets/fonts/Orbitron-*.ttf`, лицензия рядом — `Orbitron-OFL.txt` |
 | Ultimate Space Kit: Bullets Pickup, Pickup Health, Pickup Sphere, Pickup Thunder | Quaternius | [poly.pizza](https://poly.pizza/bundle/Ultimate-Space-Kit-YWh743lqGX) | CC0 | `game/assets/resources/models/props/pickup_*.glb` (обработаны `tools/assets/build-props.mjs`) |
 
 Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`).
@@ -137,3 +138,11 @@
 - **Quaternius Ultimate Space Kit** — иконки пикапов: Bullets → P, Health → R, Sphere → S (красная сфера перекрашена в голубой: красный — цвет врагов), Thunder → E. Тот же автор, что и корабли.
 - **Конвейер** `npm run build:props` (`tools/assets/build-props.mjs`): каждая модель → один меш с вершинными цветами, без текстур. Kenney-материалы (metal, metalDark, dark, metalRed) перекрашиваются в тёмную палитру (светлые серые под HDR-солнцем уходят в белое), у турелей акцент — красный; цвета пикапов берутся из атласа Quaternius. В игре все пропсы рисуются одним инстансируемым материалом (`RenderKit.props()`).
 - Исходники: `art-source/kenney-space-kit/` (все GLB пака и `License.txt`), `art-source/quaternius-ultimate-space-kit/pickup_*.glb` (скачаны с poly.pizza: Bullets Pickup, Pickup Health, Pickup Sphere, Pickup Thunder).
+
+**Выбор этапа 3** (пользователь выбрал из вариантов):
+- **Warden** — собран из модулей Kenney Space Kit, как станции: купол `hangar_roundGlass` — ядро, трубы `pipe_ring`, площадки `platform_high` под двумя турельными модулями `turret_double`, решётки `supports_high`, баки `machine_barrelLarge`, огни. Сборка описана данными (`look: assembly` в `data/enemies.ts`).
+- **Dreadnought** — Imperial из пака Quaternius. Красной расцветки у нас нет (скачаны только Blue, Green, Orange), поэтому `build-ships.mjs` перекрашивает Orange: оранжевые тона → красный с затемнением, серые темнее (как в Red-вариантах пака). Бортовые пушки — `turret_double` Kenney.
+- **Шрифт Orbitron** — логотип, заголовки, баннеры, кнопки. Bold 700 и Black 900, латинский сабсет (~16 KB каждый). Цифры HUD пока системным жирным.
+- Новые модули Kenney для станций Сектора 1 (refinery, depot, bastion) Claude выбрал сам — в рамках делегирования этапа 2 («станции и турели на твой вкус»).
+- **Иконки PWA** — свой рендер Spitfire из игры (`game/build-templates/web-mobile/icons/`).
+- Escape Pod — процедурная капсула из примитивов `RenderKit`, декор астероидных полей — те же процедурные камни, что у астероидов.

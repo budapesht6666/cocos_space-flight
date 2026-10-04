@@ -33,6 +33,10 @@ const STATION = {
   dark: [0.035, 0.04, 0.055],
   metalRed: [0.85, 0.42, 0.1],
   _defaultMat: [0.09, 0.1, 0.13],
+  // Rocks and ore (mining set pieces).
+  rock: [0.17, 0.14, 0.12],
+  rockTrack: [0.11, 0.1, 0.09],
+  crystal: [0.15, 0.85, 0.9],
 };
 const TURRET = {
   metal: [0.2, 0.2, 0.24],
@@ -52,6 +56,15 @@ const PROPS = [
   { src: path.join(KENNEY, 'machine_generatorLarge.glb'), out: 'station_generator', palette: STATION },
   { src: path.join(KENNEY, 'satelliteDish_large.glb'), out: 'station_dish', palette: STATION },
   { src: path.join(KENNEY, 'structure_detailed.glb'), out: 'station_frame', palette: STATION },
+  { src: path.join(KENNEY, 'hangar_roundGlass.glb'), out: 'station_dome', palette: STATION },
+  { src: path.join(KENNEY, 'hangar_roundA.glb'), out: 'station_hub', palette: STATION },
+  { src: path.join(KENNEY, 'hangar_largeA.glb'), out: 'station_hangarLarge', palette: STATION },
+  { src: path.join(KENNEY, 'platform_high.glb'), out: 'station_pad', palette: STATION },
+  { src: path.join(KENNEY, 'machine_barrelLarge.glb'), out: 'station_tank', palette: STATION },
+  { src: path.join(KENNEY, 'pipe_ring.glb'), out: 'station_pipe', palette: STATION },
+  { src: path.join(KENNEY, 'supports_high.glb'), out: 'station_lattice', palette: STATION },
+  { src: path.join(KENNEY, 'rock_crystalsLargeA.glb'), out: 'station_ore', palette: STATION },
+  { src: path.join(KENNEY, 'craft_cargoA.glb'), out: 'station_hauler', palette: STATION },
   // Turrets: the `turret` node (and its barrels) rotates.
   { src: path.join(KENNEY, 'turret_single.glb'), out: 'turret_single', palette: TURRET, head: 'turret' },
   { src: path.join(KENNEY, 'turret_double.glb'), out: 'turret_double', palette: TURRET, head: 'turret' },
@@ -73,6 +86,7 @@ class Part {
 }
 
 async function buildProp(prop) {
+  if (only && prop.out !== only) return;
   const doc = await io.read(prop.src);
   const root = doc.getRoot();
   const body = new Part();
@@ -232,4 +246,5 @@ function fract(v) {
   return v - Math.floor(v);
 }
 
+const only = process.argv[2];
 for (const prop of PROPS) await buildProp(prop);

@@ -21,19 +21,23 @@ A mission is a `MissionDef` in `data/missions.ts`: title, sector subtitle, `scro
 | `setPiece` | `piece` (`data/setPieces.ts`), `x` | Ground structure with turrets; scrolls at `groundSpeed` |
 | `waitClear` | optional `timeout` | Use between sections; always give a timeout so a dodging enemy can't stall the mission |
 | `boss` | `enemy`, `x` | WARNING banner (`BOSS_WARNING_TIME`), HP bar, the clock holds until it dies. Last event of the mission |
+| `decor` | `field` (`data/decor.ts`: `asteroidField`, `denseField`, `debris`), `duration` | Background rocks drift far below the flight plane for `duration` seconds. Purely visual: use it to sell an asteroid belt section |
 
 New flight paths go to `data/paths.ts` (≤ 8 points; x within ±1.6, depth −0.5…1.6).
+
+Set pieces (`data/setPieces.ts`): `outpost`, `relay`, `refinery` (mining platform), `depot` (fuel spine), `bastion` (fortress with 4 guns). Each may launch **escape pods** (`pods: { count, x, z }`) once all its turrets are destroyed — that's what the Rescuer medal counts. A new piece: modules are `station_*` props (`npm run build:props`), turrets stand on flat platforms.
 
 ## Pacing (GDD §11, s1m1 as reference)
 
 - 3–4 minutes including the boss; sections of 25–35 s split by `waitClear`.
 - Introduce one new thing per section; mix air waves with a set piece or an asteroid drift.
 - At least 3 `bonus: 'power'` waves (validated) so Power IV is reachable; one `energy`/`shield` bonus mid-mission.
+- Every mission offers escape pods (validated): 2–4 set pieces with turrets. Give the player time to clear a station's guns before it scrolls off — don't stack heavy air waves on top of a station's entry.
 - Keep pressure readable: no more than ~2 shooters plus a formation at once on Normal; Hard adds Scout fire and density automatically.
 
 ## Verify
 
-1. Add the id to `MissionId` (`data/types.ts`) and the def to `MISSIONS`.
+1. Add the id to `MissionId` (`data/types.ts`), the def to `MISSIONS` and the id to `MISSION_ORDER` (the start screen lists missions in that order, NEXT follows it).
 2. `npm test` — validation checks sorting, references, trail stagger, Power bonuses, boss at the end, preloading.
-3. Play it: `http://localhost:7456/?mission=<id>&debug=1&seed=7`. Full run fast: `&god=1&slowmo=4` with the autopilot snippet from the `playtest` skill; check the results screen. Then a real run on Normal without god mode.
+3. Play it: `http://localhost:7456/?mission=<id>&debug=1&seed=7`. Full run fast: `&god=1&slowmo=4` with the autopilot snippet from the `playtest` skill; check the results screen (medals, pods N/N). Then a real run on Normal without god mode, and `&difficulty=hard`.
 4. Update `docs/PLAN.md` and, if the mission introduces something, `docs/GDD.md`.

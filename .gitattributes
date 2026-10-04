@@ -1,0 +1,2 @@
+# Git hooks run under sh: CRLF line endings would break them on checkout.
+tools/hooks/* text eol=lf

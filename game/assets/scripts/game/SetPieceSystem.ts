@@ -1,6 +1,7 @@
 // Ground structures that scroll beneath the flight plane; their turrets are ordinary enemies with
 // 'ground' movement placed on top. Every piece a mission uses is built at load and parked.
 // Modules share one vertex-colour material, so repeated modules draw as one instanced call.
+// When every turret of a piece is destroyed, its crew launches escape pods.
 
 import { MeshRenderer, Node, Prefab, instantiate } from 'cc';
 import { swapRemove } from '../core/Pool';
@@ -11,12 +12,18 @@ import type { PropId, SetPieceDef, SetPieceEvent, SetPieceId } from '../data/typ
 import { WORLD } from '../data/world';
 import type { EnemySystem } from './EnemySystem';
 import type { GameContext } from './GameContext';
+import type { PickupSystem } from './PickupSystem';
 
 interface Piece {
+  /** Index in `all`; turrets carry it as their `site`. */
+  id: number;
   def: SetPieceDef;
   node: Node;
   x: number;
   z: number;
+  turretsLeft: number;
+  /** A turret got away: no pods from this piece. */
+  failed: boolean;
 }
 
 const PARK_Y = -1000;
@@ -25,10 +32,13 @@ export class SetPieceSystem {
   private readonly root: Node;
   private readonly free = new Map<SetPieceId, Piece[]>();
   private readonly active: Piece[] = [];
+  private readonly all: Piece[] = [];
+  private readonly launched = { count: 0, x: 0, z: 0 };
 
   constructor(
     private readonly ctx: GameContext,
     private readonly enemies: EnemySystem,
+    private readonly pickups: PickupSystem,
     /** How many of each piece the mission needs. */
     counts: ReadonlyMap<SetPieceId, number>,
     private readonly props: ReadonlyMap<PropId, Prefab>,
@@ -39,9 +49,19 @@ export class SetPieceSystem {
     ctx.worldRoot.addChild(this.root);
     for (const [id, count] of counts) {
       const list: Piece[] = [];
-      for (let i = 0; i < count; i++) list.push({ def: SET_PIECES[id], node: this.build(SET_PIECES[id]), x: 0, z: 0 });
+      for (let i = 0; i < count; i++) {
+        const piece: Piece = { id: this.all.length, def: SET_PIECES[id], node: this.build(SET_PIECES[id]), x: 0, z: 0, turretsLeft: 0, failed: false };
+        this.all.push(piece);
+        list.push(piece);
+      }
       this.free.set(id, list);
     }
+    ctx.bus.on('enemyKilled', (e) => {
+      if (e.site >= 0) this.turretGone(this.all[e.site], false);
+    });
+    ctx.bus.on('enemyEscaped', (e) => {
+      if (e.site >= 0) this.turretGone(this.all[e.site], true);
+    });
   }
 
   spawn(event: SetPieceEvent): void {
@@ -51,10 +71,12 @@ export class SetPieceSystem {
     piece.x = field.contentX(event.x);
     piece.z = field.spawnZ - piece.def.length / 2;
     piece.node.setPosition(piece.x, WORLD.heights.ground, piece.z);
+    piece.turretsLeft = piece.def.turrets.length;
+    piece.failed = false;
     this.active.push(piece);
     for (const t of piece.def.turrets) {
       const def = ENEMIES[t.enemy];
-      this.enemies.spawn(def, def.move, piece.x + t.x, piece.z + t.z, null, false, -1);
+      this.enemies.spawn(def, def.move, piece.x + t.x, piece.z + t.z, null, false, -1).site = piece.id;
     }
   }
 
@@ -76,6 +98,19 @@ export class SetPieceSystem {
 
   clear(): void {
     while (this.active.length > 0) this.release(this.active.pop() as Piece);
+  }
+
+  private turretGone(p: Piece | undefined, escaped: boolean): void {
+    if (!p || p.turretsLeft <= 0) return;
+    p.turretsLeft--;
+    if (escaped) p.failed = true;
+    const pods = p.def.pods;
+    if (p.turretsLeft > 0 || p.failed || !pods) return;
+    this.pickups.launchPods(pods.count, p.x + pods.x, p.z + pods.z);
+    this.launched.count = pods.count;
+    this.launched.x = p.x + pods.x;
+    this.launched.z = p.z + pods.z;
+    this.ctx.bus.emit('podsLaunched', this.launched);
   }
 
   private release(p: Piece): void {

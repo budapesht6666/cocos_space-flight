@@ -1,0 +1,16 @@
+{
+  "name": "Space Flight",
+  "short_name": "Space Flight",
+  "description": "A vertical 2.5D shoot 'em up for your phone.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#03040b",
+  "theme_color": "#03040b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

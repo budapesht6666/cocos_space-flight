@@ -4,7 +4,7 @@
 import { Material, MeshRenderer, Node, Vec4 } from 'cc';
 import { bakeNebula } from '../core/nebula';
 import { NEBULA } from '../data/visuals';
-import type { GameContext } from '../game/GameContext';
+import type { BackdropContext } from '../game/GameContext';
 
 export class Nebula {
   private readonly node: Node;
@@ -12,7 +12,7 @@ export class Nebula {
   private readonly tiling = new Vec4(1, 1, 0, 0);
   private offset = 0;
 
-  constructor(private readonly ctx: GameContext) {
+  constructor(private readonly ctx: BackdropContext) {
     const baked = bakeNebula({
       width: NEBULA.textureWidth,
       height: NEBULA.textureHeight,

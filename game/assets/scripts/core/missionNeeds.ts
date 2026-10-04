@@ -11,8 +11,10 @@ export interface MissionNeeds {
   enemies: Map<EnemyId, number>;
   /** Set pieces to build (every placement gets its own instance). */
   setPieces: Map<SetPieceId, number>;
-  /** Prop models to load: prop-look enemies, station modules, pickup icons. */
+  /** Prop models to load: prop-look enemies, boss assemblies, station modules, pickup icons. */
   props: Set<PropId>;
+  /** Escape pods the mission offers (Rescuer medal). */
+  pods: number;
 }
 
 /**
@@ -50,21 +52,34 @@ export function missionNeeds(mission: MissionDef): MissionNeeds {
     for (const t of SET_PIECES[id].turrets) raise(t.enemy, (enemies.get(t.enemy) ?? 0) + 1);
   }
 
-  // Splitting enemies need their fragments too (one level deep is enough for current content).
+  // Splitting enemies need their fragments, bosses their parts (one level deep is enough).
   for (const [id, count] of Array.from(enemies)) {
-    const split = ENEMIES[id].split;
-    if (split) raise(split.enemy, count * split.count);
+    const def = ENEMIES[id];
+    if (def.split) raise(def.split.enemy, count * def.split.count);
+    if (def.parts) {
+      const perParent = new Map<EnemyId, number>();
+      for (const part of def.parts) perParent.set(part.enemy, (perParent.get(part.enemy) ?? 0) + 1);
+      for (const [part, n] of perParent) raise(part, (enemies.get(part) ?? 0) + n * count);
+    }
   }
 
   const props = new Set<PropId>();
   for (const [id] of enemies) {
     const look = ENEMIES[id].look;
     if (look.kind === 'prop') props.add(look.prop);
+    if (look.kind === 'assembly') for (const m of look.modules) props.add(m.prop);
   }
   for (const [id] of setPieces) for (const m of SET_PIECES[id].modules) props.add(m.prop);
   for (const kind of Object.keys(PICKUPS) as PickupKind[]) {
     const prop = PICKUPS[kind].prop;
     if (prop) props.add(prop);
   }
-  return { enemies, setPieces, props };
+  return { enemies, setPieces, props, pods: countPods(mission) };
+}
+
+/** Escape pods offered by a mission: every set piece launches its pods once its turrets fall. */
+export function countPods(mission: MissionDef): number {
+  let pods = 0;
+  for (const e of mission.events) if (e.type === 'setPiece') pods += SET_PIECES[e.piece].pods?.count ?? 0;
+  return pods;
 }

@@ -21,20 +21,21 @@
 ├─ .mcp.json              MCP проекта: playwright, cocos
 ├─ docs/                  GDD, PLAN, ARCHITECTURE, ASSETS, PLATFORMS
 ├─ tests/                 Vitest-тесты для game/assets/scripts/{core,data}
-├─ tools/                 вспомогательные скрипты (балансные таблицы, конвертеры)
+├─ tools/                 вспомогательные скрипты: конвейеры моделей, выкатка web-сборки (deploy-web.mjs)
 ├─ build-configs/         экспортированные конфиги сборки Cocos для CLI/CI
 ├─ .claude/               настройки и скиллы Claude Code
 └─ game/                  ПРОЕКТ COCOS CREATOR (открывать в Dashboard)
+   ├─ build-templates/web-mobile/   свой index.ejs, манифест PWA, service worker, иконки
    ├─ assets/
-   │  ├─ scenes/          Boot.scene, Menu.scene, Game.scene
+   │  ├─ scenes/          Menu.scene (стартовый экран), Game.scene; Boot.scene — этап 4
    │  ├─ scripts/
-   │  │  ├─ core/         чистый TS без импорта 'cc': EventBus, Pool, Rng, math, движение, эмиттеры, таймлайн, щит, комбо
-   │  │  ├─ data/         типизированные конфиги: enemies, patterns, paths, missions, setPieces, pickups, difficulty, player, weapons
+   │  │  ├─ core/         чистый TS без импорта 'cc': EventBus, Pool, Rng, math, движение, эмиттеры, таймлайн, щит, комбо, медали, рекорды
+   │  │  ├─ data/         типизированные конфиги: enemies, patterns, paths, missions, setPieces, pickups, difficulty, elites, medals, decor, player, weapons
    │  │  ├─ game/         GameWorld и системы (Player, Enemy, Bullet, Collision, Pickup, SetPiece, Score, MissionDirector)
-   │  │  ├─ entities/     представления: EnemyView (модель корабля, пропс с поворотной частью, процедурный камень)
-   │  │  ├─ fx/           CameraShake, HitFlash, Explosions, Trails
-   │  │  ├─ ui/           экраны, HUD, виджеты
-   │  │  ├─ services/     Save, Settings, Audio, Input, SceneRouter
+   │  │  ├─ entities/     представления: EnemyView (модель корабля, пропс с поворотной частью, процедурный камень, сборка из модулей, кольцо элиты)
+   │  │  ├─ fx/           камера и тряска, взрывы, туманность, звёзды, декор астероидных полей
+   │  │  ├─ ui/           HUD, стартовый экран (StartScreen), общие UI-кирпичики (UiKit)
+   │  │  ├─ services/     Input, Launch (параметры запуска миссии), RecordStore; дальше Save, Settings, Audio, SceneRouter
    │  │  └─ debug/        оверлей, читы, URL-параметры
    │  ├─ prefabs/         ships/, enemies/, bullets/, fx/, ui/
    │  ├─ models/<source>/ импортированные glTF/glb, по источникам
@@ -54,22 +55,24 @@
 Boot ──(загрузка сохранения, настроек, прелоад общих ассетов)──▶ Menu ⇄ Game
 ```
 
-- **Boot.** Создаёт постоянный корневой узел (`director.addPersistRootNode`) с сервисами Save, Settings, Audio и SceneRouter.
-- **Menu.** Title, Main Menu, Sector Map, Hangar и Settings. Это UI-панели внутри одной сцены, не отдельные сцены.
-- **Game.** Геймплей, HUD, пауза и результаты. Параметры (миссия, сложность, снаряжение) приходят через `SceneRouter`.
+- **Boot** (этап 4). Создаёт постоянный корневой узел (`director.addPersistRootNode`) с сервисами Save, Settings, Audio и SceneRouter.
+- **Menu.** Title, Main Menu, Sector Map, Hangar и Settings. Это UI-панели внутри одной сцены, не отдельные сцены. **Этап 3:** стартовая сцена сборки, компонент `ui/StartScreen` — фон (`Nebula`, `Starfield` через узкий `BackdropContext`), вращающийся корабль, «Tap to start», выбор сложности и карточки миссий с рекордами. Если в URL есть `?mission=`, Menu один раз за загрузку страницы сразу запускает Game (удобно для сборок на телефоне).
+- **Game.** Геймплей, HUD, пауза и результаты. **Этап 3:** миссию и сложность передаёт модуль `services/Launch` (статическое состояние между сценами); сцена Game, открытая напрямую (превью редактора), берёт их из URL-флагов. NEXT перезагружает Game со следующей миссией, MENU грузит Menu. На этапе 4 это заменит `SceneRouter` со снаряжением.
 
 ## 4. Симуляция: GameWorld и системы
 
 Геймплей не живёт в `update()` отдельных компонентов. Единственный компонент `GameWorld` в сцене Game гоняет **фиксированный шаг 1/60 с** через аккумулятор и вызывает системы в строгом порядке:
 
 ```
-CameraRig.tick → (hitstop? стоп) → Starfield, Nebula → MissionDirector (таймлайн → спавны) → SetPieceSystem
+CameraRig.tick → (hitstop? стоп) → Starfield, Nebula, Decor → MissionDirector (таймлайн → спавны) → SetPieceSystem
 → PlayerSystem (ввод, движение, стрельба, Nova) → игровые пули → EnemySystem (движение, эмиттеры → вражеские пули)
 → вражеские пули → PickupSystem (магнит, сбор) → CollisionSystem → ScoreSystem (комбо) → FxSystem
 затем раз в кадр: render() всех систем (перенос состояния в узлы) и HUD
 ```
 
-**Поток миссии** (`game/MissionDirector.ts`): `intro` (корабль влетает, баннер миссии) → `combat` (играет `core/LevelTimeline`) → `outro` (баннер, пикапы притягиваются, корабль улетает) → `results`; при смерти — `failed` → `results`. Пауза — флаг в `GameWorld`: шаги симуляции не идут, рендер и HUD продолжают работать.
+**Поток миссии** (`game/MissionDirector.ts`): `intro` (корабль влетает, баннер миссии) → `combat` (играет `core/LevelTimeline`) → `outro` (баннер, пикапы притягиваются, корабль улетает) → `results`; при смерти — `failed` → `results`. Пауза — флаг в `GameWorld`: шаги симуляции не идут, рендер и HUD продолжают работать. Смерть босса включает slow-mo: `GameWorld` масштабирует время ×0.3 и плавно возвращает за 1.6 с (`BOSS_FX`).
+
+**Результаты.** `MissionDirector` считает `MissionResult` (очки, убийства, капсулы, `core/medals.ts` → маска медалей), `GameWorld` складывает его в `services/RecordStore` (localStorage, логика в `core/records.ts`) — кроме прогонов с отладочными читами (practice) — и показывает экран результатов.
 
 **Таймлайн** (`core/LevelTimeline.ts`, без движка): часы миссии **останавливаются**, пока `waitClear` ждёт пустого поля (или таймаута) и пока босс объявлен и жив. Поэтому события после паузы отсчитываются от её конца. Участники волны со `stagger` выходят по реальному времени, так что пауза не ждёт сама себя. Хозяин таймлайна — интерфейс `LevelHost` (его реализует `MissionDirector`), поэтому таймлайн покрыт тестами без движка.
 
@@ -96,7 +99,8 @@ CameraRig.tick → (hitstop? стоп) → Starfield, Nebula → MissionDirector
 - Равномерная сетка (spatial hash, ячейка 2 юнита).
 - Пары: `PlayerBullet × Enemy` (через сетку), `EnemyBullet × Player` (хитбокс 0.25 и кольцо graze 1.0: каждая пуля даёт graze один раз), `Player × Enemy` (таран: игрок получает попадание, враг — 8 урона; наземные цели не таранятся), `Player × Pickup` (в `PickupSystem`).
 - Попадания проверяются, только когда корабль уязвим: не во время влёта и улёта, не в неуязвимости, не в god mode.
-- Крупные враги и боссы имеют несколько кругов (составной коллайдер), привязанных к частям.
+- Длинные корпуса (Dreadnought) — несколько кругов `EnemyDef.hull` относительно центра; `radius` остаётся описанным радиусом для сетки и видимости.
+- **Части** (`EnemyDef.parts`) — отдельные враги с движением `attached`: `EnemySystem` спавнит их вместе с родителем, ставит вторым проходом после движения родителей (с учётом его крена), убивает вместе с ним. Пока части живы, ядро с `armor` получает урон с множителем (Warden — 25%), попадания по броне дают стальные искры. Когда падает последняя часть — событие `armorBroken`.
 
 ## 7. Данные (data-driven)
 
@@ -104,14 +108,17 @@ CameraRig.tick → (hitstop? стоп) → Starfield, Nebula → MissionDirector
 
 | Модуль | Что в нём |
 |---|---|
-| `enemies.ts` | `EnemyDef`: вид (`model` / `prop` / `rock`), HP, радиус, очки, движение `MoveSpec`, атаки (ссылки на паттерны, `minDifficulty`, фазы `hpBelow`/`hpAbove`), дроп, флаги `ground`, `obstacle`, `split` |
+| `enemies.ts` | `EnemyDef`: вид (`model` / `prop` / `rock` / `assembly` — сборка из модулей станции с огнями), HP, радиус, очки, движение `MoveSpec`, атаки (ссылки на паттерны, `minDifficulty`, фазы `hpBelow`/`hpAbove`), дроп, флаги `ground`, `obstacle`, `split`; для боссов — `parts`, `armor`, `hull`, `bank` |
 | `patterns.ts` | `EmitterSpec` — паттерны стрельбы, общие для врагов и боссов |
 | `paths.ts` | Именованные траектории для `spawn.move` |
-| `missions.ts` | `MissionDef`: заголовок, `scrollSpeed` (фон), `groundSpeed` (станции), таймлайн событий |
-| `setPieces.ts`, `props.ts` | Наземные сооружения из модулей Kenney, огни, турели; пути к пропсам и размер тайла |
-| `pickups.ts` | Пикапы, их движение, ёмкость S |
+| `missions.ts` | `MissionDef`: заголовок, `scrollSpeed` (фон), `groundSpeed` (станции), таймлайн событий; `MISSION_ORDER` и `nextMission` |
+| `setPieces.ts`, `props.ts` | Наземные сооружения из модулей Kenney, огни, турели, капсулы `pods`; пути к пропсам и размер тайла |
+| `pickups.ts` | Пикапы (включая Escape Pod), их движение, ёмкость S |
+| `elites.ts` | Элитные модификаторы: HP, скорость, щит, «пули мести», очки, цвет кольца, вес |
+| `medals.ts` | Четыре медали и порог Hunter |
+| `decor.ts` | Астероидные поля фона: частота, глубина, размеры, скорость |
 | `player.ts` | Корабль, `Loadout` (стартовое снаряжение до ангара), уровни генератора и магнита, Energy, Nova Bomb, влёт и улёт |
-| `difficulty.ts` | Множители Normal…Nightmare (GDD §13) |
+| `difficulty.ts` | Множители Normal…Nightmare (GDD §13), шанс элиты и веса |
 | `weapons.ts` | Оружие игрока (Power I–IV) и вражеские пули |
 | `scoring.ts`, `visuals.ts`, `world.ts` | Комбо и бонусы; цвета и эффекты; кадрирование, высоты слоёв, зона, где враги стреляют |
 
@@ -123,11 +130,12 @@ type LevelEvent =
   | { t; type: 'setPiece'; piece; x }
   | { t; type: 'waitClear'; timeout? }
   | { t; type: 'boss'; enemy; x }
+  | { t; type: 'decor'; field; duration }
 ```
 
-- **Сложность** применяется при спавне (HP) и при выстреле (скорость пуль, скорострельность, плотность `densityStep`); атаки и события гейтятся `minDifficulty`. Элиты — этап 3.
-- **Предзагрузка.** `core/missionNeeds.ts` по таймлайну считает, каких врагов и сколько держать в пулах, какие станции построить и какие пропсы загрузить: в бою нет `instantiate`. Окно перекрытия — 12 с (Gunship живут ~10 с).
-- **Валидация данных** — `tests/data/validation.test.ts`: ссылки, сортировка, пути, паттерны, осколки, бонусы Power, босс в конце, предзагрузка. Escape Pod — с этапа 3.
+- **Сложность** применяется при спавне (HP, элиты у врагов волн — `EnemySystem.rollElite`) и при выстреле (скорость пуль, скорострельность, плотность `densityStep`); атаки и события гейтятся `minDifficulty`.
+- **Предзагрузка.** `core/missionNeeds.ts` по таймлайну считает, каких врагов и сколько держать в пулах (включая части боссов и осколки), какие станции построить и какие пропсы загрузить (включая модули сборок): в бою нет `instantiate`. Окно перекрытия — 12 с (Gunship живут ~10 с). Там же `countPods` — сколько капсул предлагает миссия.
+- **Валидация данных** — `tests/data/validation.test.ts`: ссылки, сортировка, пути, паттерны, осколки, части и броня, корпуса, элиты, медали, бонусы Power, босс в конце, капсулы в каждой миссии, декор, предзагрузка, порядок кампании.
 - Скиллы `add-enemy`, `add-mission`, `add-weapon` описывают, как добавлять контент правкой данных.
 
 ## 8. Паттерны движения и стрельбы
@@ -137,13 +145,15 @@ type LevelEvent =
 
 ## 9. События
 
-Типизированный `EventBus` из `core/`, список событий — `GameEvents` в `game/GameContext.ts`: `enemyKilled`, `enemyEscaped`, `enemyHit`, `playerHit` (сегмент корпуса), `shieldHit`, `playerDied`, `graze`, `pickupCollected`, `scoreBonus`, `novaBomb`, `banner`. Score, FX, пикапы, режиссёр миссии и игрок подписываются на них и не держат прямых ссылок друг на друга. Частые события переиспользуют один объект-payload (без аллокаций). HUD получает состояние раз в кадр от `GameWorld` и перерисовывается только при изменении значений.
+Типизированный `EventBus` из `core/`, список событий — `GameEvents` в `game/GameContext.ts`: `enemyKilled` (с `site`, `part`, `elite`), `enemyEscaped`, `enemyHit` (`armored`), `enemyShieldBroken`, `armorBroken`, `playerHit` (сегмент корпуса), `shieldHit`, `playerDied`, `graze`, `pickupCollected`, `scoreBonus`, `novaBomb`, `banner`, `decor`, `podsLaunched`, `podLost`. Турели станции помечены `site` — номером станции: так `SetPieceSystem` узнаёт, что все её турели пали, и выпускает капсулы. Score, FX, пикапы, режиссёр миссии и игрок подписываются на них и не держат прямых ссылок друг на друга. Частые события переиспользуют один объект-payload (без аллокаций). HUD получает состояние раз в кадр от `GameWorld` и перерисовывается только при изменении значений.
 
 ## 10. Сервисы
 
 | Сервис | Ответственность |
 |---|---|
-| `SaveService` | Прогресс, медали, кредиты, апгрейды. JSON в `sys.localStorage`, поле `version` и миграции (миграции покрыты тестами) |
+| `SaveService` | Прогресс, медали, кредиты, апгрейды. JSON в `sys.localStorage`, поле `version` и миграции (миграции покрыты тестами). Этап 4: заберёт рекорды из `RecordStore` |
+| `RecordStore` (этап 3) | Рекорд, медали и лучший процент убийств на миссию и сложность, последний выбор в меню. Ключ `spaceflight.records`, версия 1, разбор и слияние — `core/records.ts` (с тестами) |
+| `Launch` (этап 3) | Какую миссию и сложность играть: Menu выставляет, Game читает, NEXT меняет. Временная замена `SceneRouter` |
 | `SettingsService` | Громкость, чувствительность, качество графики, handedness |
 | `AudioService` | Музыка (кроссфейд) и пулы SFX. Разблокировка аудио первым касанием (требование iOS Safari) |
 | `InputService` | Касания, мышь, клавиатура → смещение для драга, тапы и нажатия кнопок. Касание, начатое на экранной кнопке (Special, пауза), нажимает её и не двигает корабль; мультитач: одним пальцем рулить, другим жать Special. Клавиши: Space — Special, Esc/P — пауза, Enter — тап |
@@ -165,7 +175,11 @@ type LevelEvent =
 - **Пропсы** (модули станций, турели, иконки пикапов) собирает `tools/assets/build-props.mjs`: один меш с вершинными цветами на модель, без текстур. В игре их рисует **один общий материал** `RenderKit.props()` (`builtin-standard` + `USE_VERTEX_COLOR` + `USE_INSTANCING`): одинаковые модули станции — один draw call. Турели и другие враги-пропсы берут себе инстанс материала ради вспышки попадания; башня турели — отдельная нода `head`, её поворачивает `EnemySystem`. Станция собирается из модулей по данным (`data/setPieces.ts`, размер тайла — `data/props.ts`).
 - Астероиды — свой процедурный low-poly камень (`core/rock.ts`, 3 варианта); кредиты — золотые кубики. Светлые альбедо под HDR-солнцем уходят в белое — для своих материалов и палитр брать тёмные тона.
 - **Вспышка попадания** — emissive на собственном инстансе материала врага, не чаще раза в 0.14 с (иначе под постоянным огнём враг белый), у босса — приглушённая.
-- UI — отдельная UI-камера и Canvas с Widget на весь экран; HUD строится кодом (`ui/Hud.ts`): метки, кнопки и полосы через `Graphics`, панели паузы и результатов. Safe area — на этапе 6.
+- UI — отдельная UI-камера и Canvas с Widget на весь экран; HUD и стартовый экран строятся кодом (`ui/Hud.ts`, `ui/StartScreen.ts`) из общих кирпичиков `ui/UiKit.ts`: метки, кнопки, полосы и значки медалей через `Graphics`. Заголовки, баннеры и кнопки — шрифт Orbitron (TTF, `@property` у `GameWorld` и `StartScreen`, чтобы попасть в сборку); цифры HUD — системный жирный. Safe area — на этапе 6.
+- **Сборки из модулей** (Warden): `EnemyView` ставит модули станции и огни по данным `look: assembly`; у каждого модуля свой экземпляр материала ради вспышки попадания (босс на экране один, инстансинг не нужен). Вспышка у боссов и их частей приглушённая.
+- **Элиты** — кольцо под врагом (общий инстансируемый материал кольца на цвет, `RenderKit.ringGlow`); у свободных врагов кольцо запарковано. Бронированная элита держит стальной emissive между вспышками.
+- **Декор астероидных полей** (`fx/Decor.ts`): процедурные камни на глубине y = −2…−11 плывут со скоростью фона; один материал на три формы — три инстансных draw call.
+- **Escape Pod** — процедурная капсула (цилиндр, зелёный ореол, мигающий маячок).
 
 ## 12. Отладка
 
@@ -181,6 +195,9 @@ type LevelEvent =
 | `?power=4` | Стартовый Power |
 | `?seed=7` | Фиксированный seed случайности (повторяемые прогоны) |
 | `?slowmo=0.25` | Замедление времени, чтобы разглядеть эффекты |
+| `?elite=1` / `?elite=volatile` | Каждый враг волны — элита: случайная или заданная (armored, swift, volatile, shielded) |
+
+Прогоны с `god`, `t`, `power`, `elite` или `slowmo` — practice: экран результатов показывает их, но рекорды и медали не записываются. В сцене Menu `?mission=` сразу запускает игру (один раз за загрузку страницы), так что те же ссылки работают и на релизной сборке.
 
 Через эти параметры Playwright-плейтесты сразу попадают в нужное состояние (см. скилл `playtest`).
 Работают все параметры из таблицы.

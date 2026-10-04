@@ -15,11 +15,6 @@ import type { BulletSystem } from './BulletSystem';
 import type { GameContext } from './GameContext';
 
 const DEG = Math.PI / 180;
-/** Engine nozzle positions on the normalised Spitfire model (x across, z towards the tail). */
-const ENGINE_OFFSETS = [
-  [-0.42, 0.18],
-  [0.42, 0.18],
-] as const;
 const MAX_POWER = 4;
 
 /** intro: flying in; control: player-driven; outro: leaving the screen; dead. */
@@ -88,7 +83,7 @@ export class PlayerSystem {
     this.model.setScale(def.size, def.size, def.size);
     this.ship.addChild(this.model);
     const glow = ctx.kit.glow(COLORS.engineGlow, 2.4);
-    for (const [ex, ez] of ENGINE_OFFSETS) {
+    for (const [ex, ez] of def.engines) {
       const engine = ctx.kit.meshNode('engine', this.ship, ctx.kit.plane, glow);
       engine.setPosition(ex * def.size, 0, ez * def.size + 0.25);
       this.engines.push(engine);

@@ -21,9 +21,13 @@ enum Kind {
   Debris,
   Cyan,
   Pop,
+  /** Hits soaked by armour: dull steel sparks. */
+  Deflect,
+  /** Escape pods: green. */
+  Rescue,
 }
 
-const KINDS = [Kind.SparkHot, Kind.SparkFire, Kind.HitSpark, Kind.Flash, Kind.Fireball, Kind.Debris, Kind.Cyan, Kind.Pop];
+const KINDS = [Kind.SparkHot, Kind.SparkFire, Kind.HitSpark, Kind.Flash, Kind.Fireball, Kind.Debris, Kind.Cyan, Kind.Pop, Kind.Deflect, Kind.Rescue];
 
 /** Explosion scheduled for later (boss death chains). */
 interface Delayed {
@@ -89,6 +93,8 @@ export class FxSystem {
       [Kind.Debris]: kit.solid(COLORS.debris),
       [Kind.Cyan]: kit.glow(COLORS.shield, 2.4),
       [Kind.Pop]: kit.glow(COLORS.bulletPop, 2.2),
+      [Kind.Deflect]: kit.glow(COLORS.deflect, 1.6),
+      [Kind.Rescue]: kit.glow(COLORS.rescue, 2.4),
     };
     for (const kind of KINDS) {
       const mesh = kind === Kind.Debris ? kit.cube : kit.plane;
@@ -108,7 +114,7 @@ export class FxSystem {
           p.node.setPosition(0, PARK_Y, 0);
         },
       );
-      pool.prewarm(kind === Kind.Flash ? 4 : kind === Kind.Fireball ? 12 : kind === Kind.Pop ? 60 : 24);
+      pool.prewarm(kind === Kind.Flash ? 4 : kind === Kind.Fireball ? 12 : kind === Kind.Pop ? 60 : kind === Kind.Rescue ? 12 : 24);
       this.pools[kind] = pool;
     }
     this.ringPool = new Pool<Ring>(() => {
@@ -131,7 +137,23 @@ export class FxSystem {
       this.explode(e.x, e.z, e.def.explosion);
       if (e.boss) this.bossChain(e.x, e.z);
     });
-    ctx.bus.on('enemyHit', (e) => this.hitSparks(e.x, e.z));
+    ctx.bus.on('enemyHit', (e) => this.hitSparks(e.x, e.z, e.armored));
+    ctx.bus.on('enemyShieldBroken', (e) => {
+      this.ring(e.x, e.z, 0.5, 3, 0.3, COLORS.shield);
+      this.burst(Kind.Cyan, e.x, e.z, 10, 6);
+    });
+    ctx.bus.on('armorBroken', (e) => {
+      this.ring(e.x, e.z, 1, 9, 0.5, COLORS.sparkHot);
+      this.emit(Kind.Flash, e.x, 0.3, e.z, 0, 0, 0, 0.2, 5, 0);
+      this.burst(Kind.SparkHot, e.x, e.z, 20, 10);
+      ctx.shake(0.5);
+      ctx.hitstop(0.06);
+    });
+    ctx.bus.on('podsLaunched', (e) => {
+      this.ring(e.x, e.z, 0.5, 4, 0.45, COLORS.rescue);
+      this.burst(Kind.Rescue, e.x, e.z, 12, 6);
+    });
+    ctx.bus.on('podLost', (e) => this.burst(Kind.Deflect, e.x, e.z, 6, 3));
     ctx.bus.on('playerHit', (e) => {
       this.explode(e.x, e.z, 'small');
       ctx.shake(0.45);
@@ -142,7 +164,12 @@ export class FxSystem {
       ctx.shake(0.25);
     });
     ctx.bus.on('graze', (e) => this.burst(Kind.HitSpark, e.x, e.z, 1, 3));
-    ctx.bus.on('pickupCollected', (e) => this.burst(Kind.SparkHot, e.x, e.z, 3, 3));
+    ctx.bus.on('pickupCollected', (e) => {
+      if (e.kind === 'pod') {
+        this.ring(e.x, e.z, 0.4, 3, 0.35, COLORS.rescue);
+        this.burst(Kind.Rescue, e.x, e.z, 12, 5);
+      } else this.burst(Kind.SparkHot, e.x, e.z, 3, 3);
+    });
     ctx.bus.on('novaBomb', (e) => {
       this.ring(e.x, e.z, 0.5, NOVA_FX.ringSize, NOVA_FX.time, COLORS.nova);
       this.ring(e.x, e.z, 0.5, NOVA_FX.ringSize * 0.6, NOVA_FX.time * 0.8, COLORS.shield);
@@ -217,12 +244,13 @@ export class FxSystem {
     this.ctx.hitstop(BOSS_FX.hitstop);
   }
 
-  hitSparks(x: number, z: number): void {
+  hitSparks(x: number, z: number, armored = false): void {
     const rng = this.ctx.rng;
+    const kind = armored ? Kind.Deflect : Kind.HitSpark;
     for (let i = 0; i < 3; i++) {
       const angle = rng.range(Math.PI * 0.15, Math.PI * 0.85); // fan downwards (+Z)
-      const speed = rng.range(3, 7);
-      this.emit(Kind.HitSpark, x, 0.25, z, Math.cos(angle) * speed * 0.8, 0, Math.sin(angle) * speed, rng.range(0.1, 0.2), rng.range(0.14, 0.24), 6);
+      const speed = rng.range(3, 7) * (armored ? 1.4 : 1);
+      this.emit(kind, x, 0.25, z, Math.cos(angle) * speed * 0.8, 0, Math.sin(angle) * speed, rng.range(0.1, 0.2), rng.range(0.14, 0.24), 6);
     }
   }
 

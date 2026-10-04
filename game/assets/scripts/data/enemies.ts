@@ -1,6 +1,10 @@
 // Enemy roster (GDD §9). Movement, attacks and drops are data; behaviour code is shared.
 
-import type { EnemyDef, EnemyId } from './types';
+import type { EnemyDef, EnemyId, Rgb } from './types';
+
+const AMBER: Rgb = [1.0, 0.55, 0.15];
+const TEAL: Rgb = [0.2, 0.9, 1.0];
+const RED: Rgb = [1.0, 0.18, 0.12];
 
 export const ENEMIES: Record<EnemyId, EnemyDef> = {
   scout: {
@@ -107,5 +111,105 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     ],
     drops: { credits: 6, bigCredits: 8, extra: { kind: 'repair', chance: 1 } },
     explosion: 'large',
+  },
+
+  /** s1m2 mini-boss: a long cruiser with two side guns that can be shot off. */
+  dreadnought: {
+    id: 'dreadnought',
+    name: 'DREADNOUGHT',
+    look: { kind: 'model', path: 'models/ships/imperial_red/imperial_red', size: 6.4 },
+    hp: 640,
+    radius: 3.2,
+    hull: [
+      { x: 0, z: -2.2, r: 0.95 },
+      { x: 0, z: -0.8, r: 1.2 },
+      { x: 0, z: 0.7, r: 1.15 },
+      { x: 0, z: 2.2, r: 0.75 },
+    ],
+    score: 8000,
+    move: { kind: 'hover', enterSpeed: 3.2, depth: 0.27, time: Infinity, sway: 1.3, swayFrequency: 0.07, exitSpeed: 0 },
+    bank: 0.35,
+    attacks: [
+      { pattern: 'dreadnoughtBroadside', hpAbove: 0.33 },
+      { pattern: 'dreadnoughtLance', hpBelow: 0.66 },
+      { pattern: 'dreadnoughtBarrage', hpBelow: 0.33 },
+    ],
+    parts: [
+      { enemy: 'dreadnoughtGun', x: -1.3, z: 0.35, y: 0.5 },
+      { enemy: 'dreadnoughtGun', x: 1.3, z: 0.35, y: 0.5 },
+    ],
+    drops: { credits: 6, bigCredits: 8, extra: { kind: 'shield', chance: 1 } },
+    explosion: 'large',
+  },
+  dreadnoughtGun: {
+    id: 'dreadnoughtGun',
+    name: 'Side Gun',
+    look: { kind: 'prop', prop: 'turret_double', size: 1.35, aim: 'head' },
+    hp: 70,
+    radius: 0.6,
+    score: 1500,
+    move: { kind: 'attached' },
+    attacks: [{ pattern: 'dreadnoughtGun' }],
+    drops: { credits: 3, bigCredits: 2 },
+    explosion: 'medium',
+  },
+
+  /** Sector 1 boss: an orbital defence platform. The core is armoured until both turret pods fall. */
+  warden: {
+    id: 'warden',
+    name: 'WARDEN',
+    look: {
+      kind: 'assembly',
+      size: 1,
+      modules: [
+        { prop: 'station_dome', x: 0, z: 0, scale: 1.45, height: 0.5 },
+        { prop: 'station_pipe', x: -2.35, z: 0.05, rot: 90, scale: 1.4, height: 0.7 },
+        { prop: 'station_pipe', x: 2.35, z: 0.05, rot: 90, scale: 1.4, height: 0.7 },
+        { prop: 'station_pad', x: -3.35, z: 0.05, scale: 1.7, height: 0.35 },
+        { prop: 'station_pad', x: 3.35, z: 0.05, scale: 1.7, height: 0.35 },
+        { prop: 'station_lattice', x: -0.9, z: -2.35, scale: 1.4, height: 0.5 },
+        { prop: 'station_lattice', x: 0.9, z: -2.35, scale: 1.4, height: 0.5 },
+        { prop: 'station_tank', x: -1.2, z: 2.0, scale: 1.45, height: 0.6 },
+        { prop: 'station_tank', x: 1.2, z: 2.0, scale: 1.45, height: 0.6 },
+      ],
+      lights: [
+        { x: 0, z: 0, y: 1.1, size: 1.9, color: TEAL },
+        { x: -3.35, z: 0.95, y: 0.6, size: 0.65, color: AMBER },
+        { x: 3.35, z: 0.95, y: 0.6, size: 0.65, color: AMBER },
+        { x: -1.2, z: 2.55, y: 0.5, size: 0.8, color: RED },
+        { x: 1.2, z: 2.55, y: 0.5, size: 0.8, color: RED },
+        { x: 0, z: -2.9, y: 0.6, size: 0.7, color: AMBER },
+      ],
+    },
+    hp: 950,
+    radius: 2.0,
+    score: 15000,
+    move: { kind: 'hover', enterSpeed: 3, depth: 0.32, time: Infinity, sway: 0.55, swayFrequency: 0.07, exitSpeed: 0 },
+    bank: 0,
+    attacks: [
+      { pattern: 'wardenAimed', hpAbove: 0.66 },
+      { pattern: 'wardenRings', hpBelow: 0.66 },
+      { pattern: 'wardenFlower', hpBelow: 0.66, hpAbove: 0.33 },
+      { pattern: 'wardenSpiral', hpBelow: 0.33 },
+    ],
+    parts: [
+      { enemy: 'wardenPod', x: -3.35, z: 0.05, y: 0.6 },
+      { enemy: 'wardenPod', x: 3.35, z: 0.05, y: 0.6 },
+    ],
+    armor: 0.25,
+    drops: { credits: 10, bigCredits: 12, extra: { kind: 'repair', chance: 1 } },
+    explosion: 'large',
+  },
+  wardenPod: {
+    id: 'wardenPod',
+    name: 'Turret Pod',
+    look: { kind: 'prop', prop: 'turret_double', size: 1.9, aim: 'head' },
+    hp: 150,
+    radius: 0.95,
+    score: 2500,
+    move: { kind: 'attached' },
+    attacks: [{ pattern: 'wardenPod' }],
+    drops: { credits: 4, bigCredits: 3 },
+    explosion: 'medium',
   },
 };

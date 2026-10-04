@@ -66,6 +66,15 @@ export function volleyCount(spec: EmitterSpec, density: number): number {
   return Math.max(1, spec.count + spec.densityStep * density);
 }
 
+const oneShot = createEmitterState();
+
+/** Fires a single volley right away, outside any emitter cycle (e.g. revenge bullets on death). */
+export function fireOnce(spec: EmitterSpec, aim: number, tuning: EmitterTuning, sink: ShotSink): void {
+  oneShot.spin = 0;
+  oneShot.volley = 0;
+  fireVolley(spec, oneShot, aim, tuning, sink);
+}
+
 function fireVolley(spec: EmitterSpec, state: EmitterState, aim: number, tuning: EmitterTuning, sink: ShotSink): void {
   const n = volleyCount(spec, tuning.density);
   const base = (spec.aim ? aim : Math.PI + spec.angleDeg * DEG) + state.spin * DEG;

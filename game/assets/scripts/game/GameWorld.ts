@@ -1,29 +1,34 @@
 // Entry point of the Game scene: loads the mission's assets, builds the systems and runs the
 // fixed-step loop. Simulation order: camera → stars → mission (timeline spawns) → set pieces →
 // player → bullets → enemies (movement, fire) → enemy bullets → pickups → collisions → score → fx.
+// The mission comes from the start screen (services/Launch), or from URL flags when the scene is
+// opened directly.
 
-import { _decorator, Camera, Component, EffectAsset, Game, Node, Prefab, Vec2, game, resources, screen } from 'cc';
+import { _decorator, Camera, Component, EffectAsset, Game, Node, Prefab, TTFFont, Vec2, director, game, profiler, resources, screen } from 'cc';
 import { EventBus } from '../core/EventBus';
 import { FixedStep } from '../core/FixedStep';
 import { missionNeeds } from '../core/missionNeeds';
 import { Rng } from '../core/Rng';
 import { DIFFICULTIES } from '../data/difficulty';
 import { ENEMIES } from '../data/enemies';
-import { DEFAULT_MISSION, MISSIONS } from '../data/missions';
+import { DEFAULT_MISSION, MISSIONS, nextMission } from '../data/missions';
 import { DEFAULT_LOADOUT, NOVA_BOMB, SPITFIRE } from '../data/player';
 import { propPath } from '../data/props';
-import type { EnemyBulletId, EnemyId, MissionId, PropId } from '../data/types';
-import { NOVA_FX } from '../data/visuals';
+import type { Difficulty, EnemyBulletId, EnemyId, MissionId, PropId } from '../data/types';
+import { BOSS_FX, NOVA_FX } from '../data/visuals';
 import { ENEMY_BULLET_CAP, ENEMY_BULLETS, PULSE_CANNON } from '../data/weapons';
 import { WORLD } from '../data/world';
 import { DebugOverlay } from '../debug/DebugOverlay';
 import { readDebugFlags } from '../debug/DebugFlags';
 import { CameraRig } from '../fx/CameraRig';
+import { Decor } from '../fx/Decor';
 import { FxSystem } from '../fx/FxSystem';
 import { Nebula } from '../fx/Nebula';
 import { RenderKit } from '../fx/RenderKit';
 import { Starfield } from '../fx/Starfield';
 import { InputService } from '../services/InputService';
+import { Launch, SCENES } from '../services/Launch';
+import { RecordStore } from '../services/RecordStore';
 import { Hud } from '../ui/Hud';
 import { BulletSystem, type BulletLook } from './BulletSystem';
 import { CollisionSystem } from './CollisionSystem';
@@ -45,6 +50,7 @@ interface Systems {
   playfield: Playfield;
   stars: Starfield;
   nebula: Nebula;
+  decor: Decor;
   player: PlayerSystem;
   playerBullets: BulletSystem;
   enemyBullets: BulletSystem;
@@ -87,7 +93,16 @@ export class GameWorld extends Component {
   @property(EffectAsset)
   standardEffect: EffectAsset | null = null;
 
+  /** Orbitron Bold for banners, titles and buttons. */
+  @property(TTFFont)
+  titleFont: TTFFont | null = null;
+
   private s: Systems | null = null;
+  private missionId: MissionId = DEFAULT_MISSION;
+  private difficulty: Difficulty = 'normal';
+  /** Real seconds of boss-kill slow motion left. */
+  private slowmo = 0;
+  private leaving = false;
   private readonly input = new InputService();
   private readonly fixed = new FixedStep(WORLD.step);
   private readonly scratch = new Vec2();
@@ -121,6 +136,7 @@ export class GameWorld extends Component {
 
     s.stars.render();
     s.nebula.render();
+    s.decor.render();
     s.setPieces.render();
     s.player.render();
     s.playerBullets.render();
@@ -140,23 +156,36 @@ export class GameWorld extends Component {
     }
     if (this.input.consumePress('special')) this.specialQueued = true;
     if (phase === 'results') {
-      if (this.input.consumeTap() || this.specialQueued) this.restart();
+      this.specialQueued = false;
+      this.input.consumeTap();
+      if (this.input.consumePress('retry')) this.restart();
+      else if (this.input.consumePress('next')) this.playNext();
+      else if (this.input.consumePress('menu')) this.toMenu();
       return;
     }
     this.input.consumeTap();
 
-    const steps = this.fixed.advance(dt * s.ctx.debug.slowmo);
+    let scale = s.ctx.debug.slowmo;
+    if (this.slowmo > 0) {
+      // Boss kill: drop to slow motion, then ease back to full speed.
+      this.slowmo = Math.max(0, this.slowmo - dt);
+      const k = 1 - this.slowmo / BOSS_FX.slowmoTime;
+      scale *= BOSS_FX.slowmoScale + (1 - BOSS_FX.slowmoScale) * k * k;
+    }
+    const steps = this.fixed.advance(dt * scale);
     for (let i = 0; i < steps; i++) this.step(s, this.fixed.step);
   }
 
   private updatePaused(s: Systems): void {
     const resume = this.input.consumePress('resume') || this.input.consumePress('pause');
     const restart = this.input.consumePress('restart');
+    const quit = this.input.consumePress('menu');
     // Whatever the fingers did on the pause screen must not move the ship afterwards.
     this.input.consumeDrag(this.scratch);
     this.input.consumeTap();
     this.input.consumePress('special');
-    if (restart) this.restart();
+    if (quit) this.toMenu();
+    else if (restart) this.restart();
     else if (resume) this.setPaused(false);
     s.hud.showPause(this.paused);
   }
@@ -170,6 +199,7 @@ export class GameWorld extends Component {
     const p = s.player;
     s.stars.tick(h);
     s.nebula.tick(h);
+    s.decor.tick(h);
     s.mission.tick(h);
     s.setPieces.tick(h);
     p.tick(h, this.specialQueued);
@@ -191,16 +221,54 @@ export class GameWorld extends Component {
     hud.setCombo(s.score.combo.multiplier);
     hud.setVitals(v.hull, v.maxHull, v.shield, v.maxShield, v.shieldFill);
     hud.setCredits(stats.credits);
+    hud.setPods(stats.pods, s.mission.podsTotal);
     hud.setSpecial(v.charges, v.energy);
     const boss = s.enemies.boss;
-    hud.setBoss(boss ? boss.def.name : null, boss ? boss.hp / boss.maxHp : 0);
+    hud.setBoss(boss ? boss.def.name : null, boss ? boss.hp / boss.maxHp : 0, boss !== null && s.enemies.isArmored(boss));
     hud.tick(dt);
     if (s.mission.phase === 'results' && !this.resultsShown) {
       this.resultsShown = true;
-      hud.setPlaying(false);
-      hud.showResults(s.mission.result);
+      this.showResults(s);
     }
     s.overlay?.tick(dt);
+  }
+
+  private showResults(s: Systems): void {
+    const r = s.mission.result;
+    if (!r) return;
+    // Runs with debug cheats (god mode, seeking, forced Power or elites, slow motion) are not recorded.
+    const d = s.ctx.debug;
+    const practice = d.god || d.t > 0 || d.power !== null || d.elite !== null || d.slowmo !== 1;
+    const run = { complete: r.complete, score: r.score, medals: r.medals, killRate: r.killRate };
+    const update = practice ? null : RecordStore.submit(this.missionId, this.difficulty, run);
+    s.hud.setPlaying(false);
+    s.hud.showResults(r, {
+      mission: MISSIONS[this.missionId].title,
+      difficulty: practice ? `${this.difficulty} · practice` : this.difficulty,
+      best: update ? update.record.score : RecordStore.get(this.missionId, this.difficulty)?.score ?? 0,
+      newBest: update ? update.newBest : false,
+      newMedals: update ? update.newMedals : 0,
+      hasNext: nextMission(this.missionId) !== null,
+    });
+    // Presses queued during the fight (Enter = retry) must not skip the results screen.
+    this.input.flush();
+  }
+
+  /** Back to the start screen. */
+  private toMenu(): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    director.loadScene(SCENES.menu);
+  }
+
+  /** Reloads the scene with the next mission of the sector (same difficulty). */
+  private playNext(): void {
+    const next = nextMission(this.missionId);
+    if (!next || this.leaving) return;
+    this.leaving = true;
+    Launch.set(next, this.difficulty);
+    RecordStore.setLast(next, this.difficulty);
+    director.loadScene(SCENES.game);
   }
 
   private setPaused(paused: boolean): void {
@@ -232,15 +300,17 @@ export class GameWorld extends Component {
     s.enemies.clear();
     s.pickups.clear();
     s.setPieces.clear();
+    s.decor.clear();
     s.fx.clear();
     s.score.reset();
     s.player.reset(debug.power ?? DEFAULT_LOADOUT.startPower, debug.t > 0);
     s.mission.start(debug.t);
-    s.hud.showResults(null);
+    s.hud.showResults(null, null);
     s.hud.setPlaying(true);
     this.resultsShown = false;
     this.specialQueued = false;
     this.freeze = 0;
+    this.slowmo = 0;
     this.fixed.reset();
     this.input.flush();
     this.setPaused(false);
@@ -252,15 +322,22 @@ export class GameWorld extends Component {
     }
     const debug = readDebugFlags();
     let missionId: MissionId = DEFAULT_MISSION;
-    if (debug.mission !== null) {
+    let difficulty: Difficulty = debug.difficulty ?? 'normal';
+    const launch = Launch.current;
+    if (launch) {
+      missionId = launch.mission;
+      difficulty = launch.difficulty;
+    } else if (debug.mission !== null) {
       if (Object.prototype.hasOwnProperty.call(MISSIONS, debug.mission)) missionId = debug.mission as MissionId;
       else console.warn(`[GameWorld] unknown mission '${debug.mission}', playing ${DEFAULT_MISSION}`);
     }
+    this.missionId = missionId;
+    this.difficulty = difficulty;
     const mission = MISSIONS[missionId];
-    const difficulty = debug.difficulty ?? 'normal';
     const needs = missionNeeds(mission);
     const enemyIds = Array.from(needs.enemies.keys());
     const propIds = Array.from(needs.props);
+    // Assemblies and rocks are built from props / procedural meshes: no prefab of their own.
     const enemyPath = (id: EnemyId): string | null => {
       const look = ENEMIES[id].look;
       return look.kind === 'model' ? look.path : look.kind === 'prop' ? propPath(look.prop) : null;
@@ -302,6 +379,7 @@ export class GameWorld extends Component {
 
     const nebula = new Nebula(ctx);
     const stars = new Starfield(ctx, mission.scrollSpeed);
+    const decor = new Decor(ctx, mission.scrollSpeed);
     const playerLooks: BulletLook[] = [
       { material: kit.glow(PULSE_CANNON.color, 1.3), width: PULSE_CANNON.bulletWidth, length: PULSE_CANNON.bulletLength, round: false },
     ];
@@ -314,18 +392,20 @@ export class GameWorld extends Component {
     const bulletLookIndex = {} as Record<EnemyBulletId, number>;
     ENEMY_BULLET_IDS.forEach((id, i) => (bulletLookIndex[id] = i));
     const player = new PlayerSystem(ctx, SPITFIRE, DEFAULT_LOADOUT, PULSE_CANNON, playerBullets, this.input, shipPrefab);
-    const enemies = new EnemySystem(ctx, needs.enemies, prefabs, enemyBullets, bulletLookIndex, mission.groundSpeed);
-    const setPieces = new SetPieceSystem(ctx, enemies, needs.setPieces, props, mission.groundSpeed);
+    const enemies = new EnemySystem(ctx, needs.enemies, prefabs, props, enemyBullets, bulletLookIndex, mission.groundSpeed);
+    enemies.forceElite = debug.elite;
     const pickups = new PickupSystem(ctx, props);
+    const setPieces = new SetPieceSystem(ctx, enemies, pickups, needs.setPieces, props, mission.groundSpeed);
     const collisions = new CollisionSystem(ctx, player, playerBullets, enemyBullets, enemies);
     const score = new ScoreSystem(ctx);
     const missionDirector = new MissionDirector(ctx, mission, enemies, setPieces, pickups, player, score);
     const fx = new FxSystem(ctx);
-    const hud = new Hud(this.hudRoot);
+    const hud = new Hud(this.hudRoot, { title: this.titleFont });
+    if (!debug.overlay) profiler.hideStats();
     const overlay = debug.overlay
       ? new DebugOverlay(
           hud.debugLabel(),
-          () => ({ enemies: enemies.count, bullets: playerBullets.count, enemyBullets: enemyBullets.count, pickups: pickups.count, fx: fx.count }),
+          () => ({ enemies: enemies.count, bullets: playerBullets.count, enemyBullets: enemyBullets.count, pickups: pickups.count, fx: fx.count + decor.count }),
           () => {
             const t = missionDirector.timeline;
             return `${mission.id} ${difficulty}  t ${t.time.toFixed(1)}s ${missionDirector.phase}${t.holding !== 'none' ? `/${t.holding}` : ''}  P${player.power}${debug.god ? '  GOD' : ''}`;
@@ -334,7 +414,7 @@ export class GameWorld extends Component {
       : null;
 
     const s: Systems = {
-      ctx, playfield, stars, nebula, player, playerBullets, enemyBullets, enemies, setPieces, pickups,
+      ctx, playfield, stars, nebula, decor, player, playerBullets, enemyBullets, enemies, setPieces, pickups,
       collisions, score, mission: missionDirector, fx, cameraRig, hud, overlay,
     };
     bus.on('banner', (e) => hud.showBanner(e.text, e.sub, e.style, e.time));
@@ -344,8 +424,12 @@ export class GameWorld extends Component {
       enemies.damageVisible(NOVA_BOMB.damage);
     });
     bus.on('enemyKilled', (e) => {
-      if (e.boss) this.eraseEnemyBullets(s);
+      if (!e.boss) return;
+      this.eraseEnemyBullets(s);
+      this.slowmo = BOSS_FX.slowmoTime;
     });
+    bus.on('armorBroken', () => hud.showBanner('CORE EXPOSED', '', 'success', 1.6));
+    bus.on('podsLaunched', () => hud.flashPods());
 
     this.s = s;
     this.input.attach((x, y) => hud.hitTest(x, y));

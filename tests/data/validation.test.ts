@@ -5,10 +5,13 @@
 import { describe, expect, it } from 'vitest';
 import { formationSize } from '../../game/assets/scripts/core/formations';
 import { MAX_PATH_POINTS } from '../../game/assets/scripts/core/motion';
-import { missionNeeds } from '../../game/assets/scripts/core/missionNeeds';
+import { countPods, missionNeeds } from '../../game/assets/scripts/core/missionNeeds';
+import { DECOR } from '../../game/assets/scripts/data/decor';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../../game/assets/scripts/data/difficulty';
+import { ELITE_IDS, ELITES } from '../../game/assets/scripts/data/elites';
 import { ENEMIES } from '../../game/assets/scripts/data/enemies';
-import { MISSIONS } from '../../game/assets/scripts/data/missions';
+import { MEDALS } from '../../game/assets/scripts/data/medals';
+import { MISSION_ORDER, MISSIONS, nextMission } from '../../game/assets/scripts/data/missions';
 import { PATHS } from '../../game/assets/scripts/data/paths';
 import { PATTERNS } from '../../game/assets/scripts/data/patterns';
 import { PICKUPS } from '../../game/assets/scripts/data/pickups';
@@ -45,6 +48,7 @@ function checkMove(m: MoveSpec, where: string): void {
       expect(m.speed, where).toBeGreaterThan(0);
       break;
     case 'ground':
+    case 'attached':
       break;
   }
 }
@@ -58,9 +62,34 @@ describe('enemies', () => {
       expect(e.score, key).toBeGreaterThanOrEqual(0);
       expect(e.name.length, key).toBeGreaterThan(0);
       if (e.look.kind === 'model') expect(e.look.path, key).toMatch(/^models\//);
+      if (e.look.kind === 'assembly') for (const m of e.look.modules) expect(m.prop, key).toMatch(/^station_/);
       expect(e.look.size, key).toBeGreaterThan(0);
       checkMove(e.move, key);
+      if (e.hull) {
+        expect(e.hull.length, key).toBeGreaterThan(0);
+        for (const c of e.hull) expect(Math.hypot(c.x, c.z) + c.r, `${key}: hull circle outside the bounding radius`).toBeLessThanOrEqual(e.radius + 1e-6);
+      }
+      if (e.bank !== undefined) expect(e.bank, key).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  it('parts are attached enemies that ride only on parents; armour needs parts', () => {
+    const partIds = new Set<string>();
+    for (const e of Object.values(ENEMIES)) {
+      for (const p of e.parts ?? []) {
+        const part = ENEMIES[p.enemy];
+        expect(part, `${e.id} → ${p.enemy}`).toBeDefined();
+        expect(part.move.kind, `${p.enemy} must use 'attached' movement`).toBe('attached');
+        expect(part.parts, `${p.enemy}: parts of parts are not supported`).toBeUndefined();
+        partIds.add(p.enemy);
+      }
+      if (e.armor !== undefined) {
+        expect(e.parts?.length ?? 0, `${e.id}: armour without parts never drops`).toBeGreaterThan(0);
+        expect(e.armor).toBeGreaterThanOrEqual(0);
+        expect(e.armor).toBeLessThan(1);
+      }
+    }
+    for (const e of Object.values(ENEMIES)) if (e.move.kind === 'attached') expect(partIds.has(e.id), `${e.id} is attached but nothing carries it`).toBe(true);
   });
 
   it('attacks reference existing patterns with valid HP phases', () => {
@@ -116,8 +145,30 @@ describe('pickups and player', () => {
     for (const [key, p] of Object.entries(PICKUPS)) {
       expect(p.kind).toBe(key);
       if (p.prop) expect(p.prop, key).toMatch(/^pickup_/);
-      else expect(p.credits, `${key} without an icon must be a credit`).toBeGreaterThan(0);
+      else if (!p.pod) expect(p.credits, `${key} without an icon must be a credit`).toBeGreaterThan(0);
     }
+  });
+
+  it('elites are complete and only make enemies tougher', () => {
+    expect(ELITE_IDS.slice().sort()).toEqual(Object.keys(ELITES).sort());
+    for (const [key, e] of Object.entries(ELITES)) {
+      expect(e.id).toBe(key);
+      expect(e.hp, key).toBeGreaterThanOrEqual(1);
+      expect(e.speed, key).toBeGreaterThanOrEqual(1);
+      expect(e.shield, key).toBeGreaterThanOrEqual(0);
+      expect(e.score, key).toBeGreaterThanOrEqual(1);
+      expect(e.weight, key).toBeGreaterThan(0);
+      if (e.revenge) expect(PATTERNS[e.revenge], key).toBeDefined();
+    }
+    expect(DIFFICULTIES.normal.eliteChance).toBe(0);
+    for (const d of DIFFICULTY_ORDER) {
+      expect(DIFFICULTIES[d].eliteChance).toBeGreaterThanOrEqual(0);
+      expect(DIFFICULTIES[d].eliteChance).toBeLessThan(1);
+    }
+  });
+
+  it('medals: four, one per id', () => {
+    expect(MEDALS.map((m) => m.id)).toEqual(['hunter', 'exterminator', 'rescuer', 'untouchable']);
   });
 
   it('player hitbox is smaller than the ship, graze ring bigger', () => {
@@ -151,6 +202,11 @@ describe('set pieces', () => {
       for (const t of p.turrets) {
         expect(ENEMIES[t.enemy].ground, `${key}: ${t.enemy}`).toBe(true);
         expect(Math.abs(t.z), key).toBeLessThanOrEqual(p.length / 2);
+      }
+      if (p.pods) {
+        expect(p.pods.count, key).toBeGreaterThan(0);
+        expect(p.turrets.length, `${key}: pods are freed by destroying turrets`).toBeGreaterThan(0);
+        expect(Math.abs(p.pods.z), key).toBeLessThanOrEqual(p.length / 2);
       }
     }
   });
@@ -195,6 +251,10 @@ describe('missions', () => {
             case 'boss':
               expect(ENEMIES[e.enemy], where).toBeDefined();
               break;
+            case 'decor':
+              expect(DECOR[e.field], where).toBeDefined();
+              expect(e.duration, where).toBeGreaterThan(0);
+              break;
             case 'waitClear':
               break;
           }
@@ -205,6 +265,14 @@ describe('missions', () => {
         expect(m.events[m.events.length - 1].type).toBe('boss');
         const powers = m.events.filter((e) => e.type === 'spawn' && e.bonus === 'power').length;
         expect(powers).toBeGreaterThanOrEqual(3);
+      });
+
+      it('offers escape pods (Rescuer medal)', () => {
+        expect(countPods(m)).toBeGreaterThan(0);
+      });
+
+      it('parts never spawn on their own', () => {
+        for (const e of m.events) if (e.type === 'spawn' || e.type === 'boss') expect(ENEMIES[e.enemy].move.kind).not.toBe('attached');
       });
 
       it('preloads every enemy it can spawn', () => {
@@ -225,9 +293,22 @@ describe('missions', () => {
           if (e.type === 'setPiece') for (const mod of SET_PIECES[e.piece].modules) expect(needs.props.has(mod.prop), mod.prop).toBe(true);
         }
         for (const p of Object.values(PICKUPS)) if (p.prop) expect(needs.props.has(p.prop), p.prop).toBe(true);
+        for (const [id] of needs.enemies) {
+          const def = ENEMIES[id];
+          for (const part of def.parts ?? []) expect(needs.enemies.get(part.enemy) ?? 0, part.enemy).toBeGreaterThanOrEqual(def.parts!.filter((p) => p.enemy === part.enemy).length);
+          if (def.look.kind === 'assembly') for (const mod of def.look.modules) expect(needs.props.has(mod.prop), mod.prop).toBe(true);
+        }
       });
     });
   }
+});
+
+describe('campaign', () => {
+  it('lists every mission once, in order, with NEXT following it', () => {
+    expect(MISSION_ORDER.slice().sort()).toEqual(Object.keys(MISSIONS).sort());
+    for (let i = 0; i < MISSION_ORDER.length - 1; i++) expect(nextMission(MISSION_ORDER[i])).toBe(MISSION_ORDER[i + 1]);
+    expect(nextMission(MISSION_ORDER[MISSION_ORDER.length - 1])).toBeNull();
+  });
 });
 
 describe('paths', () => {
