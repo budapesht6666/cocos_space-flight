@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "e81f4760-9d2f-402e-9298-ecc42ffa5199",
+  "files": [],
+  "subMetas": {
+    "46337": {
+      "importer": "gltf-scene",
+      "uuid": "e81f4760-9d2f-402e-9298-ecc42ffa5199@46337",
+      "displayName": "",
+      "id": "46337",
+      "name": "pickup_shield.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "e81f4760-9d2f-402e-9298-ecc42ffa5199@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 1824
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "4e64f": {
+      "importer": "gltf-material",
+      "uuid": "e81f4760-9d2f-402e-9298-ecc42ffa5199@4e64f",
+      "displayName": "",
+      "id": "4e64f",
+      "name": "pickup_shield_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "e81f4760-9d2f-402e-9298-ecc42ffa5199@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "e81f4760-9d2f-402e-9298-ecc42ffa5199@4e64f"
+      ],
+      "scenes": [
+        "e81f4760-9d2f-402e-9298-ecc42ffa5199@46337"
+      ]
+    }
+  }
+}

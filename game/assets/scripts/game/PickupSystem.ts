@@ -1,10 +1,10 @@
 // Pickups: dropped with a little burst, sink down the screen, get pulled in by the magnet and
 // collected by the ship. Effects are applied by whoever listens to `pickupCollected`.
 
-import { Node } from 'cc';
+import { MeshRenderer, Node, Prefab, instantiate } from 'cc';
 import { Pool, swapRemove } from '../core/Pool';
 import { PICKUP_MOTION, PICKUPS } from '../data/pickups';
-import type { DropSpec, PickupDef, PickupKind } from '../data/types';
+import type { DropSpec, PickupDef, PickupKind, PropId } from '../data/types';
 import { WORLD } from '../data/world';
 import type { GameContext } from './GameContext';
 
@@ -19,12 +19,14 @@ interface Pickup {
   pulled: boolean;
   dead: boolean;
   node: Node;
+  /** 3D icon that wobbles (null for credits, which spin as a whole). */
+  icon: Node | null;
 }
 
 const PARK_Y = -1000;
 const KINDS: readonly PickupKind[] = ['credit', 'bigCredit', 'power', 'repair', 'shield', 'energy'];
-/** Badges lean towards the tilted camera so their letters read square-on. */
-const BADGE_TILT = 20;
+/** Icons are modelled facing +Z; tip them back so they face the tilted camera (pitch 70°). */
+const ICON_TILT = -70;
 
 export class PickupSystem {
   readonly active: Pickup[] = [];
@@ -34,19 +36,22 @@ export class PickupSystem {
   private readonly root: Node;
   private readonly collected = { kind: 'credit' as PickupKind, x: 0, z: 0 };
 
-  constructor(private readonly ctx: GameContext) {
+  constructor(
+    private readonly ctx: GameContext,
+    private readonly props: ReadonlyMap<PropId, Prefab>,
+  ) {
     this.root = new Node('Pickups');
     this.root.layer = ctx.worldRoot.layer;
     ctx.worldRoot.addChild(this.root);
     for (const kind of KINDS) {
       const def = PICKUPS[kind];
       const pool = new Pool<Pickup>(
-        () => ({ def, x: 0, z: 0, vx: 0, vz: 0, t: 0, pulled: false, dead: false, node: this.createNode(def) }),
+        () => this.create(def),
         (p) => {
           p.node.setPosition(0, PARK_Y, 0);
         },
       );
-      pool.prewarm(def.letter ? 2 : 24);
+      pool.prewarm(def.prop ? 2 : 24);
       this.pools.set(kind, pool);
     }
     ctx.bus.on('enemyKilled', (e) => this.drop(e.def.drops, e.x, e.z));
@@ -124,10 +129,11 @@ export class PickupSystem {
       const p = this.active[i];
       const bob = Math.sin(p.t * 4) * 0.06;
       p.node.setPosition(p.x, y + bob, p.z);
-      // Credits spin; badges pulse a little.
-      if (!p.def.letter) p.node.setRotationFromEuler(p.t * 160, p.t * 220, 35);
+      // Credits tumble; icons wobble (a full spin would show their thin side) and pulse.
+      if (!p.icon) p.node.setRotationFromEuler(p.t * 160, p.t * 220, 35);
       else {
-        const s = p.def.size * (1 + 0.08 * Math.sin(p.t * 6));
+        p.icon.setRotationFromEuler(0, Math.sin(p.t * 2.6) * 35, 0);
+        const s = p.def.size * (1 + 0.06 * Math.sin(p.t * 6));
         p.node.setScale(s, s, s);
       }
     }
@@ -145,23 +151,33 @@ export class PickupSystem {
     return this.active.length;
   }
 
-  private createNode(def: PickupDef): Node {
+  private create(def: PickupDef): Pickup {
     const kit = this.ctx.kit;
     const node = new Node(def.kind);
     node.layer = this.root.layer;
     this.root.addChild(node);
-    if (def.letter) {
-      const halo = kit.meshNode('halo', node, kit.plane, kit.glow(def.color, 1.4));
+    let icon: Node | null = null;
+    if (def.prop) {
+      const prefab = this.props.get(def.prop);
+      if (!prefab) throw new Error(`prop ${def.prop} was not loaded`);
+      const halo = kit.meshNode('halo', node, kit.plane, kit.glow(def.color, 1.5));
       halo.setScale(1.9, 1, 1.9);
-      const badge = kit.meshNode('badge', node, kit.plane, kit.badge(def.letter, def.color, 1.8));
-      badge.setPosition(0, 0.05, 0);
-      badge.setRotationFromEuler(BADGE_TILT, 0, 0);
+      const tilt = new Node('tilt');
+      tilt.layer = node.layer;
+      node.addChild(tilt);
+      tilt.setRotationFromEuler(ICON_TILT, 0, 0);
+      icon = instantiate(prefab);
+      tilt.addChild(icon);
+      for (const r of icon.getComponentsInChildren(MeshRenderer)) {
+        r.setSharedMaterial(kit.props(), 0);
+        r.shadowCastingMode = MeshRenderer.ShadowCastingMode.OFF;
+      }
       node.setScale(def.size, def.size, def.size);
     } else {
       const cube = kit.meshNode('credit', node, kit.cube, kit.solid(def.color, 0.85, 0.25, [0.45, 0.3, 0.05]));
       cube.setScale(def.size, def.size, def.size);
     }
     node.setPosition(0, PARK_Y, 0);
-    return node;
+    return { def, x: 0, z: 0, vx: 0, vz: 0, t: 0, pulled: false, dead: false, node, icon };
   }
 }

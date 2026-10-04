@@ -21,8 +21,8 @@
 |---|---|---|---|
 | ✅ выбран | [Quaternius — Ultimate Spaceships Pack](https://quaternius.com/packs/ultimatespaceships.html) | 10 кораблей × 5 расцветок, текстуры; FBX, OBJ, **glTF**, Blend | CC0 |
 | 🟡 | [Quaternius — LowPoly Spaceships (OpenGameArt)](https://opengameart.org/content/lowpoly-spaceships-pack) | Версия на OpenGameArt: 10 кораблей × 5 расцветок, по одной текстуре на корабль; FBX, OBJ, **glTF**, Blend | CC0 |
-| 🟡 рекомендую | [Quaternius — Ultimate Space Kit](https://poly.pizza/bundle/Ultimate-Space-Kit-YWh743lqGX) | 87 моделей: корабли, мехи, инопланетяне, **планеты, камни**, постройки, **пикапы** (здоровье, патроны, молния, ящики); FBX, glTF | CC0 |
-| 🟡 | [Kenney — Space Kit](https://kenney.nl/assets/space-kit) | 150 моделей: корабли, камни, **станции и конструкции** (для «земли» уровня и турелей) | CC0 |
+| ✅ выбран (пикапы) | [Quaternius — Ultimate Space Kit](https://poly.pizza/bundle/Ultimate-Space-Kit-YWh743lqGX) | 87 моделей: корабли, мехи, инопланетяне, **планеты, камни**, постройки, **пикапы** (здоровье, патроны, молния, ящики); FBX, glTF | CC0 |
+| ✅ выбран (станции, турели) | [Kenney — Space Kit](https://kenney.nl/assets/space-kit) | 150 моделей: корабли, камни, **станции и конструкции** (для «земли» уровня и турелей) | CC0 |
 | 🟡 | [Poly Pizza](https://poly.pizza) | Каталог low-poly моделей, фильтр по лицензии | CC0 / CC-BY (смотреть у каждой модели) |
 | 🟡 | [Sketchfab](https://sketchfab.com/search?features=downloadable&type=models) | Огромный выбор, фильтр «Downloadable» и лицензия CC0 / CC-BY | По модели |
 
@@ -125,7 +125,15 @@
 | Ассет | Автор | Источник | Лицензия | Где в проекте |
 |---|---|---|---|---|
 | Ultimate Spaceships Pack: Spitfire (Orange), Bob (Red), Dispatcher (Red), Challenger (Purple — Gunship; Red — мини-босс Marauder) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
+| Space Kit: platform_large, hangar_smallA, corridor_detailed, machine_generatorLarge, satelliteDish_large, structure_detailed, turret_single, turret_double | Kenney | [kenney.nl](https://kenney.nl/assets/space-kit) | CC0 | `game/assets/resources/models/props/station_*.glb`, `turret_*.glb` (обработаны `tools/assets/build-props.mjs`) |
+| Ultimate Space Kit: Bullets Pickup, Pickup Health, Pickup Sphere, Pickup Thunder | Quaternius | [poly.pizza](https://poly.pizza/bundle/Ultimate-Space-Kit-YWh743lqGX) | CC0 | `game/assets/resources/models/props/pickup_*.glb` (обработаны `tools/assets/build-props.mjs`) |
 
 Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`).
 
-**Плейсхолдеры этапа 2** (ждут выбора пользователя): астероиды — процедурный low-poly камень (`core/rock.ts`); станции и турели — кубы и цилиндры (`data/setPieces.ts`, `entities/EnemyView.ts`); значки пикапов P/R/S/E — буквы 5×7 на круге (`core/glyphs.ts`), кредиты — золотые кубики. Кандидаты на замену: Kenney Space Kit (станции, камни), Quaternius Ultimate Space Kit (камни, пикапы).
+Свои процедурные модели (пользователю понравились, остаются): астероиды — low-poly камень (`core/rock.ts`); кредиты — золотые кубики.
+
+**Выбор этапа 2** (пользователь делегировал: «на твой вкус, главное производительность»):
+- **Kenney Space Kit** — модули станций (`platform_large`, `hangar_smallA`, `corridor_detailed`, `machine_generatorLarge`, `satelliteDish_large`, `structure_detailed`) и турели (`turret_single`, `turret_double`). 76–876 треугольников, у турели отдельная поворотная башня.
+- **Quaternius Ultimate Space Kit** — иконки пикапов: Bullets → P, Health → R, Sphere → S (красная сфера перекрашена в голубой: красный — цвет врагов), Thunder → E. Тот же автор, что и корабли.
+- **Конвейер** `npm run build:props` (`tools/assets/build-props.mjs`): каждая модель → один меш с вершинными цветами, без текстур. Kenney-материалы (metal, metalDark, dark, metalRed) перекрашиваются в тёмную палитру (светлые серые под HDR-солнцем уходят в белое), у турелей акцент — красный; цвета пикапов берутся из атласа Quaternius. В игре все пропсы рисуются одним инстансируемым материалом (`RenderKit.props()`).
+- Исходники: `art-source/kenney-space-kit/` (все GLB пака и `License.txt`), `art-source/quaternius-ultimate-space-kit/pickup_*.glb` (скачаны с poly.pizza: Bullets Pickup, Pickup Health, Pickup Sphere, Pickup Thunder).

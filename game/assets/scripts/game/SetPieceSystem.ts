@@ -1,11 +1,13 @@
 // Ground structures that scroll beneath the flight plane; their turrets are ordinary enemies with
 // 'ground' movement placed on top. Every piece a mission uses is built at load and parked.
+// Modules share one vertex-colour material, so repeated modules draw as one instanced call.
 
-import { Node } from 'cc';
+import { MeshRenderer, Node, Prefab, instantiate } from 'cc';
 import { swapRemove } from '../core/Pool';
 import { ENEMIES } from '../data/enemies';
-import { SET_PIECE_DEPTH, SET_PIECE_TONES, SET_PIECES } from '../data/setPieces';
-import type { SetPieceDef, SetPieceEvent, SetPieceId } from '../data/types';
+import { STATION_HEIGHT, STATION_TILE } from '../data/props';
+import { SET_PIECES } from '../data/setPieces';
+import type { PropId, SetPieceDef, SetPieceEvent, SetPieceId } from '../data/types';
 import { WORLD } from '../data/world';
 import type { EnemySystem } from './EnemySystem';
 import type { GameContext } from './GameContext';
@@ -13,6 +15,7 @@ import type { GameContext } from './GameContext';
 interface Piece {
   def: SetPieceDef;
   node: Node;
+  x: number;
   z: number;
 }
 
@@ -26,8 +29,9 @@ export class SetPieceSystem {
   constructor(
     private readonly ctx: GameContext,
     private readonly enemies: EnemySystem,
-    /** How many of each piece the mission needs at once. */
+    /** How many of each piece the mission needs. */
     counts: ReadonlyMap<SetPieceId, number>,
+    private readonly props: ReadonlyMap<PropId, Prefab>,
     private readonly scrollSpeed: number,
   ) {
     this.root = new Node('SetPieces');
@@ -35,7 +39,7 @@ export class SetPieceSystem {
     ctx.worldRoot.addChild(this.root);
     for (const [id, count] of counts) {
       const list: Piece[] = [];
-      for (let i = 0; i < count; i++) list.push({ def: SET_PIECES[id], node: this.build(SET_PIECES[id]), z: 0 });
+      for (let i = 0; i < count; i++) list.push({ def: SET_PIECES[id], node: this.build(SET_PIECES[id]), x: 0, z: 0 });
       this.free.set(id, list);
     }
   }
@@ -44,13 +48,13 @@ export class SetPieceSystem {
     const piece = this.free.get(event.piece)?.pop();
     if (!piece) throw new Error(`set piece ${event.piece} was not preloaded`);
     const field = this.ctx.playfield;
-    const x = field.contentX(event.x);
+    piece.x = field.contentX(event.x);
     piece.z = field.spawnZ - piece.def.length / 2;
-    piece.node.setPosition(x, WORLD.heights.ground, piece.z);
+    piece.node.setPosition(piece.x, WORLD.heights.ground, piece.z);
     this.active.push(piece);
     for (const t of piece.def.turrets) {
       const def = ENEMIES[t.enemy];
-      this.enemies.spawn(def, def.move, x + t.x, piece.z + t.z, null, false, -1);
+      this.enemies.spawn(def, def.move, piece.x + t.x, piece.z + t.z, null, false, -1);
     }
   }
 
@@ -66,8 +70,7 @@ export class SetPieceSystem {
   render(): void {
     for (let i = 0; i < this.active.length; i++) {
       const p = this.active[i];
-      const pos = p.node.position;
-      p.node.setPosition(pos.x, WORLD.heights.ground, p.z);
+      p.node.setPosition(p.x, WORLD.heights.ground, p.z);
     }
   }
 
@@ -85,29 +88,26 @@ export class SetPieceSystem {
     const node = new Node(def.id);
     node.layer = this.root.layer;
     this.root.addChild(node);
-    for (const b of def.blocks) {
-      const material = b.tone === 'trim' ? kit.solid(SET_PIECE_TONES.trim, 0.2, 0.5, [0.35, 0.16, 0.03]) : kit.solid(SET_PIECE_TONES[b.tone], 0.55, 0.6);
-      const block = kit.meshNode('block', node, kit.cube, material);
-      // Blocks hang from their top surface (h above the deck) down to SET_PIECE_DEPTH below it.
-      const height = SET_PIECE_DEPTH + b.h;
-      block.setScale(b.w, height, b.l);
-      block.setPosition(b.x, b.h - height / 2, b.z);
+    const material = kit.props();
+    for (const m of def.modules) {
+      const prefab = this.props.get(m.prop);
+      if (!prefab) throw new Error(`prop ${m.prop} was not loaded`);
+      const part = instantiate(prefab);
+      for (const r of part.getComponentsInChildren(MeshRenderer)) {
+        r.setSharedMaterial(material, 0);
+        r.shadowCastingMode = MeshRenderer.ShadowCastingMode.OFF;
+      }
+      part.setScale(STATION_TILE, STATION_TILE * STATION_HEIGHT, STATION_TILE);
+      part.setPosition(m.x, 0, m.z);
+      if (m.rot) part.setRotationFromEuler(0, m.rot, 0);
+      node.addChild(part);
     }
     for (const light of def.lights) {
       const glow = kit.meshNode('light', node, kit.plane, kit.glow(light.color, 2.2));
       glow.setScale(light.size, 1, light.size);
-      glow.setPosition(light.x, 0.05 + maxHeightAt(def, light.x, light.z), light.z);
+      glow.setPosition(light.x, 0.12, light.z);
     }
     node.setPosition(0, PARK_Y, 0);
     return node;
   }
-}
-
-/** Top of the tallest block under a point, so lights sit on the surface. */
-function maxHeightAt(def: SetPieceDef, x: number, z: number): number {
-  let h = 0;
-  for (const b of def.blocks) {
-    if (Math.abs(x - b.x) <= b.w / 2 && Math.abs(z - b.z) <= b.l / 2) h = Math.max(h, b.h);
-  }
-  return h;
 }

@@ -1,8 +1,9 @@
 // What a mission needs loaded and pooled up front, so gameplay never instantiates. Engine-free.
 
 import { ENEMIES } from '../data/enemies';
+import { PICKUPS } from '../data/pickups';
 import { SET_PIECES } from '../data/setPieces';
-import type { EnemyId, MissionDef, SetPieceId } from '../data/types';
+import type { EnemyId, MissionDef, PickupKind, PropId, SetPieceId } from '../data/types';
 import { formationSize } from './formations';
 
 export interface MissionNeeds {
@@ -10,10 +11,15 @@ export interface MissionNeeds {
   enemies: Map<EnemyId, number>;
   /** Set pieces to build (every placement gets its own instance). */
   setPieces: Map<SetPieceId, number>;
+  /** Prop models to load: prop-look enemies, station modules, pickup icons. */
+  props: Set<PropId>;
 }
 
-/** Events closer than this (seconds) are assumed to be on screen together. */
-const OVERLAP = 7;
+/**
+ * Events closer than this (seconds) are assumed to be on screen together. Generous on purpose:
+ * hovering Gunships live ~10 s, and a pool that grows mid-fight means an instantiate hitch.
+ */
+const OVERLAP = 12;
 
 export function missionNeeds(mission: MissionDef): MissionNeeds {
   const enemies = new Map<EnemyId, number>();
@@ -49,5 +55,16 @@ export function missionNeeds(mission: MissionDef): MissionNeeds {
     const split = ENEMIES[id].split;
     if (split) raise(split.enemy, count * split.count);
   }
-  return { enemies, setPieces };
+
+  const props = new Set<PropId>();
+  for (const [id] of enemies) {
+    const look = ENEMIES[id].look;
+    if (look.kind === 'prop') props.add(look.prop);
+  }
+  for (const [id] of setPieces) for (const m of SET_PIECES[id].modules) props.add(m.prop);
+  for (const kind of Object.keys(PICKUPS) as PickupKind[]) {
+    const prop = PICKUPS[kind].prop;
+    if (prop) props.add(prop);
+  }
+  return { enemies, setPieces, props };
 }

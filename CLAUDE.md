@@ -50,6 +50,7 @@
 | Релизная сборка (редактор закрыт) | `"C:\ProgramData\cocos\editors\Creator\3.8.8\CocosCreator.exe" --project game --build "configPath=../build-configs/web-mobile.json"` (CLI ещё не проверялся) |
 | Раздать сборку на iPhone | в `game/build/web-mobile`: `python -m http.server 8080 --bind 0.0.0.0` (Python 3.12 разрешён брандмауэром); на телефоне `http://192.168.1.43:8080/?debug=1` |
 | Модели кораблей | `npm run build:ships` (`tools/assets/build-ships.mjs`; исходники пака — в `art-source/`, вне git) |
+| Пропсы: станции, турели, иконки пикапов | `npm run build:props` (`tools/assets/build-props.mjs`: вершинные цвета, один меш на модель; исходники — в `art-source/`) |
 
 ## MCP-серверы и скиллы
 
@@ -121,4 +122,5 @@
 - `const enum` не использовать (Babel в Cocos), только обычный `enum`. Целевой стандарт ES2015: без `trimEnd`, `Object.entries` и т.п. Оператор `satisfies` тоже не использовать.
 - Один `MaterialInstance` нельзя ставить в shared-слот нескольких рендереров («Can't set a material instance to a sharedMaterial slot»): общий материал + `getMaterialInstance(0)` у каждого.
 - Текстуры, запечённые сверху вниз, на нашей плоскости выходят перевёрнутыми: строки переворачивать при загрузке (`flipRows` в `RenderKit`).
-- Светлые альбедо (серый 0.4) под HDR-солнцем уходят в белое — для своих lit-материалов брать тёмные тона (0.1–0.15).
+- Светлые альбедо (серый 0.4) под HDR-солнцем уходят в белое — для своих lit-материалов и палитр пропсов брать тёмные тона (0.1–0.2).
+- Вершинные цвета `builtin-standard` трактует как sRGB (`SRGBToLinear` в шейдере) — палитры в `build-props.mjs` задаются в sRGB.

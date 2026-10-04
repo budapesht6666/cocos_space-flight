@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 import { formationSize } from '../../game/assets/scripts/core/formations';
 import { MAX_PATH_POINTS } from '../../game/assets/scripts/core/motion';
 import { missionNeeds } from '../../game/assets/scripts/core/missionNeeds';
-import { hasGlyph } from '../../game/assets/scripts/core/glyphs';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../../game/assets/scripts/data/difficulty';
 import { ENEMIES } from '../../game/assets/scripts/data/enemies';
 import { MISSIONS } from '../../game/assets/scripts/data/missions';
@@ -113,11 +112,11 @@ describe('patterns and bullets', () => {
 });
 
 describe('pickups and player', () => {
-  it('pickup ids match keys and letters have glyphs', () => {
+  it('pickup ids match keys; power-ups have an icon, credits a value', () => {
     for (const [key, p] of Object.entries(PICKUPS)) {
       expect(p.kind).toBe(key);
-      if (p.letter) expect(hasGlyph(p.letter), key).toBe(true);
-      else expect(p.credits, `${key} without a letter must be a credit`).toBeGreaterThan(0);
+      if (p.prop) expect(p.prop, key).toMatch(/^pickup_/);
+      else expect(p.credits, `${key} without an icon must be a credit`).toBeGreaterThan(0);
     }
   });
 
@@ -152,6 +151,17 @@ describe('set pieces', () => {
       for (const t of p.turrets) {
         expect(ENEMIES[t.enemy].ground, `${key}: ${t.enemy}`).toBe(true);
         expect(Math.abs(t.z), key).toBeLessThanOrEqual(p.length / 2);
+      }
+    }
+  });
+
+  it('modules are station props within the piece', () => {
+    for (const [key, p] of Object.entries(SET_PIECES)) {
+      expect(p.modules.length, key).toBeGreaterThan(0);
+      for (const m of p.modules) {
+        expect(m.prop, key).toMatch(/^station_/);
+        expect(Math.abs(m.z), `${key}: ${m.prop}`).toBeLessThanOrEqual(p.length / 2);
+        expect(Math.abs(m.x), `${key}: ${m.prop}`).toBeLessThan(5);
       }
     }
   });
@@ -208,7 +218,13 @@ describe('missions', () => {
         for (const [id] of needs.enemies) {
           const split = ENEMIES[id].split;
           if (split) expect(needs.enemies.get(split.enemy), split.enemy).toBeGreaterThan(0);
+          const look = ENEMIES[id].look;
+          if (look.kind === 'prop') expect(needs.props.has(look.prop), look.prop).toBe(true);
         }
+        for (const e of m.events) {
+          if (e.type === 'setPiece') for (const mod of SET_PIECES[e.piece].modules) expect(needs.props.has(mod.prop), mod.prop).toBe(true);
+        }
+        for (const p of Object.values(PICKUPS)) if (p.prop) expect(needs.props.has(p.prop), p.prop).toBe(true);
       });
     });
   }

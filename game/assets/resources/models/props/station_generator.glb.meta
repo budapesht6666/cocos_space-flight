@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "e32cdbb0-2e2b-4d0f-87df-fe301ef99642",
+  "files": [],
+  "subMetas": {
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "e32cdbb0-2e2b-4d0f-87df-fe301ef99642@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 126
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "11dbd": {
+      "importer": "gltf-material",
+      "uuid": "e32cdbb0-2e2b-4d0f-87df-fe301ef99642@11dbd",
+      "displayName": "",
+      "id": "11dbd",
+      "name": "station_generator_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "907d3": {
+      "importer": "gltf-scene",
+      "uuid": "e32cdbb0-2e2b-4d0f-87df-fe301ef99642@907d3",
+      "displayName": "",
+      "id": "907d3",
+      "name": "station_generator.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "e32cdbb0-2e2b-4d0f-87df-fe301ef99642@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "e32cdbb0-2e2b-4d0f-87df-fe301ef99642@11dbd"
+      ],
+      "scenes": [
+        "e32cdbb0-2e2b-4d0f-87df-fe301ef99642@907d3"
+      ]
+    }
+  }
+}

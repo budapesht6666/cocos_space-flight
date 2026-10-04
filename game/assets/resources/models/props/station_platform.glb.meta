@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "1b162a9c-aaac-4b6d-bf20-8b11bede9772",
+  "files": [],
+  "subMetas": {
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "1b162a9c-aaac-4b6d-bf20-8b11bede9772@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 76
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "30e76": {
+      "importer": "gltf-material",
+      "uuid": "1b162a9c-aaac-4b6d-bf20-8b11bede9772@30e76",
+      "displayName": "",
+      "id": "30e76",
+      "name": "station_platform_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "5cec8": {
+      "importer": "gltf-scene",
+      "uuid": "1b162a9c-aaac-4b6d-bf20-8b11bede9772@5cec8",
+      "displayName": "",
+      "id": "5cec8",
+      "name": "station_platform.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "1b162a9c-aaac-4b6d-bf20-8b11bede9772@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "1b162a9c-aaac-4b6d-bf20-8b11bede9772@30e76"
+      ],
+      "scenes": [
+        "1b162a9c-aaac-4b6d-bf20-8b11bede9772@5cec8"
+      ]
+    }
+  }
+}

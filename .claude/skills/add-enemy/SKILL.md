@@ -13,7 +13,7 @@ Coordinates in content: x in half-widths of the field (-1 left edge … 1 right 
 
 | Part | Where | Options |
 |---|---|---|
-| Look | `EnemyDef.look` | `model` (glb prefab path under `resources/`, see the `add-asset` skill and `tools/assets/build-ships.mjs`), `rock` (procedural asteroid), `turret` (placeholder from boxes) |
+| Look | `EnemyDef.look` | `model` (ship glb with its own texture, `tools/assets/build-ships.mjs`), `prop` (vertex-coloured prop from `tools/assets/build-props.mjs`; `aim` names the child node that turns towards the player, e.g. turret `head`), `rock` (procedural asteroid) |
 | Movement | `EnemyDef.move` (`data/types.ts` → `MoveSpec`) | `straight`, `sine`, `dive` (aim then ram), `path` (Catmull-Rom through points, `data/paths.ts`), `hover` (enter, sway, leave; `time: Infinity` for bosses), `drift` (asteroids), `ground` (on set pieces) |
 | Attacks | `EnemyDef.attacks[]` → `data/patterns.ts` | Emitter fields: `count`, `gapDeg` (fan) or `ring`, `aim`, `angleDeg`, `spinDeg` (spiral), `volleys` + `volleyInterval` (burst), `cooldown`, `delay`, `densityStep` (difficulty), `speedStep`. Gate with `minDifficulty`; boss phases with `hpBelow` / `hpAbove` |
 | Drops | `EnemyDef.drops` | credits, big credits, optional `extra` pickup with chance |

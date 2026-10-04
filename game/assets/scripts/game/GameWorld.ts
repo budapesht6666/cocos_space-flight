@@ -11,7 +11,8 @@ import { DIFFICULTIES } from '../data/difficulty';
 import { ENEMIES } from '../data/enemies';
 import { DEFAULT_MISSION, MISSIONS } from '../data/missions';
 import { DEFAULT_LOADOUT, NOVA_BOMB, SPITFIRE } from '../data/player';
-import type { EnemyBulletId, EnemyId, MissionId } from '../data/types';
+import { propPath } from '../data/props';
+import type { EnemyBulletId, EnemyId, MissionId, PropId } from '../data/types';
 import { NOVA_FX } from '../data/visuals';
 import { ENEMY_BULLET_CAP, ENEMY_BULLETS, PULSE_CANNON } from '../data/weapons';
 import { WORLD } from '../data/world';
@@ -259,15 +260,26 @@ export class GameWorld extends Component {
     const mission = MISSIONS[missionId];
     const difficulty = debug.difficulty ?? 'normal';
     const needs = missionNeeds(mission);
-    const modelIds = Array.from(needs.enemies.keys()).filter((id) => ENEMIES[id].look.kind === 'model');
-    const [shipPrefab, ...enemyPrefabs] = await Promise.all([
+    const enemyIds = Array.from(needs.enemies.keys());
+    const propIds = Array.from(needs.props);
+    const enemyPath = (id: EnemyId): string | null => {
+      const look = ENEMIES[id].look;
+      return look.kind === 'model' ? look.path : look.kind === 'prop' ? propPath(look.prop) : null;
+    };
+    const [shipPrefab, enemyPrefabs, propPrefabs] = await Promise.all([
       loadPrefab(SPITFIRE.model),
-      ...modelIds.map((id) => {
-        const look = ENEMIES[id].look;
-        return loadPrefab(look.kind === 'model' ? look.path : '');
-      }),
+      Promise.all(enemyIds.map((id) => {
+        const path = enemyPath(id);
+        return path ? loadPrefab(path) : Promise.resolve(null);
+      })),
+      Promise.all(propIds.map((id) => loadPrefab(propPath(id)))),
     ]);
-    const prefabs = new Map<EnemyId, Prefab>(modelIds.map((id, i) => [id, enemyPrefabs[i]]));
+    const prefabs = new Map<EnemyId, Prefab>();
+    enemyIds.forEach((id, i) => {
+      const prefab = enemyPrefabs[i];
+      if (prefab) prefabs.set(id, prefab);
+    });
+    const props = new Map<PropId, Prefab>(propIds.map((id, i) => [id, propPrefabs[i]]));
 
     const playfield = new Playfield(WORLD, screenAspect());
     const kit = new RenderKit(this.unlitEffect, this.standardEffect);
@@ -304,8 +316,8 @@ export class GameWorld extends Component {
     ENEMY_BULLET_IDS.forEach((id, i) => (bulletLookIndex[id] = i));
     const player = new PlayerSystem(ctx, SPITFIRE, DEFAULT_LOADOUT, PULSE_CANNON, playerBullets, this.input, shipPrefab);
     const enemies = new EnemySystem(ctx, needs.enemies, prefabs, enemyBullets, bulletLookIndex, mission.groundSpeed);
-    const setPieces = new SetPieceSystem(ctx, enemies, needs.setPieces, mission.groundSpeed);
-    const pickups = new PickupSystem(ctx);
+    const setPieces = new SetPieceSystem(ctx, enemies, needs.setPieces, props, mission.groundSpeed);
+    const pickups = new PickupSystem(ctx, props);
     const collisions = new CollisionSystem(ctx, player, playerBullets, enemyBullets, enemies);
     const score = new ScoreSystem(ctx);
     const missionDirector = new MissionDirector(ctx, mission, enemies, setPieces, pickups, player, score);

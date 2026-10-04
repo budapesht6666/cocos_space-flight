@@ -189,14 +189,30 @@ export type MoveSpec =
   /** Moves with the level's ground (turrets on set pieces). */
   | { kind: 'ground' };
 
-export type EnemyLook =
-  | { kind: 'model'; path: string; size: number }
-  /** Procedural low-poly rock (placeholder until an asteroid asset is chosen). */
-  | { kind: 'rock'; size: number }
-  /** Turret built from primitives (placeholder); its head turns to aim. */
-  | { kind: 'turret'; size: number };
+/** Props built by tools/assets/build-props.mjs: one vertex-coloured mesh each (models/props/<id>). */
+export type PropId =
+  | 'station_platform'
+  | 'station_hangar'
+  | 'station_corridor'
+  | 'station_generator'
+  | 'station_dish'
+  | 'station_frame'
+  | 'turret_single'
+  | 'turret_double'
+  | 'pickup_power'
+  | 'pickup_repair'
+  | 'pickup_shield'
+  | 'pickup_energy';
 
-export type EnemyId = 'scout' | 'dart' | 'gunship' | 'asteroid' | 'rock' | 'turret' | 'marauder';
+export type EnemyLook =
+  /** A ship model with its own textured material. */
+  | { kind: 'model'; path: string; size: number }
+  /** A prop (shared vertex-colour material); `aim` names the child node that turns towards the player. */
+  | { kind: 'prop'; prop: PropId; size: number; aim?: string }
+  /** Procedural low-poly rock. */
+  | { kind: 'rock'; size: number };
+
+export type EnemyId = 'scout' | 'dart' | 'gunship' | 'asteroid' | 'rock' | 'turret' | 'turretHeavy' | 'marauder';
 
 export type ExplosionSize = 'small' | 'medium' | 'large';
 
@@ -246,9 +262,10 @@ export interface PickupDef {
   /** Credits value (0 for power-ups). */
   credits: number;
   size: number;
+  /** Halo colour (and the cube colour for credits). */
   color: Rgb;
-  /** Letter on the badge; credits are spinning cubes instead. */
-  letter?: string;
+  /** 3D icon; credits are spinning cubes instead. */
+  prop?: PropId;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -310,21 +327,20 @@ export interface MissionDef {
   events: readonly LevelEvent[];
 }
 
-export interface SetPieceBlock {
-  /** Centre relative to the piece, world units; y is the top surface height above the ground. */
+export interface SetPieceModule {
+  prop: PropId;
+  /** Centre relative to the piece, world units. */
   x: number;
   z: number;
-  w: number;
-  l: number;
-  h: number;
-  tone: 'hull' | 'dark' | 'trim';
+  /** Turn around Y, degrees. */
+  rot?: number;
 }
 
 export interface SetPieceDef {
   id: SetPieceId;
   /** Extent along Z, world units. */
   length: number;
-  blocks: readonly SetPieceBlock[];
+  modules: readonly SetPieceModule[];
   lights: readonly { x: number; z: number; size: number; color: Rgb }[];
   turrets: readonly { enemy: EnemyId; x: number; z: number }[];
 }

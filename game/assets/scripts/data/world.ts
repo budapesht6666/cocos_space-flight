@@ -11,7 +11,7 @@ export const WORLD: WorldDef = {
   playerTopLimit: 0.35,
   playerEdgeMargin: 0.45,
   spawnMargin: 2,
-  heights: { playerBullets: 0.05, enemyBullets: 0.35, pickups: 0.25, ground: -0.7 },
+  heights: { playerBullets: 0.05, enemyBullets: 0.35, pickups: 0.25, ground: -1.2 },
   fireMinDepth: 0.03,
   fireMaxDepth: 0.72,
 };

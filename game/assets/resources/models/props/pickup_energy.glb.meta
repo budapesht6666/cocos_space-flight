@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "3ced3031-f4ff-4477-a1a4-5b804a078987",
+  "files": [],
+  "subMetas": {
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "3ced3031-f4ff-4477-a1a4-5b804a078987@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 228
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "c5454": {
+      "importer": "gltf-material",
+      "uuid": "3ced3031-f4ff-4477-a1a4-5b804a078987@c5454",
+      "displayName": "",
+      "id": "c5454",
+      "name": "pickup_energy_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "b8f26": {
+      "importer": "gltf-scene",
+      "uuid": "3ced3031-f4ff-4477-a1a4-5b804a078987@b8f26",
+      "displayName": "",
+      "id": "b8f26",
+      "name": "pickup_energy.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "3ced3031-f4ff-4477-a1a4-5b804a078987@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "3ced3031-f4ff-4477-a1a4-5b804a078987@c5454"
+      ],
+      "scenes": [
+        "3ced3031-f4ff-4477-a1a4-5b804a078987@b8f26"
+      ]
+    }
+  }
+}

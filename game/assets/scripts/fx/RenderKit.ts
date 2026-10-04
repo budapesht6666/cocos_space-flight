@@ -3,7 +3,6 @@
 // bullets or sparks cost one draw call per colour.
 
 import { Color, EffectAsset, ImageAsset, Material, Mesh, MeshRenderer, Node, Texture2D, Vec3, primitives, utils } from 'cc';
-import { bakeBadge } from '../core/glyphs';
 import { buildRock } from '../core/rock';
 import type { Rgb } from '../data/types';
 
@@ -62,30 +61,24 @@ export class RenderKit {
     });
   }
 
-  /** Lettered pickup badge, alpha-blended so it reads on top of glows (shared, instanced). */
-  badge(letter: string, rgb: Rgb, intensity = 1): Material {
-    return this.cached(`badge:${letter}:${rgb}:${intensity}`, () => {
-      const size = 64;
-      // Baked top row first; texture rows go bottom-up on our plane.
-      const texture = rgbaTexture(flipRows(bakeBadge(letter, size, rgb), size, size), size, size, false);
+  /**
+   * Shared lit material for props (station modules, turrets, pickup icons): their colours are baked
+   * into vertex colours by tools/assets/build-props.mjs, so one instanced material draws them all.
+   */
+  props(): Material {
+    return this.cached('props', () => {
       const material = new Material();
-      material.initialize({
-        effectAsset: this.unlitEffect,
-        technique: UNLIT_TRANSPARENT,
-        defines: { USE_TEXTURE: true, USE_INSTANCING: true },
-      });
-      material.setProperty('mainTexture', texture);
+      material.initialize({ effectAsset: this.standardEffect, technique: 0, defines: { USE_VERTEX_COLOR: true, USE_INSTANCING: true } });
       material.setProperty('mainColor', new Color(255, 255, 255, 255));
-      const scale = intensity * HDR_UNLIT_SCALE;
-      material.setProperty('colorScale', new Vec3(scale, scale, scale));
+      material.setProperty('roughness', 0.6);
+      material.setProperty('metallic', 0.4);
       return material;
     });
   }
 
   /** Additive ring material — NOT shared: rings fade individually via mainColor alpha. */
   ringInstance(rgb: Rgb, intensity = 1): Material {
-    const material = this.additive(this.ringTexture, rgb, intensity, false);
-    return material;
+    return this.additive(this.ringTexture, rgb, intensity, false);
   }
 
   /** Lit solid colour material (shared, instanced): debris, rocks, station blocks, credits. */
@@ -166,13 +159,6 @@ export class RenderKit {
 export function toColor(rgb: Rgb, scale = 1, alpha = 1): Color {
   const c = (v: number): number => Math.round(Math.min(1, Math.max(0, v * scale)) * 255);
   return new Color(c(rgb[0]), c(rgb[1]), c(rgb[2]), Math.round(alpha * 255));
-}
-
-function flipRows(data: Uint8Array, width: number, height: number): Uint8Array {
-  const out = new Uint8Array(data.length);
-  const row = width * 4;
-  for (let y = 0; y < height; y++) out.set(data.subarray(y * row, (y + 1) * row), (height - 1 - y) * row);
-  return out;
 }
 
 function rgbaTexture(data: Uint8Array, width: number, height: number, repeat: boolean): Texture2D {

@@ -7,7 +7,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p game/tsconfig.json",
-    "build:ships": "node tools/assets/build-ships.mjs"
+    "build:ships": "node tools/assets/build-ships.mjs",
+    "build:props": "node tools/assets/build-props.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",

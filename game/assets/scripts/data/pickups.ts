@@ -1,14 +1,15 @@
-// In-mission pickups (GDD §8). Visuals are placeholders: lettered badges and gold cubes.
+// In-mission pickups (GDD §8): 3D icons from Quaternius Ultimate Space Kit with a coloured halo;
+// credits are spinning gold cubes.
 
 import type { PickupDef, PickupKind } from './types';
 
 export const PICKUPS: Record<PickupKind, PickupDef> = {
   credit: { kind: 'credit', credits: 5, size: 0.24, color: [1.0, 0.78, 0.25] },
   bigCredit: { kind: 'bigCredit', credits: 25, size: 0.4, color: [1.0, 0.78, 0.25] },
-  power: { kind: 'power', credits: 0, size: 0.85, color: [1.0, 0.55, 0.1], letter: 'P' },
-  repair: { kind: 'repair', credits: 0, size: 0.85, color: [0.35, 1.0, 0.45], letter: 'R' },
-  shield: { kind: 'shield', credits: 0, size: 0.85, color: [0.3, 0.8, 1.0], letter: 'S' },
-  energy: { kind: 'energy', credits: 0, size: 0.85, color: [1.0, 0.92, 0.3], letter: 'E' },
+  power: { kind: 'power', credits: 0, size: 0.85, color: [1.0, 0.55, 0.1], prop: 'pickup_power' },
+  repair: { kind: 'repair', credits: 0, size: 0.85, color: [0.35, 1.0, 0.45], prop: 'pickup_repair' },
+  shield: { kind: 'shield', credits: 0, size: 0.85, color: [0.3, 0.8, 1.0], prop: 'pickup_shield' },
+  energy: { kind: 'energy', credits: 0, size: 0.85, color: [1.0, 0.92, 0.3], prop: 'pickup_energy' },
 };
 
 export const PICKUP_MOTION = {

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { bakeBadge } from '../../game/assets/scripts/core/glyphs';
 import { buildRock } from '../../game/assets/scripts/core/rock';
 
 describe('buildRock', () => {
@@ -31,21 +30,5 @@ describe('buildRock', () => {
       expect(r).toBeLessThanOrEqual(1.2 + 1e-6);
     }
     expect(buildRock(spec).positions).toEqual(g.positions);
-  });
-});
-
-describe('bakeBadge', () => {
-  it('draws an opaque white letter inside a round badge with transparent corners', () => {
-    const size = 64;
-    const data = bakeBadge('P', size, [1, 0.5, 0.1]);
-    expect(data.length).toBe(size * size * 4);
-    expect(data[3]).toBe(0); // corner
-    let white = 0;
-    for (let i = 0; i < data.length; i += 4) if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255 && data[i + 3] === 255) white++;
-    expect(white).toBeGreaterThan(100);
-  });
-
-  it('rejects letters without a glyph', () => {
-    expect(() => bakeBadge('Q', 32, [1, 1, 1])).toThrow();
   });
 });

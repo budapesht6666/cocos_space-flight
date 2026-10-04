@@ -290,7 +290,7 @@ export class EnemySystem implements ShotSink {
     if (look === 'rock') {
       node.setRotationFromEuler(e.tilt + e.t * e.spin * 0.6, e.yaw, e.tilt * 0.5);
     } else {
-      node.setRotationFromEuler(0, look === 'turret' ? 0 : e.yaw, e.bank);
+      node.setRotationFromEuler(0, e.view.head ? 0 : e.yaw, e.bank);
     }
     if (e.view.head) e.view.head.setRotationFromEuler(0, e.aimYaw, 0);
   }
