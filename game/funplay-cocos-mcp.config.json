@@ -1,0 +1,9 @@
+{
+  "host": "127.0.0.1",
+  "port": 28456,
+  "toolProfile": "full",
+  "enableSessions": false,
+  "enableConsoleLogging": true,
+  "executeJavascriptSafetyChecks": true,
+  "autostart": true
+}

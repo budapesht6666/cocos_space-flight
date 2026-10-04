@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@playwright/mcp@latest",
+        "--viewport-size",
+        "390x844",
+        "--caps",
+        "vision",
+        "--isolated",
+        "--output-dir",
+        ".playwright-mcp"
+      ]
+    },
+    "cocos": {
+      "type": "http",
+      "url": "http://127.0.0.1:28456/"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__playwright",
+      "WebFetch(domain:docs.cocos.com)",
+      "WebFetch(domain:kenney.nl)",
+      "WebFetch(domain:quaternius.com)",
+      "WebFetch(domain:poly.pizza)",
+      "WebFetch(domain:opengameart.org)"
+    ]
+  }
+}

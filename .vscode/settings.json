@@ -1,0 +1,15 @@
+{
+  "files.exclude": {
+    "**/*.meta": true,
+    "game/library": true,
+    "game/local": true,
+    "game/temp": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "game/build": true,
+    "game/library": true,
+    "game/temp": true,
+    "**/*.anim": true
+  }
+}

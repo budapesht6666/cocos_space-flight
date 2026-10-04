@@ -1,0 +1,15 @@
+{
+  "name": "space-flight-tooling",
+  "private": true,
+  "type": "module",
+  "description": "Repo-level tooling for the Space Flight Cocos project: unit tests and type checking",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p game/tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^5.0.3"
+  }
+}

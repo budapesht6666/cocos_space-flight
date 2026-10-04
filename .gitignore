@@ -1,0 +1,25 @@
+# Node / tooling
+node_modules/
+coverage/
+
+# Playwright MCP screenshots and traces
+.playwright-mcp/
+
+# Third-party editor extension (JavaScript, not game code). Installed locally:
+#   git clone --depth 1 https://github.com/FunplayAI/funplay-cocos-mcp.git game/extensions/funplay-cocos-mcp
+game/extensions/funplay-cocos-mcp/
+
+# Cocos Creator generated (game/.gitignore from Cocos covers these too)
+game/library/
+game/temp/
+game/local/
+game/build/
+game/profiles/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+
+# Claude Code local overrides
+.claude/settings.local.json
