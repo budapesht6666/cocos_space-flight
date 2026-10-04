@@ -26,6 +26,23 @@ const BOSS_HP = new Color(255, 80, 70, 255);
 const BOSS_HP_LOW = new Color(255, 170, 60, 255);
 const DEBUG = new Color(160, 230, 160, 255);
 
+const BAR_EMPTY = new Color(22, 30, 50, 230);
+const HULL_DIM = new Color(255, 196, 90, 200);
+const DANGER_DIM = new Color(255, 90, 80, 200);
+const SHIELD_DIM = new Color(90, 210, 255, 200);
+const SHIELD_REGEN = new Color(90, 210, 255, 140);
+const ICON_INK = new Color(10, 14, 26, 255);
+
+/** Status block (top left): rows of icon + bar; the bars never grow past BAR_MAX_WIDTH. */
+const ROW_HULL = -22;
+const ROW_SHIELD = -64;
+const ROW_CREDITS = -106;
+const BAR_X = 50;
+const BAR_HEIGHT = 18;
+const BAR_GAP = 6;
+const BAR_SEGMENT = 34;
+const BAR_MAX_WIDTH = 210;
+
 const SPECIAL_RADIUS = 66;
 const BOSS_BAR_WIDTH = 520;
 const BOSS_BAR_HEIGHT = 14;
@@ -51,8 +68,7 @@ interface Banner {
 export class Hud {
   private readonly score: Label;
   private readonly combo: Label;
-  private readonly hull: Label;
-  private readonly shield: Label;
+  private readonly bars: Graphics;
   private readonly credits: Label;
   private readonly specialNode: Node;
   private readonly specialGfx: Graphics;
@@ -70,16 +86,22 @@ export class Hud {
   private readonly resultsBody: Label;
   private readonly resultsHint: Label;
   private readonly hitPoint = new Vec2();
-  private shown = { score: -1, combo: -1, hull: -1, hullMax: -1, shield: -1, shieldMax: -1, credits: -1, charges: -1, energy: -1, boss: -1 };
+  private shown = { score: -1, combo: -1, hull: -1, hullMax: -1, shield: -1, shieldMax: -1, shieldFill: -1, credits: -1, charges: -1, energy: -1, boss: -1 };
   private time = 0;
 
   constructor(private readonly root: Node) {
     this.score = this.label(root, 'Score', 46, WHITE, { top: 70, centerX: true });
     this.combo = this.label(root, 'Combo', 30, ACCENT, { top: 124, centerX: true });
-    // Left column: the bottom of the screen is under the player's thumb.
-    this.hull = this.label(root, 'Hull', 28, ACCENT, { top: 74, left: 28 });
-    this.shield = this.label(root, 'Shield', 28, SHIELD, { top: 110, left: 28 });
-    this.credits = this.label(root, 'Credits', 26, GOLD, { top: 146, left: 28 });
+    // Status block, top left (the bottom of the screen is under the player's thumb): icons are
+    // drawn once, bars redraw when the values change.
+    const status = this.node(root, 'Status', BAR_X + BAR_MAX_WIDTH, 128, { top: 60, left: 24 });
+    status.getComponent(UITransform)!.setAnchorPoint(0, 1);
+    drawStatusIcons(this.node(status, 'Icons', 0, 0, {}).addComponent(Graphics));
+    this.bars = this.node(status, 'Bars', 0, 0, {}).addComponent(Graphics);
+    this.credits = this.label(status, 'Credits', 30, GOLD, {});
+    this.credits.node.getComponent(UITransform)!.setAnchorPoint(0, 0.5);
+    this.credits.horizontalAlign = Label.HorizontalAlign.LEFT;
+    this.credits.node.setPosition(BAR_X, ROW_CREDITS);
 
     this.pauseNode = this.node(root, 'PauseButton', 72, 72, { top: 64, right: 24 });
     const pauseGfx = this.pauseNode.addComponent(Graphics);
@@ -142,26 +164,27 @@ export class Hud {
     this.combo.string = `×${multiplier}`;
   }
 
-  setHull(hull: number, max: number): void {
-    if (hull === this.shown.hull && max === this.shown.hullMax) return;
-    this.shown.hull = hull;
-    this.shown.hullMax = max;
-    this.hull.string = `HULL ${cells(hull, max)}`;
-    this.hull.color = hull <= 1 ? DANGER : ACCENT;
-  }
-
-  setShield(shield: number, max: number): void {
-    if (shield === this.shown.shield && max === this.shown.shieldMax) return;
-    this.shown.shield = shield;
-    this.shown.shieldMax = max;
-    this.shield.node.active = max > 0;
-    this.shield.string = `SHLD ${cells(shield, max)}`;
+  /** Hull and shield as segmented bars; the next shield segment fills up while it regenerates. */
+  setVitals(hull: number, hullMax: number, shield: number, shieldMax: number, shieldFill: number): void {
+    const fill = shield < shieldMax ? Math.round(shieldFill * 20) / 20 : 0;
+    const v = this.shown;
+    if (hull === v.hull && hullMax === v.hullMax && shield === v.shield && shieldMax === v.shieldMax && fill === v.shieldFill) return;
+    v.hull = hull;
+    v.hullMax = hullMax;
+    v.shield = shield;
+    v.shieldMax = shieldMax;
+    v.shieldFill = fill;
+    const g = this.bars;
+    g.clear();
+    const low = hull <= 1;
+    drawSegments(g, ROW_HULL, hull, hullMax, 0, low ? DANGER : ACCENT, low ? DANGER_DIM : HULL_DIM);
+    if (shieldMax > 0) drawSegments(g, ROW_SHIELD, shield, shieldMax, fill, SHIELD, SHIELD_DIM);
   }
 
   setCredits(credits: number): void {
     if (credits === this.shown.credits) return;
     this.shown.credits = credits;
-    this.credits.string = `CR ${credits.toLocaleString('en-US')}`;
+    this.credits.string = credits.toLocaleString('en-US');
   }
 
   /** Special button: charges in the middle, Energy as a ring around it. */
@@ -389,8 +412,80 @@ export class Hud {
   }
 }
 
-function cells(filled: number, max: number): string {
-  let s = '';
-  for (let i = 0; i < max; i++) s += i < filled ? (i > 0 ? ' ■' : '■') : i > 0 ? ' □' : '□';
-  return s;
+/** One row of bar segments: `filled` solid, the next one `partial` full, the rest empty. */
+function drawSegments(g: Graphics, y: number, filled: number, max: number, partial: number, color: Color, dim: Color): void {
+  const width = Math.min(BAR_SEGMENT, (BAR_MAX_WIDTH - BAR_GAP * (max - 1)) / max);
+  const top = y - BAR_HEIGHT / 2;
+  for (let i = 0; i < max; i++) {
+    const x = BAR_X + i * (width + BAR_GAP);
+    g.fillColor = i < filled ? color : BAR_EMPTY;
+    g.roundRect(x, top, width, BAR_HEIGHT, 3);
+    g.fill();
+    if (i >= filled) {
+      if (i === filled && partial > 0) {
+        g.fillColor = SHIELD_REGEN;
+        g.roundRect(x, top, width * partial, BAR_HEIGHT, 3);
+        g.fill();
+      }
+      g.lineWidth = 2;
+      g.strokeColor = dim;
+      g.roundRect(x, top, width, BAR_HEIGHT, 3);
+      g.stroke();
+    }
+  }
+}
+
+/** Hull: armour plate with a repair cross. Shield: crest. Credits: coin. Icon size ~34 UI units. */
+function drawStatusIcons(g: Graphics): void {
+  const k = 1.15;
+  const cx = 18;
+  // Hull: hexagonal plate.
+  g.fillColor = ACCENT;
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 6 + (i * Math.PI) / 3;
+    const x = cx + Math.cos(a) * 15 * k;
+    const y = ROW_HULL + Math.sin(a) * 15 * k;
+    if (i === 0) g.moveTo(x, y);
+    else g.lineTo(x, y);
+  }
+  g.close();
+  g.fill();
+  g.fillColor = ICON_INK;
+  g.rect(cx - 3, ROW_HULL - 9, 6, 18);
+  g.rect(cx - 9, ROW_HULL - 3, 18, 6);
+  g.fill();
+
+  // Shield: flat top, curved sides meeting in a point.
+  const top = ROW_SHIELD + 16;
+  g.fillColor = SHIELD;
+  g.moveTo(cx - 15, top);
+  g.lineTo(cx + 15, top);
+  g.lineTo(cx + 15, top - 11);
+  g.quadraticCurveTo(cx + 14, top - 27, cx, top - 34);
+  g.quadraticCurveTo(cx - 14, top - 27, cx - 15, top - 11);
+  g.close();
+  g.fill();
+  g.fillColor = ICON_INK;
+  g.moveTo(cx, top - 5);
+  g.lineTo(cx + 8, top - 8);
+  g.lineTo(cx + 8, top - 15);
+  g.quadraticCurveTo(cx + 7, top - 23, cx, top - 27);
+  g.close();
+  g.fill();
+
+  // Credits: coin with an inner ring and a diamond.
+  g.fillColor = GOLD;
+  g.circle(cx, ROW_CREDITS, 16);
+  g.fill();
+  g.lineWidth = 3;
+  g.strokeColor = ICON_INK;
+  g.circle(cx, ROW_CREDITS, 11);
+  g.stroke();
+  g.fillColor = ICON_INK;
+  g.moveTo(cx, ROW_CREDITS + 6.5);
+  g.lineTo(cx + 4.5, ROW_CREDITS);
+  g.lineTo(cx, ROW_CREDITS - 6.5);
+  g.lineTo(cx - 4.5, ROW_CREDITS);
+  g.close();
+  g.fill();
 }

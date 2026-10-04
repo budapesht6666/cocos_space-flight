@@ -189,8 +189,7 @@ export class GameWorld extends Component {
     const stats = s.score.stats;
     hud.setScore(stats.score);
     hud.setCombo(s.score.combo.multiplier);
-    hud.setHull(v.hull, v.maxHull);
-    hud.setShield(v.shield, v.maxShield);
+    hud.setVitals(v.hull, v.maxHull, v.shield, v.maxShield, v.shieldFill);
     hud.setCredits(stats.credits);
     hud.setSpecial(v.charges, v.energy);
     const boss = s.enemies.boss;

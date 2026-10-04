@@ -59,6 +59,8 @@ export interface PlayerShipDef {
   /** Invulnerability after a hull hit, and the short one after a shield hit. */
   invulnerableTime: number;
   shieldInvulnerableTime: number;
+  /** Ship travel per finger travel (1 = the ship moves the same fraction of the screen as the finger). */
+  dragSensitivity: number;
   /** Keyboard speed, world units per second. */
   keyboardSpeed: number;
   /** How quickly the ship catches up with the finger (higher = snappier). */

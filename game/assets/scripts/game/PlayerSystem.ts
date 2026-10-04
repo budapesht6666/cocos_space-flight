@@ -264,9 +264,9 @@ export class PlayerSystem {
 
   private steer(dt: number): void {
     const field = this.ctx.playfield;
-    // One UI unit of finger travel moves the ship by the same fraction of the screen width.
+    // Finger travel moves the ship by the same fraction of the screen width, times the sensitivity.
     this.input.consumeDrag(this.drag);
-    const worldPerUi = (2 * field.halfWidth(this.z)) / view.getDesignResolutionSize().width;
+    const worldPerUi = ((2 * field.halfWidth(this.z)) / view.getDesignResolutionSize().width) * this.def.dragSensitivity;
     this.targetX += this.drag.x * worldPerUi;
     this.targetZ -= this.drag.y * worldPerUi;
     this.input.keyAxis(this.axis);
