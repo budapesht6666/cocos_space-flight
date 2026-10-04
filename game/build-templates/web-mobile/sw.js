@@ -4,8 +4,8 @@
 // Everything else: cache first — Cocos names its files by content hash (md5Cache).
 
 const CACHE = 'spaceflight-__BUILD__';
-// Absolute URLs only: md5Cache rewrites relative path literals in template files ('./' became
-// 'index.<hash>.js/').
+// Absolute URLs only: md5Cache rewrites relative path literals in template files (even in
+// comments), so the scope root is taken from the registration.
 const ROOT = self.registration.scope;
 
 self.addEventListener('install', (event) => {
