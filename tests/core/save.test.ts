@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buyUpgrade, formatUpgradeValue, grantCredits, nextCost, runRewards, setWallet, upgradeLevel, upgradeValue } from '../../game/assets/scripts/core/economy';
-import { buildLoadout } from '../../game/assets/scripts/core/loadout';
+import { buyUpgrade, formatUpgradeValue, grantCredits, nextCost, runRewards, setWallet, upgradeLevel, upgradeUnlocked, upgradeValue } from '../../game/assets/scripts/core/economy';
+import { autoEquip, buildLoadout, equipItem, isEquipped, overrideLoadout, owns } from '../../game/assets/scripts/core/loadout';
 import { MEDAL_BITS } from '../../game/assets/scripts/core/medals';
 import {
+  campaignMedals,
   continueTarget,
   difficultyUnlocked,
   isCleared,
@@ -10,9 +11,11 @@ import {
   sectorMedals,
   sectorState,
   shipUnlocked,
+  unlockMet,
+  unlockText,
 } from '../../game/assets/scripts/core/progress';
 import { applyRun, type RecordMap } from '../../game/assets/scripts/core/records';
-import { loadSave, newSave, SAVE_VERSION, serializeSave } from '../../game/assets/scripts/core/save';
+import { defaultEquip, loadSave, newSave, SAVE_VERSION, serializeSave } from '../../game/assets/scripts/core/save';
 import { SECTORS } from '../../game/assets/scripts/data/campaign';
 import { REWARDS, UPGRADES } from '../../game/assets/scripts/data/economy';
 import { ENERGY, SHIPS } from '../../game/assets/scripts/data/player';
@@ -39,6 +42,10 @@ describe('save', () => {
     save.upgrades.hull = 2;
     save.ship = 'striker';
     save.paints.striker = 'green';
+    save.upgrades.scatter = 2;
+    save.upgrades.droneBay = 1;
+    save.upgrades.guardian = 1;
+    save.equip = { primary: 'scatter', secondary: null, drones: ['guardian'], special: 'nova' };
     clear(save.records, 's1m1', 'normal', MEDAL_BITS.hunter);
     save.last = { mission: 's1m1', difficulty: 'normal' };
     const r = loadSave(serializeSave(save), null);
@@ -59,6 +66,28 @@ describe('save', () => {
     expect(r.save.last).toEqual(v1.last);
     expect(r.save.credits).toBe(0);
     expect(r.save.ship).toBe('spitfire');
+    expect(r.save.equip).toEqual(defaultEquip());
+  });
+
+  it('migrates a stage 4 save (v2): upgrades and the Pulse Cannon level kept, stock slots', () => {
+    const v2 = {
+      version: 2,
+      credits: 4321,
+      earned: 9000,
+      upgrades: { hull: 2, pulse: 3 },
+      ship: 'spitfire',
+      paints: { spitfire: 'blue' },
+      records: { 's1m1:normal': { score: 9000, medals: 5, killRate: 0.9, clears: 3 } },
+      last: { mission: 's1m1', difficulty: 'normal' },
+    };
+    const r = loadSave(JSON.stringify(v2), null);
+    expect(r.status).toBe('migrated');
+    expect(r.save.version).toBe(SAVE_VERSION);
+    expect(r.save.credits).toBe(4321);
+    expect(r.save.upgrades).toEqual({ hull: 2, pulse: 3 });
+    expect(r.save.paints).toEqual({ spitfire: 'blue' });
+    expect(r.save.equip).toEqual(defaultEquip());
+    expect(buildLoadout(r.save, SHIPS.spitfire).primary).toEqual({ id: 'pulse', level: 4 });
   });
 
   it('ignores the old key once a save exists, and unreadable old records', () => {
@@ -94,6 +123,7 @@ describe('save', () => {
       upgrades: { hull: 99, shield: -1, magnet: 2.6, nonsense: 3 },
       ship: 42,
       paints: { spitfire: 'red', striker: 'blue', zenith: 'green' },
+      equip: { primary: 'laser', secondary: 'rail', drones: ['guardian', 'guardian', 'toaster', 3], special: 7 },
       records: { 's1m1:normal': { score: 10, medals: 99, killRate: 2, clears: 1 } },
       last: { mission: 7 },
     };
@@ -103,6 +133,7 @@ describe('save', () => {
     expect(s.upgrades).toEqual({ hull: UPGRADES.hull.costs.length, magnet: 2 });
     expect(s.ship).toBe('spitfire');
     expect(s.paints).toEqual({ striker: 'blue' });
+    expect(s.equip).toEqual({ primary: 'pulse', secondary: 'rail', drones: ['guardian'], special: 'nova' });
     expect(s.records['s1m1:normal']).toEqual({ score: 10, medals: 3, killRate: 1, clears: 1 });
     expect(s.last).toBeNull();
   });
@@ -169,8 +200,12 @@ describe('loadout', () => {
       maxCharges: ENERGY.maxCharges,
       energyGain: 1,
       startPower: 1,
-      weaponLevel: 1,
+      primary: { id: 'pulse', level: 1 },
+      secondary: null,
+      drones: [],
+      special: 'nova',
       primaryDamage: 1,
+      secondaryCooldown: 1,
     });
   });
 
@@ -181,7 +216,8 @@ describe('loadout', () => {
     expect(exe.hull).toBe(10);
     expect(exe.shield).toBe(7);
     expect(exe.primaryDamage).toBeCloseTo(1.15);
-    expect(exe.weaponLevel).toBe(5);
+    expect(exe.secondaryCooldown).toBeCloseTo(0.8);
+    expect(exe.primary).toEqual({ id: 'pulse', level: 5 });
     expect(exe.startPower).toBe(2);
     const striker = buildLoadout(save, SHIPS.striker);
     expect(striker.hull).toBe(7);
@@ -190,6 +226,114 @@ describe('loadout', () => {
     expect(striker.energyGain).toBeCloseTo(ENERGY.gainLevels[2] * 1.3);
     // Striker on a fresh save: one hull fewer, never below one.
     expect(buildLoadout(newSave(), SHIPS.striker).hull).toBe(2);
+  });
+});
+
+describe('arsenal', () => {
+  it('stock kit: Pulse Cannon and Nova Bomb owned and equipped, nothing else', () => {
+    const save = newSave();
+    expect(owns(save, 'pulse')).toBe(true);
+    expect(owns(save, 'nova')).toBe(true);
+    expect(owns(save, 'scatter')).toBe(false);
+    expect(isEquipped(save, 'pulse')).toBe(true);
+    expect(isEquipped(save, 'nova')).toBe(true);
+  });
+
+  it('items unlock with progress: missions, then medals; ?unlock=1 opens all', () => {
+    const save = newSave();
+    expect(upgradeUnlocked(save, 'hull')).toBe(true);
+    expect(upgradeUnlocked(save, 'scatter')).toBe(false);
+    expect(upgradeUnlocked(save, 'scatter', true)).toBe(true);
+    save.credits = 100000;
+    expect(buyUpgrade(save, 'scatter')).toBe('locked');
+    clear(save.records, 's1m1', 'normal');
+    expect(upgradeUnlocked(save, 'scatter')).toBe(true);
+    expect(upgradeUnlocked(save, 'plasma')).toBe(false);
+    clear(save.records, 's1m1', 'hard', ALL);
+    clear(save.records, 's1m2', 'normal', ALL);
+    expect(campaignMedals(save.records)).toBe(8);
+    expect(unlockMet(save.records, { medals: 8 })).toBe(true);
+    expect(upgradeUnlocked(save, 'plasma')).toBe(true);
+    expect(unlockText({ mission: 's1m2' })).toBe('CLEAR MISSION 1-2');
+    expect(unlockText({ medals: 12 })).toBe('EARN 12 MEDALS');
+  });
+
+  it('a licence goes straight into its slot; levels after it', () => {
+    const save = newSave();
+    save.credits = 100000;
+    clear(save.records, 's1m1', 'normal');
+    expect(buyUpgrade(save, 'scatter')).toBe('bought');
+    autoEquip(save, 'scatter');
+    expect(save.equip.primary).toBe('scatter');
+    expect(buildLoadout(save, SHIPS.spitfire).primary).toEqual({ id: 'scatter', level: 1 });
+    buyUpgrade(save, 'scatter');
+    autoEquip(save, 'scatter');
+    expect(buildLoadout(save, SHIPS.spitfire).primary).toEqual({ id: 'scatter', level: 2 });
+    expect(buyUpgrade(save, 'swarm')).toBe('bought');
+    autoEquip(save, 'swarm');
+    expect(save.equip.secondary).toBe('swarm');
+  });
+
+  it('equips owned items only; Secondary and drones toggle; drones need bays', () => {
+    const save = newSave();
+    expect(equipItem(save, 'ion')).toBe('notOwned');
+    save.upgrades.ion = 1;
+    save.upgrades.rail = 1;
+    save.upgrades.gunDrone = 1;
+    save.upgrades.guardian = 2;
+    save.upgrades.collector = 1;
+    expect(equipItem(save, 'ion')).toBe('equipped');
+    expect(equipItem(save, 'rail')).toBe('equipped');
+    expect(equipItem(save, 'rail')).toBe('unequipped');
+    expect(save.equip.secondary).toBeNull();
+    expect(equipItem(save, 'guardian')).toBe('noSlot');
+    save.upgrades.droneBay = 1;
+    expect(equipItem(save, 'guardian')).toBe('equipped');
+    // One bay: the next drone takes its place.
+    expect(equipItem(save, 'gunDrone')).toBe('equipped');
+    expect(save.equip.drones).toEqual(['gunDrone']);
+    save.upgrades.droneBay = 2;
+    expect(equipItem(save, 'guardian')).toBe('equipped');
+    expect(equipItem(save, 'collector')).toBe('equipped');
+    expect(save.equip.drones).toEqual(['guardian', 'collector']);
+    expect(equipItem(save, 'guardian')).toBe('unequipped');
+    expect(save.equip.drones).toEqual(['collector']);
+  });
+
+  it('a new Drone Bay fills with drones already owned', () => {
+    const save = newSave();
+    save.upgrades.guardian = 1;
+    save.upgrades.collector = 1;
+    save.upgrades.droneBay = 1;
+    autoEquip(save, 'droneBay');
+    expect(save.equip.drones).toEqual(['guardian']);
+    save.upgrades.droneBay = 2;
+    autoEquip(save, 'droneBay');
+    expect(save.equip.drones).toEqual(['guardian', 'collector']);
+    const l = buildLoadout(save, SHIPS.spitfire);
+    expect(l.drones).toEqual([{ id: 'guardian', level: 1 }, { id: 'collector', level: 1 }]);
+  });
+
+  it('the loadout falls back to the stock kit for anything not owned', () => {
+    const save = newSave();
+    save.equip = { primary: 'tesla', secondary: 'rear', drones: ['guardian'], special: 'warp' };
+    const l = buildLoadout(save, SHIPS.spitfire);
+    expect(l.primary.id).toBe('pulse');
+    expect(l.secondary).toBeNull();
+    expect(l.drones).toEqual([]);
+    expect(l.special).toBe('nova');
+  });
+
+  it('debug flags borrow any loadout', () => {
+    const base = buildLoadout(newSave(), SHIPS.spitfire);
+    const none = { primary: null, secondary: null, drones: null, special: null, level: null };
+    expect(overrideLoadout(base, none)).toEqual(base);
+    const l = overrideLoadout(base, { primary: 'tesla', secondary: 'rail', drones: ['gunDrone', 'guardian', 'collector'], special: 'warp', level: 9 });
+    expect(l.primary).toEqual({ id: 'tesla', level: 5 });
+    expect(l.secondary).toEqual({ id: 'rail', level: 5 });
+    expect(l.drones).toEqual([{ id: 'gunDrone', level: 3 }, { id: 'guardian', level: 3 }]);
+    expect(l.special).toBe('warp');
+    expect(overrideLoadout(l, Object.assign({}, none, { secondary: 'none' })).secondary).toBeNull();
   });
 });
 

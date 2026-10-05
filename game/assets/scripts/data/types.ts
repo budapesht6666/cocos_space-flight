@@ -106,6 +106,12 @@ export interface PlayerShipDef {
   unlock: { sector: number } | null;
 }
 
+/** An item in a slot and its hangar level (1..5 for guns, 1..3 for drones). */
+export interface Equipped<Id> {
+  id: Id;
+  level: number;
+}
+
 /** What the player brings into a mission: hangar upgrades plus the ship's own modifiers. */
 export interface Loadout {
   hull: number;
@@ -121,9 +127,14 @@ export interface Loadout {
   /** Energy gain multiplier. */
   energyGain: number;
   startPower: number;
-  /** Primary weapon level 1..5 and the ship's damage multiplier. */
-  weaponLevel: number;
+  /** The four slots (GDD §7). */
+  primary: Equipped<PrimaryId>;
+  secondary: Equipped<SecondaryId> | null;
+  drones: readonly Equipped<DroneId>[];
+  special: SpecialId;
+  /** Ship modifiers: Primary damage and Secondary cooldown multipliers. */
   primaryDamage: number;
+  secondaryCooldown: number;
 }
 
 export interface GeneratorLevel {
@@ -136,36 +147,151 @@ export interface GeneratorLevel {
 // ---------------------------------------------------------------------------------------------
 // Weapons and bullets
 
-export type WeaponId = 'pulse';
+export type PrimaryId = 'pulse' | 'scatter' | 'ion' | 'seeker' | 'plasma' | 'tesla';
+export type SecondaryId = 'swarm' | 'wing' | 'rail' | 'rear';
+export type WeaponId = PrimaryId | SecondaryId;
+export type DroneId = 'gunDrone' | 'guardian' | 'collector';
+export type SpecialId = 'nova' | 'overdrive' | 'phase' | 'warp';
+/** Everything that goes into the four slots. */
+export type ArsenalId = WeaponId | DroneId | SpecialId;
+export type ArsenalSlot = 'primary' | 'secondary' | 'drone' | 'special';
+
+/** Player projectile looks; each is one shared instanced material (one draw call). */
+export type BoltId = 'pulse' | 'pellet' | 'missile' | 'plasma' | 'rocket' | 'wing' | 'rail' | 'rear' | 'drone';
+
+export interface BoltDef {
+  /** Visual size, world units (round looks use `width` for both). */
+  width: number;
+  length: number;
+  color: Rgb;
+  /** Glow intensity (1 = normal, 2+ = white-hot). */
+  intensity: number;
+  /** Round orbs don't turn along their flight. */
+  round: boolean;
+  /** Made up front when a loadout uses it (peak alive at weapon level 5, Power IV). */
+  pool: number;
+}
 
 export interface BulletStream {
   /** Offset across the ship, world units. */
   x: number;
+  /** Offset towards the tail from the nose, world units (wing guns, rear guns). */
+  z?: number;
   /** Direction relative to straight up, degrees (positive = to the right). */
   angleDeg: number;
 }
 
-/** What one weapon level (1..5, bought in the hangar) multiplies. */
+/** What one weapon level (bought in the hangar) multiplies. */
 export interface WeaponLevel {
   damage: number;
   /** Fire rate multiplier: the fire interval is divided by it. */
   rate: number;
 }
 
-export interface WeaponDef {
-  id: WeaponId;
-  name: string;
-  fireInterval: number;
-  bulletSpeed: number;
-  damage: number;
-  bulletRadius: number;
-  /** Visual size of the bolt. */
-  bulletWidth: number;
-  bulletLength: number;
-  color: Rgb;
-  /** Bullet pattern for Power I..IV (index 0..3). */
-  powerForms: readonly (readonly BulletStream[])[];
+/** One Power level of a bolt weapon. */
+export interface BoltForm {
+  streams: readonly BulletStream[];
+  /** Damage multiplier of this Power level. */
+  damage?: number;
+  /** Visual size and hit radius multiplier. */
+  scale?: number;
+  /** Splash radius around every hit, world units (Plasma Orbs). */
+  splash?: number;
 }
+
+/**
+ * Projectile weapons: Pulse Cannon, Scatter Gun, Seeker Missiles, Plasma Orbs and all Secondaries.
+ * Each shot fires the current Power form; a `burst` fires it `count` times `gap` seconds apart.
+ */
+export interface BoltWeaponDef {
+  kind: 'bolts';
+  id: WeaponId;
+  bolt: BoltId;
+  /** Seconds between shots (or bursts) at weapon level 1. */
+  interval: number;
+  burst?: { count: number; gap: number };
+  speed: number;
+  /** Per bolt at weapon level 1. */
+  damage: number;
+  radius: number;
+  /** Power I..IV (index 0..3). */
+  forms: readonly BoltForm[];
+  /** Flight time before the bolt fizzles out (range), seconds; none = until it leaves the screen. */
+  life?: number;
+  /** Damage left at the end of `life` (Scatter Gun loses punch with distance). */
+  falloff?: number;
+  /** Enemies one bolt can hit (default 1). */
+  pierce?: number;
+  /** Fraction of a hit's damage dealt to every other enemy within the form's `splash` radius. */
+  splashDamage?: number;
+  /** Homing after `delay` seconds of straight flight, turning at most `turnRate` degrees per second. */
+  homing?: { turnRate: number; delay: number };
+  /** Random spread per bolt, ± degrees. */
+  jitterDeg?: number;
+  /** Fraction of a boss core's armour the hits ignore. */
+  armorPierce?: number;
+}
+
+/** One Power level of the Ion Laser: the main beam and, from IV, two angled side beams. */
+export interface BeamForm {
+  width: number;
+  damage: number;
+  side?: { angleDeg: number; offset: number; width: number; damage: number };
+}
+
+/** Continuous piercing beam (Ion Laser): `dps` to everything it touches. */
+export interface BeamWeaponDef {
+  kind: 'beam';
+  id: WeaponId;
+  dps: number;
+  armorPierce: number;
+  color: Rgb;
+  forms: readonly BeamForm[];
+}
+
+/** Lightning that strikes the nearest enemy and jumps on (Tesla Arc). */
+export interface ChainWeaponDef {
+  kind: 'chain';
+  id: WeaponId;
+  interval: number;
+  /** To the first target; every jump multiplies it by `decay`. */
+  damage: number;
+  decay: number;
+  /** Reach of the first strike from the nose, and of each jump. */
+  range: number;
+  jump: number;
+  color: Rgb;
+  forms: readonly { targets: number; damage: number }[];
+}
+
+export type WeaponDef = BoltWeaponDef | BeamWeaponDef | ChainWeaponDef;
+
+/** What every drone has: its model (a prop, normalised to 1 unit), size and glow colour. */
+interface DroneLook {
+  id: DroneId;
+  prop: PropId;
+  size: number;
+  color: Rgb;
+}
+
+/** Drones fly with the ship (GDD §7); `level` (1..3) scales them through `levels`. */
+export type DroneDef =
+  /** Fires straight bolts worth `share` of the Primary's damage per second. */
+  | (DroneLook & { kind: 'gun'; interval: number; speed: number; radius: number; levels: readonly { share: number }[] })
+  /** Circles the ship and blocks one enemy bullet, then recharges. */
+  | (DroneLook & { kind: 'guardian'; orbit: number; spin: number; block: number; levels: readonly { recharge: number }[] })
+  /** Flies out to pickups and sends whatever is within `reach` to the ship. */
+  | (DroneLook & { kind: 'collector'; reach: number; levels: readonly { speed: number }[] });
+
+/** Specials spend a charge (GDD §7). */
+export type SpecialDef =
+  | { kind: 'nova'; id: SpecialId; label: string; damage: number; invulnerableTime: number; bulletScore: number }
+  /** Power IV and faster fire for `time` seconds. */
+  | { kind: 'overdrive'; id: SpecialId; label: string; time: number; rate: number }
+  /** Invulnerable for `time` seconds; touching enemies takes `ramDps`, bullets that touch the bubble pop. */
+  | { kind: 'phase'; id: SpecialId; label: string; time: number; ramDps: number; radius: number }
+  /** Enemies, their bullets and the level run at `scale` speed for `time` seconds. */
+  | { kind: 'warp'; id: SpecialId; label: string; time: number; scale: number };
 
 export type EnemyBulletId = 'orb' | 'orbLarge';
 
@@ -271,7 +397,10 @@ export type PropId =
   | 'pickup_power'
   | 'pickup_repair'
   | 'pickup_shield'
-  | 'pickup_energy';
+  | 'pickup_energy'
+  | 'drone_gun'
+  | 'drone_guardian'
+  | 'drone_collector';
 
 export type EnemyLook =
   /** A ship model with its own textured material. */
@@ -548,13 +677,19 @@ export interface SectorDef {
   medalsToAdvance: number;
 }
 
-export type UpgradeId = 'hull' | 'shield' | 'generator' | 'magnet' | 'charges' | 'energy' | 'power' | 'pulse';
+export type SystemId = 'hull' | 'shield' | 'generator' | 'magnet' | 'charges' | 'energy' | 'power' | 'droneBay';
+
+/** Everything bought in the hangar: system upgrades and the arsenal (an arsenal item's value 0 = not owned). */
+export type UpgradeId = SystemId | ArsenalId;
+
+/** Progress needed before an item can be bought: a mission cleared, or medals earned over the campaign. */
+export type UnlockReq = { mission: MissionId } | { medals: number };
 
 export interface UpgradeDef {
   id: UpgradeId;
   name: string;
-  /** Hangar tab. */
-  group: 'systems' | 'weapons';
+  /** Hangar tab (systems) or arsenal slot. */
+  group: 'systems' | ArsenalSlot;
   /** One hangar line on what it does. */
   hint: string;
   /** Value at each level; index 0 is the base, before any purchase. */
@@ -563,4 +698,6 @@ export interface UpgradeDef {
   costs: readonly number[];
   /** How values print: a plain count, a roman numeral (Power) or a level number. */
   format: 'count' | 'roman' | 'level';
+  /** Can't be bought before this; null = from the start. */
+  unlock: UnlockReq | null;
 }

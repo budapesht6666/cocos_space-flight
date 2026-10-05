@@ -18,6 +18,7 @@
 | [docs/GDD.md](docs/GDD.md) | Механики, контент, стартовый баланс |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Устройство кода, системы, бюджеты производительности |
 | [docs/ASSETS.md](docs/ASSETS.md) | Кандидаты ассетов, лицензии, пайплайн импорта, Credits |
+| [docs/BALANCE.md](docs/BALANCE.md) | Таблица баланса арсенала и экономики — **генерируется** `npm run balance`, руками не править |
 | [docs/PLATFORMS.md](docs/PLATFORMS.md) | Платформы, особенности iOS Safari, iOS без Mac, CLI-сборка |
 
 Изменилось решение — обнови соответствующий документ в том же шаге.
@@ -57,6 +58,7 @@
 | Раздать сборку на iPhone по Wi‑Fi | `npm run serve:web` (CLI-сборка из `.cache/cli-game`; другую папку — `python tools/serve_web.py <папка>`). Отдаёт с `Cache-Control: no-store`: голый `python -m http.server` позволяет браузеру закэшировать `index.html`, и после пересборки грузится старый бандл. Python 3.12 разрешён брандмауэром; на телефоне `http://192.168.1.43:8080/?debug=1` |
 | Модели кораблей | `npm run build:ships` (`tools/assets/build-ships.mjs`; исходники пака — в `art-source/`, вне git) |
 | Пропсы: станции, турели, иконки пикапов | `npm run build:props` (`tools/assets/build-props.mjs`: вершинные цвета, один меш на модель; исходники — в `art-source/`) |
+| Таблица баланса | `npm run balance` → `docs/BALANCE.md` (DPS по ситуациям, время убийства, доход, цены). Перегенерировать после правки оружия, врагов, миссий, цен; инварианты — `tests/core/balance.test.ts` |
 
 ## MCP-серверы и скиллы
 
@@ -68,7 +70,7 @@
   - Работает, только пока открыт редактор. Если редактор закрыт — попроси пользователя открыть.
 - **playwright** (`.mcp.json`) — браузерные плейтесты: окно 390×844, `--caps vision` (клики и драги по координатам на canvas), консоль. Скриншоты пишутся в `.playwright-mcp/`.
 - **github** — операции с репозиторием.
-- Скиллы проекта: `playtest` (запустить и проверить игру, полный прогон миссии автопилотом), `add-asset` (найти, проверить лицензию, импортировать, записать Credits), `add-enemy`, `add-mission`, `add-weapon` (контент правкой данных).
+- Скиллы проекта: `playtest` (запустить и проверить игру, полный прогон миссии автопилотом), `add-asset` (найти, проверить лицензию, импортировать, записать Credits), `add-enemy`, `add-mission`, `add-weapon` (оружие, дроны, Special — правкой данных, с таблицей баланса).
 
 ## Правила кода
 
@@ -94,6 +96,7 @@
 - Ссылки на ассеты в свойствах компонентов (шрифт, эффект) ставить через `Editor.Message.request('scene', 'set-property', { uuid, path: '__comps__.N.prop', dump: { type: 'cc.TTFFont', value: { uuid } } })`, затем `save-scene`. `set_component_property` из MCP пишет `{ "uuid" }` вместо `__uuid__` — такая ссылка не работает.
 - `.scene`, `.prefab`, `.anim`, `.mtl` — сериализованный JSON со ссылками по UUID. Правим **через MCP или редактор**. Ручная правка — крайняя мера, с проверкой открытием в редакторе.
 - Не трогать сгенерированное: `game/library/`, `game/temp/`, `game/local/`, `game/build/`, `game/profiles/`.
+- `refresh_assets` из MCP вызывать **с путём** (`assets/scripts`): без пути он создаёт мусорный `game/assets/.meta` — удалить, не коммитить.
 - Новый сторонний ассет — сразу строка в Credits ([docs/ASSETS.md](docs/ASSETS.md)). Порядок — скилл `add-asset`.
 
 ## Проверка перед словом «готово»
@@ -115,9 +118,9 @@
 
 ## Отладка (URL-параметры превью и debug-сборок)
 
-`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1` (s1m1–s1m3; из Menu — сразу в игру), `?difficulty=hard` (normal, hard, insane, nightmare), `?elite=1` / `?elite=volatile` (каждый враг волны — элита), `?unlock=1` (открыты все секторы, миссии, сложности и корабли), `?credits=50000` (кошелёк = 50 000, раз за загрузку страницы), `?reset=1` (стереть прогресс, раз за загрузку страницы; с `credits` — сначала стирает), `?scale=0.5` (фиксированное разрешение 3D вместо адаптивного), `?bloom=0`, `?fxaa=1` (A/B пост-эффектов на телефоне; по умолчанию bloom вкл., FXAA выкл.).
-Прогоны с `god`, `t`, `power`, `elite`, `slowmo`, `unlock` — practice: рекорды, медали и кредиты не пишутся. Сохранение — localStorage `spaceflight.save` (сброс: `localStorage.clear()`).
-Клавиши в превью: стрелки/WASD, Space — Nova Bomb, Esc/P — пауза, Enter — тап и RETRY на результатах. Меню: Enter — старт с титула и CONTINUE, Esc/Backspace — назад, 1–3 — страница миссии Сектора 1; в кампании ←/→ — сектор, на странице миссии ←/→ — сложность и Enter — LAUNCH; в ангаре Tab — вкладка, ←/→ — корабль, Enter — LAUNCH. Держать список актуальным здесь и в ARCHITECTURE §12.
+`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1` (s1m1–s1m3; из Menu — сразу в игру), `?difficulty=hard` (normal, hard, insane, nightmare), `?elite=1` / `?elite=volatile` (каждый враг волны — элита), `?unlock=1` (открыты все секторы, миссии, сложности и корабли), `?credits=50000` (кошелёк = 50 000, раз за загрузку страницы), `?reset=1` (стереть прогресс, раз за загрузку страницы; с `credits` — сначала стирает), `?scale=0.5` (фиксированное разрешение 3D вместо адаптивного), `?bloom=0`, `?fxaa=1` (A/B пост-эффектов на телефоне; по умолчанию bloom вкл., FXAA выкл.), `?primary=ion&secondary=rail&drones=gunDrone,guardian&special=warp&level=5` (любое снаряжение без покупки; `secondary=none`; ids — ARCHITECTURE §12).
+Прогоны с `god`, `t`, `power`, `elite`, `slowmo`, `unlock` и флагами снаряжения — practice: рекорды, медали и кредиты не пишутся. Сохранение — localStorage `spaceflight.save` (сброс: `localStorage.clear()`).
+Клавиши в превью: стрелки/WASD, Space — Special (Nova Bomb и др.), Esc/P — пауза, Enter — тап и RETRY на результатах. Меню: Enter — старт с титула и CONTINUE, Esc/Backspace — назад, 1–3 — страница миссии Сектора 1; в кампании ←/→ — сектор, на странице миссии ←/→ — сложность и Enter — LAUNCH; в ангаре Tab — вкладка, ←/→ — корабль (SHIP) или слот (WEAPONS), Enter — LAUNCH. Держать список актуальным здесь и в ARCHITECTURE §12.
 
 ## Рендер — грабли, на которые уже наступили
 

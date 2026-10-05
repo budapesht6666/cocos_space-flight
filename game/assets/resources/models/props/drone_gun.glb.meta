@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "f6bd2fdd-f9e0-4632-90f0-b74dd8537319",
+  "files": [],
+  "subMetas": {
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "f6bd2fdd-f9e0-4632-90f0-b74dd8537319@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 280
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "ef7e4": {
+      "importer": "gltf-material",
+      "uuid": "f6bd2fdd-f9e0-4632-90f0-b74dd8537319@ef7e4",
+      "displayName": "",
+      "id": "ef7e4",
+      "name": "drone_gun_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "9aa78": {
+      "importer": "gltf-scene",
+      "uuid": "f6bd2fdd-f9e0-4632-90f0-b74dd8537319@9aa78",
+      "displayName": "",
+      "id": "9aa78",
+      "name": "drone_gun.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "f6bd2fdd-f9e0-4632-90f0-b74dd8537319@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "f6bd2fdd-f9e0-4632-90f0-b74dd8537319@ef7e4"
+      ],
+      "scenes": [
+        "f6bd2fdd-f9e0-4632-90f0-b74dd8537319@9aa78"
+      ]
+    }
+  }
+}

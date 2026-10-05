@@ -19,6 +19,7 @@ describe('parseDebugFlags', () => {
       scale: null,
       bloom: null,
       fxaa: null,
+      loadout: { primary: null, secondary: null, drones: null, special: null, level: null },
     });
   });
 
@@ -39,6 +40,7 @@ describe('parseDebugFlags', () => {
       scale: 0.55,
       bloom: false,
       fxaa: false,
+      loadout: { primary: null, secondary: null, drones: null, special: null, level: null },
     });
   });
 
@@ -53,6 +55,19 @@ describe('parseDebugFlags', () => {
     expect(parseDebugFlags('?scale=0.1').scale).toBe(0.3);
     expect(parseDebugFlags('?bloom=1').bloom).toBe(true);
     expect(parseDebugFlags('?fxaa=yes').fxaa).toBe(true);
+  });
+
+  it('borrows a loadout: known ids only', () => {
+    expect(parseDebugFlags('?primary=ion&secondary=rail&drones=gunDrone,toaster,guardian&special=warp&level=4.6').loadout).toEqual({
+      primary: 'ion',
+      secondary: 'rail',
+      drones: ['gunDrone', 'guardian'],
+      special: 'warp',
+      level: 5,
+    });
+    expect(parseDebugFlags('?primary=laser&secondary=none').loadout.primary).toBeNull();
+    expect(parseDebugFlags('?secondary=none').loadout.secondary).toBe('none');
+    expect(parseDebugFlags('?drones=').loadout.drones).toEqual([]);
   });
 
   it('forces elites: a named one or random', () => {

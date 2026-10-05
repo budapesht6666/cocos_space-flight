@@ -1,6 +1,7 @@
 // Entry point of the Game scene: loads the mission's assets, builds the systems and runs the
 // fixed-step loop. Simulation order: camera → stars → mission (timeline spawns) → set pieces →
-// player → bullets → enemies (movement, fire) → enemy bullets → pickups → collisions → score → fx.
+// player → weapons → bullets → enemies (movement, fire) → enemy bullets → drones → pickups →
+// collisions → score → fx. Time Warp slows the level, enemies and their bullets, not the ship.
 // The mission comes from the menu (services/SceneRouter), or from URL flags when the scene is
 // opened directly; the ship and its loadout come from the hangar (services/SaveService).
 
@@ -8,16 +9,17 @@ import { _decorator, Camera, Component, EffectAsset, Game, Node, Prefab, TTFFont
 import { EventBus } from '../core/EventBus';
 import { FixedStep } from '../core/FixedStep';
 import { smoothstep } from '../core/math';
+import { hasOverride, overrideLoadout } from '../core/loadout';
 import { enemyPrefabPath, missionNeeds } from '../core/missionNeeds';
 import { missionUnlocked } from '../core/progress';
 import { Rng } from '../core/Rng';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_MISSION, MISSIONS, nextMission } from '../data/missions';
-import { NOVA_BOMB, SHIPS, shipModel } from '../data/player';
+import { SHIPS, shipModel } from '../data/player';
 import { propPath } from '../data/props';
-import type { Difficulty, EnemyBulletId, EnemyId, Loadout, MissionId, PropId } from '../data/types';
+import type { BoltId, Difficulty, EnemyBulletId, EnemyId, Loadout, MissionId, PropId } from '../data/types';
 import { BOSS_FX, NOVA_FX, POST_FX } from '../data/visuals';
-import { BULLET_POOLS, ENEMY_BULLET_CAP, ENEMY_BULLETS, PULSE_CANNON } from '../data/weapons';
+import { BOLTS, DRONES, ENEMY_BULLET_CAP, ENEMY_BULLET_POOLS, ENEMY_BULLETS, PLAYER_BULLET_CAP, SPECIALS, WEAPONS } from '../data/weapons';
 import { WORLD } from '../data/world';
 import { DebugOverlay } from '../debug/DebugOverlay';
 import { readDebugFlags } from '../debug/DebugFlags';
@@ -36,6 +38,7 @@ import { SceneRouter, type MenuEntry } from '../services/SceneRouter';
 import { Hud } from '../ui/Hud';
 import { BulletSystem, type BulletLook } from './BulletSystem';
 import { CollisionSystem } from './CollisionSystem';
+import { DroneSystem } from './DroneSystem';
 import { EnemySystem } from './EnemySystem';
 import type { GameContext, GameEvents } from './GameContext';
 import { MissionDirector } from './MissionDirector';
@@ -44,6 +47,7 @@ import { Playfield } from './Playfield';
 import { PlayerSystem } from './PlayerSystem';
 import { ScoreSystem } from './ScoreSystem';
 import { SetPieceSystem } from './SetPieceSystem';
+import { WeaponSystem } from './WeaponSystem';
 
 const { ccclass, property } = _decorator;
 
@@ -56,6 +60,8 @@ interface Systems {
   nebula: Nebula;
   decor: Decor;
   player: PlayerSystem;
+  weapons: WeaponSystem;
+  drones: DroneSystem;
   playerBullets: BulletSystem;
   enemyBullets: BulletSystem;
   enemies: EnemySystem;
@@ -160,6 +166,7 @@ export class GameWorld extends Component {
     s.decor.render();
     s.setPieces.render();
     s.player.render();
+    s.drones.render();
     s.playerBullets.render();
     s.enemyBullets.render();
     s.enemies.render();
@@ -231,18 +238,22 @@ export class GameWorld extends Component {
     // A hitstop requested mid-frame holds the rest of this frame's steps too.
     if (this.freeze > 0) return;
     const p = s.player;
-    s.stars.tick(h);
-    s.nebula.tick(h);
-    s.decor.tick(h);
-    s.mission.tick(h);
-    s.setPieces.tick(h);
+    // Time Warp: the level, enemies and their bullets run slow; the ship and its guns don't.
+    const w = h * p.warpScale;
+    s.stars.tick(w);
+    s.nebula.tick(w);
+    s.decor.tick(w);
+    s.mission.tick(w);
+    s.setPieces.tick(w);
     p.tick(h, this.specialQueued);
     this.specialQueued = false;
+    s.weapons.tick(h);
     s.playerBullets.tick(h);
-    s.enemies.tick(h, p.x, p.z, p.alive);
-    s.enemyBullets.tick(h);
+    s.enemies.tick(w, p.x, p.z, p.alive);
+    s.enemyBullets.tick(w);
+    s.drones.tick(h);
     s.pickups.tick(h, p.x, p.z, p.magnetRadius, p.pickupRadius, p.canCollect);
-    s.collisions.tick();
+    s.collisions.tick(h);
     s.score.tick(h);
     s.fx.tick(h);
   }
@@ -256,7 +267,7 @@ export class GameWorld extends Component {
     hud.setVitals(v.hull, v.maxHull, v.shield, v.maxShield, v.shieldFill);
     hud.setCredits(stats.credits);
     hud.setPods(stats.pods, s.mission.podsTotal);
-    hud.setSpecial(v.charges, v.energy);
+    hud.setSpecial(s.player.special.label, v.charges, v.energy, s.player.specialLeft);
     const boss = s.enemies.boss;
     hud.setBoss(boss ? boss.def.name : null, boss ? boss.hp / boss.maxHp : 0, boss !== null && s.enemies.isArmored(boss));
     hud.tick(dt);
@@ -271,9 +282,9 @@ export class GameWorld extends Component {
     const r = s.mission.result;
     if (!r) return;
     // Runs with debug cheats (god mode, seeking, forced Power or elites, slow motion, everything
-    // unlocked) are practice: no records, no credits.
+    // unlocked, a borrowed loadout) are practice: no records, no credits.
     const d = s.ctx.debug;
-    const practice = d.god || d.t > 0 || d.power !== null || d.elite !== null || d.slowmo !== 1 || d.unlock;
+    const practice = d.god || d.t > 0 || d.power !== null || d.elite !== null || d.slowmo !== 1 || d.unlock || hasOverride(d.loadout);
     const run = { complete: r.complete, score: r.score, medals: r.medals, killRate: r.killRate };
     const report = practice ? null : SaveService.submitRun(this.missionId, this.difficulty, run, r.credits);
     const next = nextMission(this.missionId);
@@ -339,6 +350,8 @@ export class GameWorld extends Component {
     const debug = s.ctx.debug;
     s.playerBullets.clear();
     s.enemyBullets.clear();
+    s.weapons.clear();
+    s.drones.clear();
     s.enemies.clear();
     s.pickups.clear();
     s.setPieces.clear();
@@ -346,6 +359,8 @@ export class GameWorld extends Component {
     s.fx.clear();
     s.score.reset();
     s.player.reset(debug.power ?? (this.loadout as Loadout).startPower, debug.t > 0);
+    s.weapons.reset();
+    s.drones.reset();
     s.mission.start(debug.t);
     s.hud.showResults(null, null);
     s.hud.setPlaying(true);
@@ -377,10 +392,11 @@ export class GameWorld extends Component {
     this.difficulty = difficulty;
     const shipId = SaveService.shipToFly(debug.unlock);
     const ship = SHIPS[shipId];
-    const loadout = SaveService.loadout(shipId);
+    const loadout = overrideLoadout(SaveService.loadout(shipId), debug.loadout);
     this.loadout = loadout;
     const mission = MISSIONS[missionId];
     const needs = missionNeeds(mission);
+    for (const d of loadout.drones) needs.props.add(DRONES[d.id].prop);
     const enemyIds = Array.from(needs.enemies.keys());
     const propIds = Array.from(needs.props);
     // Assemblies and rocks are built from props / procedural meshes: no prefab of their own.
@@ -431,21 +447,32 @@ export class GameWorld extends Component {
     const nebula = new Nebula(ctx);
     const stars = new Starfield(ctx, mission.scrollSpeed);
     const decor = new Decor(ctx, mission.scrollSpeed);
-    const playerLooks: BulletLook[] = [
-      { material: kit.glow(PULSE_CANNON.color, 1.3), width: PULSE_CANNON.bulletWidth, length: PULSE_CANNON.bulletLength, round: false },
-    ];
-    const playerBullets = new BulletSystem(ctx, 'PlayerBullets', playerLooks, WORLD.heights.playerBullets, BULLET_POOLS.player, 400);
+    // Player projectile looks: only the bolts this loadout fires, one instanced draw call each.
+    const bolts: BoltId[] = [];
+    for (const item of [loadout.primary, loadout.secondary]) {
+      const def = item ? WEAPONS[item.id] : null;
+      if (def && def.kind === 'bolts' && bolts.indexOf(def.bolt) < 0) bolts.push(def.bolt);
+    }
+    if (loadout.drones.some((d) => d.id === 'gunDrone')) bolts.push('drone');
+    const playerLooks: BulletLook[] = bolts.map((id) => {
+      const b = BOLTS[id];
+      return { material: kit.glow(b.color, b.intensity), width: b.width, length: b.length, round: b.round };
+    });
+    const boltLooks = new Map<BoltId, number>(bolts.map((id, i) => [id, i]));
+    const playerBullets = new BulletSystem(ctx, 'PlayerBullets', playerLooks, WORLD.heights.playerBullets, bolts.map((id) => BOLTS[id].pool), PLAYER_BULLET_CAP);
     const enemyLooks: BulletLook[] = ENEMY_BULLET_IDS.map((id) => {
       const b = ENEMY_BULLETS[id];
       return { material: kit.orb(b.color, 1.7), width: b.size, length: b.size, round: true };
     });
-    const enemyBullets = new BulletSystem(ctx, 'EnemyBullets', enemyLooks, WORLD.heights.enemyBullets, BULLET_POOLS.enemy, ENEMY_BULLET_CAP);
+    const enemyBullets = new BulletSystem(ctx, 'EnemyBullets', enemyLooks, WORLD.heights.enemyBullets, ENEMY_BULLET_POOLS, ENEMY_BULLET_CAP);
     const bulletLookIndex = {} as Record<EnemyBulletId, number>;
     ENEMY_BULLET_IDS.forEach((id, i) => (bulletLookIndex[id] = i));
-    const player = new PlayerSystem(ctx, ship, loadout, PULSE_CANNON, playerBullets, this.input, shipPrefab);
+    const player = new PlayerSystem(ctx, ship, loadout, this.input, shipPrefab);
     const enemies = new EnemySystem(ctx, needs.enemies, prefabs, props, enemyBullets, bulletLookIndex, mission.groundSpeed);
     enemies.forceElite = debug.elite;
+    const weapons = new WeaponSystem(ctx, loadout, player, playerBullets, enemies, boltLooks);
     const pickups = new PickupSystem(ctx, props);
+    const drones = new DroneSystem(ctx, loadout, player, playerBullets, enemyBullets, pickups, boltLooks.get('drone') ?? -1, props);
     const setPieces = new SetPieceSystem(ctx, enemies, pickups, needs.setPieces, props, mission.groundSpeed);
     const collisions = new CollisionSystem(ctx, player, playerBullets, enemyBullets, enemies);
     const score = new ScoreSystem(ctx);
@@ -460,20 +487,24 @@ export class GameWorld extends Component {
           () => {
             const t = missionDirector.timeline;
             const scale = this.scaler ? this.scaler.scale : debug.scale;
-            return `${mission.id} ${difficulty}  t ${t.time.toFixed(1)}s ${missionDirector.phase}${t.holding !== 'none' ? `/${t.holding}` : ''}  P${player.power}${debug.god ? '  GOD' : ''}  3D×${scale ?? '?'}`;
+            const kit = `${loadout.primary.id}${loadout.secondary ? `+${loadout.secondary.id}` : ''}`;
+            return `${mission.id} ${difficulty}  t ${t.time.toFixed(1)}s ${missionDirector.phase}${t.holding !== 'none' ? `/${t.holding}` : ''}  P${player.firePower} ${kit}${debug.god ? '  GOD' : ''}  3D×${scale ?? '?'}`;
           },
         )
       : null;
 
     const s: Systems = {
-      ctx, playfield, stars, nebula, decor, player, playerBullets, enemyBullets, enemies, setPieces, pickups,
+      ctx, playfield, stars, nebula, decor, player, weapons, drones, playerBullets, enemyBullets, enemies, setPieces, pickups,
       collisions, score, mission: missionDirector, fx, cameraRig, hud, overlay,
     };
     bus.on('banner', (e) => hud.showBanner(e.text, e.sub, e.style, e.time));
+    const nova = SPECIALS.nova;
     bus.on('novaBomb', () => {
       const erased = this.eraseEnemyBullets(s);
-      bus.emit('scoreBonus', { amount: erased * NOVA_BOMB.bulletScore });
-      enemies.damageVisible(NOVA_BOMB.damage);
+      if (nova.kind === 'nova') {
+        bus.emit('scoreBonus', { amount: erased * nova.bulletScore });
+        enemies.damageVisible(nova.damage);
+      }
     });
     bus.on('enemyKilled', (e) => {
       if (!e.boss) return;

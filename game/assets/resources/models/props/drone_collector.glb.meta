@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "b5b5773f-ac06-4794-86c8-95e3821442ca",
+  "files": [],
+  "subMetas": {
+    "65903": {
+      "importer": "gltf-scene",
+      "uuid": "b5b5773f-ac06-4794-86c8-95e3821442ca@65903",
+      "displayName": "",
+      "id": "65903",
+      "name": "drone_collector.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "b5b5773f-ac06-4794-86c8-95e3821442ca@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 384
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "9f911": {
+      "importer": "gltf-material",
+      "uuid": "b5b5773f-ac06-4794-86c8-95e3821442ca@9f911",
+      "displayName": "",
+      "id": "9f911",
+      "name": "drone_collector_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "b5b5773f-ac06-4794-86c8-95e3821442ca@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "b5b5773f-ac06-4794-86c8-95e3821442ca@9f911"
+      ],
+      "scenes": [
+        "b5b5773f-ac06-4794-86c8-95e3821442ca@65903"
+      ]
+    }
+  }
+}

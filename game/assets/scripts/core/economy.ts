@@ -4,6 +4,7 @@ import { REWARDS, UPGRADES } from '../data/economy';
 import type { UpgradeDef, UpgradeId } from '../data/types';
 import { clamp } from './math';
 import { medalCount } from './medals';
+import { unlockMet } from './progress';
 import type { SaveData } from './save';
 
 /** Levels bought, 0..max. */
@@ -23,12 +24,18 @@ export function nextCost(save: SaveData, id: UpgradeId): number | null {
   return level < costs.length ? costs[level] : null;
 }
 
-export type BuyResult = 'bought' | 'max' | 'poor';
+export type BuyResult = 'bought' | 'max' | 'poor' | 'locked';
 
-/** Buys the next level if there is one and the wallet allows it (mutates the save). */
-export function buyUpgrade(save: SaveData, id: UpgradeId): BuyResult {
+/** Open for purchase: its unlock condition is met (or everything is open, debug `?unlock=1`). */
+export function upgradeUnlocked(save: SaveData, id: UpgradeId, unlockAll = false): boolean {
+  return unlockAll || unlockMet(save.records, UPGRADES[id].unlock);
+}
+
+/** Buys the next level if there is one, it is unlocked and the wallet allows it (mutates the save). */
+export function buyUpgrade(save: SaveData, id: UpgradeId, unlockAll = false): BuyResult {
   const cost = nextCost(save, id);
   if (cost === null) return 'max';
+  if (!upgradeUnlocked(save, id, unlockAll)) return 'locked';
   if (save.credits < cost) return 'poor';
   save.credits -= cost;
   save.upgrades[id] = upgradeLevel(save, id) + 1;

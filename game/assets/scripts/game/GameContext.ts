@@ -3,7 +3,7 @@
 import type { Node } from 'cc';
 import type { EventBus } from '../core/EventBus';
 import type { Rng } from '../core/Rng';
-import type { DecorFieldId, Difficulty, DifficultyDef, EliteDef, EnemyDef, PickupKind } from '../data/types';
+import type { DecorFieldId, Difficulty, DifficultyDef, EliteDef, EnemyDef, PickupKind, SpecialDef } from '../data/types';
 import type { DebugFlags } from '../debug/DebugFlags';
 import type { RenderKit } from '../fx/RenderKit';
 import type { Playfield } from './Playfield';
@@ -43,6 +43,12 @@ export interface GameEvents {
   /** Score that isn't a kill: wasted pickups, erased bullets. */
   scoreBonus: { amount: number };
   novaBomb: { x: number; z: number };
+  /** A timed Special started (Overdrive, Phase Shield, Time Warp; the Nova Bomb has its own event). */
+  special: { def: SpecialDef; x: number; z: number };
+  /** A Plasma Orb splashed everything within `radius`. */
+  blast: { x: number; z: number; radius: number };
+  /** An enemy bullet stopped by a Guardian drone or the Phase Shield. */
+  bulletBlocked: { x: number; z: number };
   banner: { text: string; sub: string; style: BannerStyle; time: number };
   /** Background scenery starts drifting past. */
   decor: { field: DecorFieldId; duration: number };

@@ -1,0 +1,93 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "ab68dc75-be96-43dc-8da2-15eb57bae8f0",
+  "files": [],
+  "subMetas": {
+    "5e001": {
+      "importer": "gltf-mesh",
+      "uuid": "ab68dc75-be96-43dc-8da2-15eb57bae8f0@5e001",
+      "displayName": "",
+      "id": "5e001",
+      "name": "body.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 390
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f2d29": {
+      "importer": "gltf-material",
+      "uuid": "ab68dc75-be96-43dc-8da2-15eb57bae8f0@f2d29",
+      "displayName": "",
+      "id": "f2d29",
+      "name": "drone_guardian_vc.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "d6eff": {
+      "importer": "gltf-scene",
+      "uuid": "ab68dc75-be96-43dc-8da2-15eb57bae8f0@d6eff",
+      "displayName": "",
+      "id": "d6eff",
+      "name": "drone_guardian.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "ab68dc75-be96-43dc-8da2-15eb57bae8f0@5e001"
+      ],
+      "skeletons": [],
+      "textures": [],
+      "materials": [
+        "ab68dc75-be96-43dc-8da2-15eb57bae8f0@f2d29"
+      ],
+      "scenes": [
+        "ab68dc75-be96-43dc-8da2-15eb57bae8f0@d6eff"
+      ]
+    }
+  }
+}

@@ -1,22 +1,21 @@
-// The player's ship: relative-drag movement, banking, auto-fire, hull and shield, Energy and the
-// Nova Bomb, plus the scripted fly-in and fly-out at the start and end of a mission.
+// The player's ship: relative-drag movement, banking, hull and shield, Energy and the Special
+// (Nova Bomb, Overdrive, Phase Shield, Time Warp), plus the scripted fly-in and fly-out at the
+// start and end of a mission. The guns are the WeaponSystem's.
 
 import { Material, MeshRenderer, Node, Prefab, Vec2, instantiate, view } from 'cc';
 import { clamp, damp, lerp } from '../core/math';
 import { Vitals, type VitalsSpec } from '../core/vitals';
 import { DIFFICULTIES } from '../data/difficulty';
 import { SHIELD_CELL, WASTED_PICKUP_SCORE } from '../data/pickups';
-import { ENERGY, GENERATOR_LEVELS, MAGNET_RADIUS, NOVA_BOMB, SHIP_FLIGHT } from '../data/player';
-import type { Loadout, PickupKind, PlayerShipDef, WeaponDef } from '../data/types';
+import { ENERGY, GENERATOR_LEVELS, MAGNET_RADIUS, SHIP_FLIGHT } from '../data/player';
+import type { Loadout, PickupKind, PlayerShipDef, SpecialDef } from '../data/types';
 import { COLORS } from '../data/visuals';
-import { WEAPON_LEVELS } from '../data/weapons';
+import { SPECIALS } from '../data/weapons';
 import { toColor } from '../fx/RenderKit';
 import type { InputService } from '../services/InputService';
-import type { BulletSystem } from './BulletSystem';
 import type { GameContext } from './GameContext';
 
-const DEG = Math.PI / 180;
-const MAX_POWER = 4;
+export const MAX_POWER = 4;
 
 /** intro: flying in; control: player-driven; outro: leaving the screen; dead. */
 export type ShipMode = 'intro' | 'control' | 'outro' | 'dead';
@@ -31,8 +30,9 @@ export class PlayerSystem {
   private targetZ = 0;
   private vx = 0;
   private bank = 0;
-  private fireCooldown = 0;
   private time = 0;
+  /** Seconds left of a timed Special. */
+  private specialTime = 0;
   private modeTime = 0;
   private modeDuration = 1;
   private fromZ = 0;
@@ -41,9 +41,7 @@ export class PlayerSystem {
   /** Blinking after a hull hit. */
   private blink = 0;
   private readonly spec: VitalsSpec;
-  /** Primary weapon after its hangar level and the ship's damage bonus. */
-  private readonly damage: number;
-  private readonly fireInterval: number;
+  readonly special: SpecialDef;
   private readonly ship: Node;
   private readonly model: Node;
   private readonly engines: Node[] = [];
@@ -55,13 +53,12 @@ export class PlayerSystem {
   private readonly hitEvent = { x: 0, z: 0, hull: 0 };
   private readonly shieldEvent = { x: 0, z: 0, shield: 0 };
   private readonly bonusEvent = { amount: 0 };
+  private readonly specialEvent: { def: SpecialDef; x: number; z: number };
 
   constructor(
     private readonly ctx: GameContext,
-    private readonly def: PlayerShipDef,
+    readonly def: PlayerShipDef,
     private readonly loadout: Loadout,
-    private readonly weapon: WeaponDef,
-    private readonly bullets: BulletSystem,
     private readonly input: InputService,
     prefab: Prefab,
   ) {
@@ -79,9 +76,8 @@ export class PlayerSystem {
       energyGain: loadout.energyGain,
     };
     this.vitals = new Vitals(this.spec);
-    const level = WEAPON_LEVELS[clamp(loadout.weaponLevel, 1, WEAPON_LEVELS.length) - 1];
-    this.damage = weapon.damage * level.damage * loadout.primaryDamage;
-    this.fireInterval = weapon.fireInterval / level.rate;
+    this.special = SPECIALS[loadout.special];
+    this.specialEvent = { def: this.special, x: 0, z: 0 };
 
     this.ship = new Node('Player');
     this.ship.layer = ctx.worldRoot.layer;
@@ -129,7 +125,7 @@ export class PlayerSystem {
     this.targetZ = field.zAt(this.def.startHeight);
     this.vx = 0;
     this.bank = 0;
-    this.fireCooldown = 0;
+    this.specialTime = 0;
     this.shieldFlash = 0;
     this.blink = 0;
     this.ship.active = true;
@@ -183,6 +179,45 @@ export class PlayerSystem {
     return MAGNET_RADIUS[clamp(this.loadout.magnet, 1, MAGNET_RADIUS.length) - 1];
   }
 
+  /** The nose, where Primary shots start. */
+  get noseZ(): number {
+    return this.z - 0.45 * this.def.size;
+  }
+
+  /** Fraction of a timed Special left (1 to 0), 0 when none runs. */
+  get specialLeft(): number {
+    const s = this.special;
+    return this.specialTime > 0 && s.kind !== 'nova' ? this.specialTime / s.time : 0;
+  }
+
+  /** Power the guns fire at: Overdrive forces IV. */
+  get firePower(): number {
+    return this.specialTime > 0 && this.special.kind === 'overdrive' ? MAX_POWER : this.power;
+  }
+
+  /** Fire rate multiplier (Overdrive). */
+  get fireRate(): number {
+    return this.specialTime > 0 && this.special.kind === 'overdrive' ? this.special.rate : 1;
+  }
+
+  /** Phase Shield up: untouchable, hurts what it touches. */
+  get phasing(): boolean {
+    return this.specialTime > 0 && this.special.kind === 'phase' && this.alive;
+  }
+
+  get phaseRadius(): number {
+    return this.special.kind === 'phase' ? this.special.radius : 0;
+  }
+
+  get phaseRamDps(): number {
+    return this.special.kind === 'phase' ? this.special.ramDps : 0;
+  }
+
+  /** Time Warp: the speed of everything but the ship and its shots. */
+  get warpScale(): number {
+    return this.specialTime > 0 && this.special.kind === 'warp' ? this.special.scale : 1;
+  }
+
   tick(dt: number, specialPressed: boolean): void {
     this.time += dt;
     this.modeTime += dt;
@@ -190,16 +225,12 @@ export class PlayerSystem {
     if (this.blink > 0) this.blink -= dt;
     if (this.mode === 'dead') return;
     this.vitals.tick(dt);
+    if (this.specialTime > 0) this.specialTime = Math.max(0, this.specialTime - dt);
 
     const prevX = this.x;
     if (this.mode === 'control') {
       this.steer(dt);
-      if (specialPressed) this.novaBomb();
-      this.fireCooldown -= dt;
-      while (this.fireCooldown <= 0) {
-        this.fire();
-        this.fireCooldown += this.fireInterval;
-      }
+      if (specialPressed) this.useSpecial();
     } else {
       this.input.consumeDrag(this.drag); // no steering during scripted flight
       const k = clamp(this.modeTime / this.modeDuration, 0, 1);
@@ -239,6 +270,7 @@ export class PlayerSystem {
     this.ctx.bus.emit('playerHit', e);
     if (result === 'dead') {
       this.mode = 'dead';
+      this.specialTime = 0;
       this.ship.active = false;
       this.ctx.bus.emit('playerDied', { x: this.x, z: this.z });
     }
@@ -254,12 +286,21 @@ export class PlayerSystem {
     const blinking = this.blink > 0 && Math.floor(this.blink * 14) % 2 === 0;
     if (this.model.active === blinking) this.model.active = !blinking;
     const flicker = 0.75 + 0.25 * Math.sin(this.time * 47) * Math.sin(this.time * 31);
-    const thrust = this.mode === 'outro' ? 1.8 : this.mode === 'intro' ? 1.3 : 1;
-    for (let i = 0; i < this.engines.length; i++) this.engines[i].setScale(0.42 * flicker, 1, 0.75 * flicker * thrust);
+    const boost = this.fireRate > 1 ? 1.6 : 1;
+    const thrust = (this.mode === 'outro' ? 1.8 : this.mode === 'intro' ? 1.3 : 1) * boost;
+    for (let i = 0; i < this.engines.length; i++) this.engines[i].setScale(0.42 * flicker * boost, 1, 0.75 * flicker * thrust);
 
     // Bubble: faint with full shield, bright for a moment after it soaks a hit, gone when empty.
+    // The Phase Shield swells it into a bright pulsing sphere that fades in its last second.
     const level = v.maxShield > 0 ? v.shield / v.maxShield : 0;
-    const alpha = v.shield > 0 ? 0.18 + 0.22 * level + (this.shieldFlash > 0 ? this.shieldFlash * 2 : 0) : this.shieldFlash * 1.5;
+    let alpha = v.shield > 0 ? 0.18 + 0.22 * level + (this.shieldFlash > 0 ? this.shieldFlash * 2 : 0) : this.shieldFlash * 1.5;
+    let size = this.def.size * 1.45;
+    if (this.phasing) {
+      const fade = Math.min(1, this.specialTime);
+      alpha = Math.max(alpha, (0.75 + 0.25 * Math.sin(this.time * 18)) * fade);
+      size = this.phaseRadius * (2.9 + 0.15 * Math.sin(this.time * 9));
+    }
+    this.bubble.setScale(size, 1, size);
     this.bubbleColor.a = Math.round(clamp(alpha, 0, 1) * 255);
     this.bubbleMaterial.setProperty('mainColor', this.bubbleColor);
   }
@@ -290,10 +331,21 @@ export class PlayerSystem {
     }
   }
 
-  private novaBomb(): void {
-    if (!this.vitals.useCharge()) return;
-    this.vitals.makeInvulnerable(NOVA_BOMB.invulnerableTime);
-    this.ctx.bus.emit('novaBomb', { x: this.x, z: this.z });
+  /** Spends a charge on the equipped Special; a timed one can't be stacked while it runs. */
+  private useSpecial(): void {
+    const s = this.special;
+    if (this.specialTime > 0 || !this.vitals.useCharge()) return;
+    if (s.kind === 'nova') {
+      this.vitals.makeInvulnerable(s.invulnerableTime);
+      this.ctx.bus.emit('novaBomb', { x: this.x, z: this.z });
+      return;
+    }
+    this.specialTime = s.time;
+    if (s.kind === 'phase') this.vitals.makeInvulnerable(s.time);
+    const e = this.specialEvent;
+    e.x = this.x;
+    e.z = this.z;
+    this.ctx.bus.emit('special', e);
   }
 
   private applyPickup(kind: PickupKind): void {
@@ -319,16 +371,6 @@ export class PlayerSystem {
     if (!used) {
       this.bonusEvent.amount = WASTED_PICKUP_SCORE;
       this.ctx.bus.emit('scoreBonus', this.bonusEvent);
-    }
-  }
-
-  private fire(): void {
-    const form = this.weapon.powerForms[clamp(this.power, 1, this.weapon.powerForms.length) - 1];
-    const w = this.weapon;
-    const noseZ = this.z - 0.45 * this.def.size;
-    for (let i = 0; i < form.length; i++) {
-      const s = form[i];
-      this.bullets.spawn(0, this.x + s.x, noseZ, s.angleDeg * DEG, w.bulletSpeed, this.damage, w.bulletRadius);
     }
   }
 }

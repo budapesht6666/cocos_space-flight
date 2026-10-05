@@ -1,16 +1,16 @@
-// The player's progress in local storage: wallet, hangar, ship and paints, records. Parsing,
+// The player's progress in local storage: wallet, hangar, arsenal, ship and paints, records. Parsing,
 // migrations and rules live in core/ (save, economy, loadout, progress); this is the storage and
 // the one copy of the save every scene shares.
 
 import { sys } from 'cc';
 import { buyUpgrade, grantCredits, runRewards, setWallet, type BuyResult, type RunRewards } from '../core/economy';
-import { buildLoadout } from '../core/loadout';
+import { autoEquip, buildLoadout, equipItem, type EquipResult } from '../core/loadout';
 import { shipUnlocked } from '../core/progress';
 import { applyRun, getRecord, type MissionRecord, type RecordMap, type RecordUpdate, type RunOutcome } from '../core/records';
 import { loadSave, newSave, serializeSave, type SaveData } from '../core/save';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_PAINT, DEFAULT_SHIP, SHIPS } from '../data/player';
-import type { Difficulty, Loadout, PaintId, ShipId, UpgradeId } from '../data/types';
+import type { ArsenalId, Difficulty, Loadout, PaintId, ShipId, UpgradeId } from '../data/types';
 
 const KEY = 'spaceflight.save';
 /** Stage 3 kept only records, here; migrated into the save once and removed. */
@@ -146,9 +146,19 @@ export const SaveService = {
     return { update, rewards, balance: save.credits };
   },
 
-  buy(id: UpgradeId): BuyResult {
-    const result = buyUpgrade(load(), id);
-    if (result === 'bought') persist();
+  /** Buys the next level; a new arsenal item goes straight into its slot. `unlockAll`: debug `?unlock=1`. */
+  buy(id: UpgradeId, unlockAll = false): BuyResult {
+    const save = load();
+    const result = buyUpgrade(save, id, unlockAll);
+    if (result !== 'bought') return result;
+    autoEquip(save, id);
+    persist();
+    return result;
+  },
+
+  equip(id: ArsenalId): EquipResult {
+    const result = equipItem(load(), id);
+    if (result === 'equipped' || result === 'unequipped') persist();
     return result;
   },
 

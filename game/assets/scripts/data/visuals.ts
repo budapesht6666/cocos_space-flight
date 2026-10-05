@@ -22,6 +22,11 @@ export const COLORS = {
   deflect: [0.6, 0.65, 0.75] as Rgb,
   /** Escape pods and rescues. */
   rescue: [0.45, 1.0, 0.6] as Rgb,
+  /** Plasma Orb splash. */
+  plasma: [0.2, 1.0, 0.75] as Rgb,
+  /** Specials: Overdrive, Time Warp (the Phase Shield uses the shield colour). */
+  overdrive: [1.0, 0.75, 0.3] as Rgb,
+  warp: [0.55, 0.45, 1.0] as Rgb,
 };
 
 export const STARFIELD = {
@@ -92,7 +97,9 @@ export const FX_POOLS = {
   pop: 60,
   deflect: 32,
   rescue: 40,
-  rings: 10,
+  /** Plasma Orb splashes: ~7 a second at Power IV, a few sparks each. */
+  plasma: 40,
+  rings: 18,
 };
 
 /**

@@ -1,20 +1,21 @@
 // Hangar (GDD §6, §7, §14): three tabs. SHIP — pick a ship and its paint on the turntable; SYSTEMS —
 // hull, shield, generator, magnet, Nova charges, Energy gain, starting Power; WEAPONS — the four
-// slots (Primary with its level; Secondary and Drones arrive with stage 5; Special). LAUNCH plays
-// the mission picked on the main or mission page.
+// slots with their arsenal (ui/HangarWeapons.ts). LAUNCH plays the mission picked on the main or
+// mission page.
 
-import { Color, Graphics, KeyCode, Label, Node, view } from 'cc';
-import { formatUpgradeValue, nextCost, upgradeLevel, upgradeValue } from '../core/economy';
+import { Graphics, KeyCode, Label, Node, view } from 'cc';
 import { shipUnlocked } from '../core/progress';
 import { SECTORS } from '../data/campaign';
 import { UPGRADE_ORDER, UPGRADES } from '../data/economy';
 import { PAINT_ORDER, PAINTS, SHIP_ORDER, SHIPS } from '../data/player';
-import type { PaintId, ShipId, UpgradeDef, UpgradeId } from '../data/types';
+import type { ArsenalId, PaintId, ShipId, UpgradeId } from '../data/types';
 import { toColor } from '../fx/RenderKit';
 import { SaveService } from '../services/SaveService';
+import { ROW_GAP, ROW_HEIGHT, UpgradeRow } from './HangarRows';
+import { WeaponsPanel } from './HangarWeapons';
 import { pickLabel } from './MenuPages';
 import { HEADER_TOP, pageHeader, pageRoot, type MenuHost, type MenuPage, type ShipPose } from './MenuPage';
-import { drawButton, drawCard, drawChevron, drawCoin, drawLock, onTap, placeLabel, UI, uiLabel, uiNode } from './UiKit';
+import { drawButton, drawChevron, onTap, placeLabel, UI, uiLabel, uiNode } from './UiKit';
 
 type Tab = 'ship' | 'systems' | 'weapons';
 
@@ -27,99 +28,10 @@ const TAB_WIDTH = 204;
 const TAB_HEIGHT = 66;
 const TABS_TOP = HEADER_TOP + 92;
 const CONTENT_TOP = TABS_TOP + TAB_HEIGHT + 24;
-const CARD_WIDTH = 640;
-const LEFT = -CARD_WIDTH / 2 + 24;
-const ROW_HEIGHT = 108;
-const ROW_GAP = 10;
-const BUY_WIDTH = 176;
-const BUY_HEIGHT = 72;
-const BUY_X = CARD_WIDTH / 2 - BUY_WIDTH / 2 - 16;
-const PIP = 18;
 const SWATCH_R = 30;
 const SWATCH_GAP = 104;
 /** Top of the ship name block, from the bottom of the screen: the turntable sits above it. */
 const SHIP_INFO_TOP = 568;
-
-const BUY_POOR = new Color(26, 30, 44, 230);
-const PIP_ON = new Color(90, 200, 255, 255);
-
-/** One upgrade: name, hint, current → next value, level pips and a BUY button with the price. */
-class UpgradeRow {
-  readonly node: Node;
-  private readonly card: Graphics;
-  private readonly value: Label;
-  private readonly pips: Graphics;
-  private readonly buy: Node;
-  private readonly buyGfx: Graphics;
-  private readonly price: Label;
-
-  constructor(
-    parent: Node,
-    private readonly def: UpgradeDef,
-    top: number,
-    private readonly host: MenuHost,
-    onBuy: (id: UpgradeId) => void,
-  ) {
-    const font = host.font;
-    this.node = uiNode(parent, `Upgrade-${def.id}`, CARD_WIDTH, ROW_HEIGHT, { top, centerX: true });
-    this.card = this.node.addComponent(Graphics);
-    const name = uiLabel(this.node, 'Name', 24, UI.white, {}, font);
-    name.string = def.name;
-    placeLabel(name, LEFT, 30, 'left');
-    const hint = uiLabel(this.node, 'Hint', 17, UI.dim, {}, font);
-    hint.string = def.hint;
-    placeLabel(hint, LEFT, 0, 'left');
-    this.value = uiLabel(this.node, 'Value', 20, UI.accent, {}, font);
-    placeLabel(this.value, LEFT, -32, 'left');
-    this.pips = uiNode(this.node, 'Pips', 0, 0, {}).addComponent(Graphics);
-    this.buy = uiNode(this.node, 'Buy', BUY_WIDTH, BUY_HEIGHT, {});
-    this.buy.setPosition(BUY_X, 0);
-    this.buyGfx = this.buy.addComponent(Graphics);
-    this.price = uiLabel(this.buy, 'Price', 24, UI.gold, {}, font);
-    onTap(this.buy, () => onBuy(def.id));
-  }
-
-  refresh(): void {
-    const save = SaveService.data;
-    const def = this.def;
-    const level = upgradeLevel(save, def.id);
-    const max = def.costs.length;
-    const cost = nextCost(save, def.id);
-    drawCard(this.card, CARD_WIDTH, ROW_HEIGHT);
-    const now = formatUpgradeValue(def, upgradeValue(save, def.id));
-    this.value.string = cost === null ? `${now}  ·  MAX` : `${now}  →  ${formatUpgradeValue(def, def.values[level + 1])}`;
-
-    // Level pips, right-aligned before the button.
-    const g = this.pips;
-    g.clear();
-    const x0 = BUY_X - BUY_WIDTH / 2 - 18 - max * (PIP + 6);
-    for (let i = 0; i < max; i++) {
-      g.fillColor = i < level ? PIP_ON : UI.faint;
-      g.roundRect(x0 + i * (PIP + 6), 22, PIP, PIP, 4);
-      g.fill();
-    }
-
-    const b = this.buyGfx;
-    b.clear();
-    if (cost === null) {
-      this.price.string = 'MAX';
-      this.price.color = UI.dim;
-      placeLabel(this.price, 0, 0);
-      return;
-    }
-    const affordable = SaveService.credits >= cost;
-    if (affordable) drawButton(b, BUY_WIDTH, BUY_HEIGHT, false);
-    else {
-      b.fillColor = BUY_POOR;
-      b.roundRect(-BUY_WIDTH / 2, -BUY_HEIGHT / 2, BUY_WIDTH, BUY_HEIGHT, 18);
-      b.fill();
-    }
-    drawCoin(b, -BUY_WIDTH / 2 + 30, 0, 14);
-    this.price.string = cost.toLocaleString('en-US');
-    this.price.color = affordable ? UI.gold : UI.dim;
-    placeLabel(this.price, 16, 0);
-  }
-}
 
 interface Swatch {
   paint: PaintId;
@@ -142,7 +54,7 @@ export class HangarPage implements MenuPage {
   private readonly shipPerks: Label;
   private readonly shipStatus: Label;
   private readonly swatches: Swatch[] = [];
-  private readonly specialInfo: Label;
+  private readonly weapons: WeaponsPanel;
   private readonly launchLabel: Label;
 
   constructor(parent: Node, private readonly host: MenuHost) {
@@ -188,36 +100,14 @@ export class HangarPage implements MenuPage {
     // SYSTEMS: one row per upgrade.
     const onBuy = (id: UpgradeId): void => this.buy(id);
     UPGRADE_ORDER.filter((id) => UPGRADES[id].group === 'systems').forEach((id, i) => {
-      this.rows.push(new UpgradeRow(this.panels.systems, UPGRADES[id], CONTENT_TOP + i * (ROW_HEIGHT + ROW_GAP), host, onBuy));
+      this.rows.push(new UpgradeRow(this.panels.systems, UPGRADES[id], CONTENT_TOP + i * (ROW_HEIGHT + ROW_GAP), font, onBuy));
     });
 
-    // WEAPONS: the four slots.
-    const weapons = this.panels.weapons;
-    let top = CONTENT_TOP;
-    const caption = (text: string): void => {
-      const label = uiLabel(weapons, `Slot-${text}`, 20, UI.accent, { top, left: 46 }, font);
-      label.string = text;
-      top += 34;
-    };
-    caption('PRIMARY');
-    for (const id of UPGRADE_ORDER.filter((u) => UPGRADES[u].group === 'weapons')) {
-      this.rows.push(new UpgradeRow(weapons, UPGRADES[id], top, host, onBuy));
-      top += ROW_HEIGHT + 22;
-    }
-    caption('SECONDARY');
-    this.lockedSlot(weapons, top, 'Rockets, wing cannons and more', 'IN A LATER UPDATE');
-    top += 96 + 22;
-    caption('DRONES');
-    this.lockedSlot(weapons, top, 'Gun, guardian and collector drones', 'IN A LATER UPDATE');
-    top += 96 + 22;
-    caption('SPECIAL');
-    const special = uiNode(weapons, 'Special', CARD_WIDTH, 96, { top, centerX: true });
-    drawCard(special.addComponent(Graphics), CARD_WIDTH, 96);
-    const nova = uiLabel(special, 'Name', 24, UI.white, {}, font);
-    nova.string = 'NOVA BOMB';
-    placeLabel(nova, LEFT, 18, 'left');
-    this.specialInfo = uiLabel(special, 'Info', 17, UI.dim, {}, font);
-    placeLabel(this.specialInfo, LEFT, -18, 'left');
+    // WEAPONS: the four slots and their arsenal.
+    this.weapons = new WeaponsPanel(this.panels.weapons, CONTENT_TOP, font, host.unlockAll, {
+      buy: onBuy,
+      equip: (id) => this.equip(id),
+    });
 
     const launch = uiNode(this.root, 'Launch', 600, 100, { bottom: 44, centerX: true });
     drawButton(launch.addComponent(Graphics), 600, 100, true);
@@ -250,24 +140,14 @@ export class HangarPage implements MenuPage {
       this.showTab(TABS[(i + 1) % TABS.length].id);
       return true;
     }
-    if (this.tab === 'ship' && (code === KeyCode.ARROW_LEFT || code === KeyCode.ARROW_RIGHT)) {
-      this.browse(code === KeyCode.ARROW_LEFT ? -1 : 1);
+    if (code === KeyCode.ARROW_LEFT || code === KeyCode.ARROW_RIGHT) {
+      const dir = code === KeyCode.ARROW_LEFT ? -1 : 1;
+      if (this.tab === 'ship') this.browse(dir);
+      else if (this.tab === 'weapons') this.weapons.step(dir);
+      else return false;
       return true;
     }
     return false;
-  }
-
-  private lockedSlot(parent: Node, top: number, text: string, status: string): void {
-    const node = uiNode(parent, `Locked-${top}`, CARD_WIDTH, 96, { top, centerX: true });
-    const g = node.addComponent(Graphics);
-    drawCard(g, CARD_WIDTH, 96, null, true);
-    drawLock(g, CARD_WIDTH / 2 - 52, 0, 44, UI.dim);
-    const label = uiLabel(node, 'Text', 20, UI.dim, {}, this.host.font);
-    label.string = text;
-    placeLabel(label, LEFT, 16, 'left');
-    const sub = uiLabel(node, 'Status', 17, UI.faint, {}, this.host.font);
-    sub.string = status;
-    placeLabel(sub, LEFT, -18, 'left');
   }
 
   private showTab(tab: Tab): void {
@@ -284,9 +164,8 @@ export class HangarPage implements MenuPage {
 
   private refresh(): void {
     for (const row of this.rows) row.refresh();
+    this.weapons.refresh();
     this.refreshShip();
-    const l = SaveService.loadout(SaveService.shipToFly(this.host.unlockAll));
-    this.specialInfo.string = `Clears the screen  ·  ${l.specialCharges} at start, holds ${l.maxCharges}`;
   }
 
   private isOpen(ship: ShipId): boolean {
@@ -342,10 +221,15 @@ export class HangarPage implements MenuPage {
   }
 
   private buy(id: UpgradeId): void {
-    const result = SaveService.buy(id);
+    const result = SaveService.buy(id, this.host.unlockAll);
     if (result === 'poor') this.host.walletDenied();
     if (result !== 'bought') return;
     this.host.walletChanged();
     this.refresh();
+  }
+
+  private equip(id: ArsenalId): void {
+    const result = SaveService.equip(id);
+    if (result === 'equipped' || result === 'unequipped') this.weapons.refresh();
   }
 }

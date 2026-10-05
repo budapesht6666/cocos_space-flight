@@ -184,6 +184,42 @@ export class PickupSystem {
     this.collectAll = false;
   }
 
+  /**
+   * Collector drone: the nearest pickup to (x, z) that is still loose (not pulled, not a pod: pods
+   * are the ship's to catch). Writes its position into `out`; false if there is none.
+   */
+  findLoose(x: number, z: number, out: { x: number; z: number }): boolean {
+    let best = -1;
+    let bestD2 = Infinity;
+    const field = this.ctx.playfield;
+    for (let i = 0; i < this.active.length; i++) {
+      const p = this.active[i];
+      if (p.pulled || p.dead || p.def.pod || !field.isVisible(p.x, p.z, 0.3)) continue;
+      const dx = p.x - x;
+      const dz = p.z - z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        best = i;
+      }
+    }
+    if (best < 0) return false;
+    out.x = this.active[best].x;
+    out.z = this.active[best].z;
+    return true;
+  }
+
+  /** Sends every loose pickup within `reach` of (x, z) to the ship, as if the magnet caught it. */
+  pullNear(x: number, z: number, reach: number): void {
+    for (let i = 0; i < this.active.length; i++) {
+      const p = this.active[i];
+      if (p.pulled || p.def.pod) continue;
+      const dx = p.x - x;
+      const dz = p.z - z;
+      if (dx * dx + dz * dz <= reach * reach) p.pulled = true;
+    }
+  }
+
   get count(): number {
     return this.active.length;
   }

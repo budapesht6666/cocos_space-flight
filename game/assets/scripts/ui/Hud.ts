@@ -12,6 +12,7 @@ import type { ButtonId } from '../services/InputService';
 import { contains, drawCoin, drawMedal, UI, uiButton, uiLabel, uiNode, uiPanel } from './UiKit';
 
 const SPECIAL_READY = new Color(30, 90, 140, 220);
+const SPECIAL_ACTIVE = new Color(60, 120, 170, 235);
 const SPECIAL_EMPTY = new Color(16, 24, 40, 200);
 const SPECIAL_RIM = new Color(40, 60, 90, 255);
 const BOSS_BACK = new Color(20, 10, 16, 220);
@@ -108,7 +109,7 @@ export class Hud {
   private readonly nextButton: Node;
   private readonly hangarButton: Node;
   private readonly menuButton: Node;
-  private shown = { score: -1, combo: -1, hull: -1, hullMax: -1, shield: -1, shieldMax: -1, shieldFill: -1, credits: -1, charges: -1, energy: -1, boss: -1, armored: false, pods: -1, podsTotal: -1 };
+  private shown = { score: -1, combo: -1, hull: -1, hullMax: -1, shield: -1, shieldMax: -1, shieldFill: -1, credits: -1, charges: -1, energy: -1, active: -1, boss: -1, armored: false, pods: -1, podsTotal: -1 };
   private time = 0;
   private podsFlash = 0;
   private recordBlink = false;
@@ -247,30 +248,37 @@ export class Hud {
     this.podsFlash = 1.2;
   }
 
-  /** Special button: charges in the middle, Energy as a ring around it. */
-  setSpecial(charges: number, energy: number): void {
+  /**
+   * Special button: its name and charges in the middle, Energy as a ring around it. While a timed
+   * Special runs (`active` 1 → 0), the ring shows the time left instead.
+   */
+  setSpecial(label: string, charges: number, energy: number, active: number): void {
     const e = Math.round(energy * 100) / 100;
-    if (charges === this.shown.charges && e === this.shown.energy) return;
+    const a = Math.round(active * 100) / 100;
+    if (charges === this.shown.charges && e === this.shown.energy && a === this.shown.active) return;
     this.shown.charges = charges;
     this.shown.energy = e;
+    this.shown.active = a;
     const g = this.specialGfx;
-    const ready = charges > 0;
+    const ready = charges > 0 && a <= 0;
     g.clear();
-    g.fillColor = ready ? SPECIAL_READY : SPECIAL_EMPTY;
+    g.fillColor = a > 0 ? SPECIAL_ACTIVE : ready ? SPECIAL_READY : SPECIAL_EMPTY;
     g.circle(0, 0, SPECIAL_RADIUS - 8);
     g.fill();
     g.lineWidth = 8;
     g.strokeColor = SPECIAL_RIM;
     g.circle(0, 0, SPECIAL_RADIUS);
     g.stroke();
-    if (e > 0) {
-      g.strokeColor = e >= 1 ? UI.gold : UI.shield;
+    const ring = a > 0 ? a : e;
+    if (ring > 0) {
+      g.strokeColor = a > 0 ? UI.white : e >= 1 ? UI.gold : UI.shield;
       // Clockwise from the top.
-      g.arc(0, 0, SPECIAL_RADIUS, Math.PI / 2, Math.PI / 2 - Math.PI * 2 * Math.min(1, e), false);
+      g.arc(0, 0, SPECIAL_RADIUS, Math.PI / 2, Math.PI / 2 - Math.PI * 2 * Math.min(1, ring), false);
       g.stroke();
     }
-    this.specialLabel.string = `NOVA\n${charges > 0 ? '●'.repeat(charges) : '–'}`;
-    this.specialLabel.color = ready ? UI.white : UI.dim;
+    this.specialLabel.string = `${label}
+${charges > 0 ? '●'.repeat(charges) : '–'}`;
+    this.specialLabel.color = ready || a > 0 ? UI.white : UI.dim;
   }
 
   /** Boss bar with phase marks; `name` null hides it. An armoured core shows a steel bar. */

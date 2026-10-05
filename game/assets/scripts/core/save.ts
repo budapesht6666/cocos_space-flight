@@ -4,15 +4,27 @@
 // Versions:
 //   1 — stage 3: records and the last menu pick only, under the key `spaceflight.records`.
 //   2 — stage 4: credits, hangar upgrades, ship and paints next to the records (`spaceflight.save`).
+//   3 — stage 5: the arsenal. Weapons, drones and Specials are upgrade tracks like the systems
+//       (Pulse Cannon's level was one already), plus what is equipped in the four slots.
 // A new version adds a step to MIGRATIONS that turns the previous document into the next one.
 
 import { UPGRADE_ORDER, UPGRADES } from '../data/economy';
 import { DEFAULT_SHIP, PAINTS, SHIPS } from '../data/player';
-import type { PaintId, ShipId } from '../data/types';
+import type { DroneId, PaintId, PrimaryId, SecondaryId, ShipId, SpecialId } from '../data/types';
+import { DRONES, PRIMARIES, SECONDARIES, SPECIALS } from '../data/weapons';
 import { clamp } from './math';
 import { int, sanitizeRecords, type RecordMap } from './records';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
+
+/** What is in the four slots (ownership is checked when the loadout is built). */
+export interface EquipState {
+  primary: PrimaryId;
+  secondary: SecondaryId | null;
+  /** In slot order; as many fly as the Drone Bay allows. */
+  drones: DroneId[];
+  special: SpecialId;
+}
 
 export interface SaveData {
   version: number;
@@ -25,6 +37,7 @@ export interface SaveData {
   ship: ShipId;
   /** Paint per ship; a ship without an entry wears the default paint. */
   paints: { [ship: string]: PaintId };
+  equip: EquipState;
   records: RecordMap;
   /** Last mission and difficulty launched. */
   last: { mission: string; difficulty: string } | null;
@@ -47,10 +60,16 @@ type Raw = { [key: string]: unknown };
 const MIGRATIONS: { [from: number]: (raw: Raw) => Raw } = {
   // Records and the last pick carry over; the hangar starts empty.
   1: (raw) => ({ version: 2, credits: 0, earned: 0, upgrades: {}, ship: DEFAULT_SHIP, paints: {}, records: raw.records, last: raw.last }),
+  // Upgrade levels keep their meaning (Pulse Cannon included); the slots start with the stock kit.
+  2: (raw) => Object.assign({}, raw, { version: 3, equip: defaultEquip() }),
 };
 
+export function defaultEquip(): EquipState {
+  return { primary: 'pulse', secondary: null, drones: [], special: 'nova' };
+}
+
 export function newSave(): SaveData {
-  return { version: SAVE_VERSION, credits: 0, earned: 0, upgrades: {}, ship: DEFAULT_SHIP, paints: {}, records: {}, last: null };
+  return { version: SAVE_VERSION, credits: 0, earned: 0, upgrades: {}, ship: DEFAULT_SHIP, paints: {}, equip: defaultEquip(), records: {}, last: null };
 }
 
 /**
@@ -101,10 +120,24 @@ function sanitize(raw: Raw): SaveData {
     const paint = paints[ship];
     if (typeof paint === 'string' && Object.prototype.hasOwnProperty.call(PAINTS, paint)) save.paints[ship] = paint as PaintId;
   }
+  save.equip = sanitizeEquip(raw.equip);
   save.records = sanitizeRecords(raw.records);
   const last = raw.last as Raw | null | undefined;
   if (last && typeof last.mission === 'string' && typeof last.difficulty === 'string') save.last = { mission: last.mission, difficulty: last.difficulty };
   return save;
+}
+
+function sanitizeEquip(value: unknown): EquipState {
+  const equip = defaultEquip();
+  const raw = (value && typeof value === 'object' ? value : {}) as Raw;
+  const has = (table: object, id: unknown): boolean => typeof id === 'string' && Object.prototype.hasOwnProperty.call(table, id);
+  if (has(PRIMARIES, raw.primary)) equip.primary = raw.primary as PrimaryId;
+  if (has(SECONDARIES, raw.secondary)) equip.secondary = raw.secondary as SecondaryId;
+  if (has(SPECIALS, raw.special)) equip.special = raw.special as SpecialId;
+  if (Array.isArray(raw.drones)) {
+    for (const id of raw.drones) if (has(DRONES, id) && equip.drones.indexOf(id as DroneId) < 0) equip.drones.push(id as DroneId);
+  }
+  return equip;
 }
 
 function parse(json: string): Raw | null {

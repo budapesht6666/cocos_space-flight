@@ -1,4 +1,4 @@
-// Builds game-ready props (station modules, turrets, pickups) from CC0 packs.
+// Builds game-ready props (station modules, turrets, pickups, drones) from CC0 packs.
 //
 // Every prop becomes ONE mesh with baked vertex colours and no texture, so the game draws all of
 // them with a single shared, GPU-instanced material (builtin-standard + USE_VERTEX_COLOR):
@@ -6,10 +6,12 @@
 //     remapped to our dark palette. Light greys would blow out to white under the scene's HDR sun.
 //     Turret palettes paint the accents enemy red (GDD: red/purple = enemy).
 //   - Quaternius Ultimate Space Kit pickups: colours are sampled from the texture atlas per vertex.
+//   - Drones are Kenney craft painted dark like the stations, accents in the drone's own glow colour
+//     (orange-red trim would read as an enemy).
 // Turrets keep their rotating part as a separate child node `head` (pivot at its base) so the game
 // can aim it; everything else is merged into `body`.
 // Station modules keep the pack's tile units (1 tile = 1 unit), centred on X/Z, standing on y = 0;
-// pickups are centred and normalised so the largest extent is 1. Sizes in game come from data.
+// pickups and drones are centred and normalised so the largest extent is 1. Sizes in game come from data.
 //
 // Usage: node tools/assets/build-props.mjs
 // Sources: art-source/kenney-space-kit/*.glb, art-source/quaternius-ultimate-space-kit/*.glb
@@ -45,6 +47,14 @@ const TURRET = {
   metalRed: [0.75, 0.08, 0.1],
   _defaultMat: [0.11, 0.11, 0.14],
 };
+/** Drones: dark hull, canopy almost black, trim in the drone's colour. */
+const drone = (accent) => ({
+  metal: [0.2, 0.22, 0.27],
+  metalDark: [0.11, 0.12, 0.15],
+  dark: [0.04, 0.05, 0.07],
+  metalRed: accent,
+  _defaultMat: [0.11, 0.12, 0.15],
+});
 /** The Shield pickup's sphere is red in the pack; red belongs to enemies, so it turns cyan. */
 const RED_TO_CYAN = (c) => (c[0] > 0.45 && c[1] < 0.3 && c[2] < 0.3 ? [0.2, 0.8, 1.0] : c);
 
@@ -73,6 +83,10 @@ const PROPS = [
   { src: path.join(QUATERNIUS, 'pickup_health.glb'), out: 'pickup_repair', pickup: true },
   { src: path.join(QUATERNIUS, 'pickup_sphere.glb'), out: 'pickup_shield', pickup: true, recolor: RED_TO_CYAN },
   { src: path.join(QUATERNIUS, 'pickup_thunder.glb'), out: 'pickup_energy', pickup: true },
+  // Drones: a small fighter, a dish-shaped shield emitter, a mining craft with claws.
+  { src: path.join(KENNEY, 'craft_speederA.glb'), out: 'drone_gun', palette: drone([0.15, 0.55, 0.95]), centred: true },
+  { src: path.join(KENNEY, 'satelliteDish_detailed.glb'), out: 'drone_guardian', palette: drone([0.15, 0.8, 0.9]), centred: true },
+  { src: path.join(KENNEY, 'craft_miner.glb'), out: 'drone_collector', palette: drone([0.95, 0.65, 0.15]), centred: true },
 ];
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
@@ -106,13 +120,14 @@ async function buildProp(prop) {
     }
   }
 
-  // Frame: centre X/Z; props stand on y = 0, pickups are centred and normalised.
+  // Frame: centre X/Z; props stand on y = 0, pickups and drones are centred and normalised.
+  const centred = prop.pickup || prop.centred;
   const all = body.positions.concat(head.positions);
   const [min, max] = bounds(all);
   const cx = (min[0] + max[0]) / 2;
   const cz = (min[2] + max[2]) / 2;
-  const cy = prop.pickup ? (min[1] + max[1]) / 2 : min[1];
-  const scale = prop.pickup ? 1 / Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]) : 1;
+  const cy = centred ? (min[1] + max[1]) / 2 : min[1];
+  const scale = centred ? 1 / Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]) : 1;
   const pivot = headPivot ? [headPivot[0], headPivot[1], headPivot[2]] : [cx, cy, cz];
   shift(body.positions, cx, cy, cz, scale);
   shift(head.positions, pivot[0], pivot[1], pivot[2], scale);

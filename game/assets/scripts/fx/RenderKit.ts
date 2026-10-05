@@ -92,6 +92,11 @@ export class RenderKit {
     });
   }
 
+  /** Beam strip (shared, instanced): white-hot core across the width fading into `rim`; scale X = width, Z = length. */
+  beam(rim: Rgb, intensity = 1): Material {
+    return this.cached(`beam:${rim}:${intensity}`, () => this.additive(makeBeamTexture(64, rim), [1, 1, 1], intensity));
+  }
+
   /** Additive ring (shared, instanced): elite markers. */
   ringGlow(rgb: Rgb, intensity = 1): Material {
     return this.cached(`ring:${rgb}:${intensity}`, () => this.additive(this.ringTexture, rgb, intensity));
@@ -241,6 +246,27 @@ function makeOrbTexture(size: number, rim: Rgb): Texture2D {
     }
   }
   return rgbaTexture(data, size, size, false);
+}
+
+/** Beam cross-section along U (constant along V): white core, `rim` colour towards soft edges. */
+function makeBeamTexture(width: number, rim: Rgb): Texture2D {
+  const rows = 4;
+  const data = new Uint8Array(width * rows * 4);
+  const half = (width - 1) / 2;
+  for (let x = 0; x < width; x++) {
+    const d = Math.abs(x - half) / half;
+    // A thin white-hot core; most of the strip is the rim colour fading out.
+    const k = Math.min(1, Math.max(0, (d - 0.04) / 0.22));
+    const alpha = d >= 1 ? 0 : Math.pow(1 - d, 1.7);
+    for (let y = 0; y < rows; y++) {
+      const i = (y * width + x) * 4;
+      data[i] = Math.round((1 + (rim[0] - 1) * k) * 255);
+      data[i + 1] = Math.round((1 + (rim[1] - 1) * k) * 255);
+      data[i + 2] = Math.round((1 + (rim[2] - 1) * k) * 255);
+      data[i + 3] = Math.round(alpha * 255);
+    }
+  }
+  return rgbaTexture(data, width, rows, false);
 }
 
 /** White texture whose alpha follows `profile(d)`, d = distance from centre (0..1 at the edge). */

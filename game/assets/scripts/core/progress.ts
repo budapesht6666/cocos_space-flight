@@ -6,12 +6,13 @@
 // - A mission opens when the previous mission of its sector is cleared on any difficulty.
 // - A difficulty opens when all four medals are earned on the previous one.
 // - A ship opens when its sector's boss is beaten.
+// - An arsenal item can be bought once its mission is cleared or enough medals are earned.
 // Anything already played (stage 3 had everything open) stays open.
 
 import { CAMPAIGN_DIFFICULTIES, SECTORS } from '../data/campaign';
 import { DIFFICULTY_ORDER } from '../data/difficulty';
 import { MISSION_ORDER, nextMission } from '../data/missions';
-import type { Difficulty, MissionId, PlayerShipDef, SectorDef } from '../data/types';
+import type { Difficulty, MissionId, PlayerShipDef, SectorDef, UnlockReq } from '../data/types';
 import { medalCount } from './medals';
 import { getRecord, type RecordMap } from './records';
 
@@ -84,6 +85,28 @@ export function shipUnlocked(records: RecordMap, ship: PlayerShipDef): boolean {
   if (!ship.unlock) return true;
   const sector = SECTORS[ship.unlock.sector - 1];
   return sector !== undefined && bossBeaten(records, sector);
+}
+
+/** Medals earned over the whole campaign (campaign difficulties). */
+export function campaignMedals(records: RecordMap): number {
+  let earned = 0;
+  for (const s of SECTORS) earned += sectorMedals(records, s).earned;
+  return earned;
+}
+
+/** An unlock condition (arsenal items): null is always met. */
+export function unlockMet(records: RecordMap, req: UnlockReq | null): boolean {
+  if (!req) return true;
+  if ('mission' in req) return isCleared(records, req.mission);
+  return campaignMedals(records) >= req.medals;
+}
+
+/** How the hangar words a condition: "CLEAR MISSION 1-2", "EARN 8 MEDALS". */
+export function unlockText(req: UnlockReq): string {
+  if ('medals' in req) return `EARN ${req.medals} MEDALS`;
+  const sector = sectorOf(req.mission);
+  const index = sector ? sector.missions.indexOf(req.mission) + 1 : 0;
+  return sector ? `CLEAR MISSION ${sector.id}-${index}` : 'LOCKED';
 }
 
 function isMission(id: string): id is MissionId {

@@ -3,9 +3,10 @@
 // an armoured core; wave enemies may roll elite modifiers from Hard up.
 
 import { Color, Node, Prefab } from 'cc';
+import { armorScale, distToSegment2 } from '../core/arsenal';
 import { createEmitterState, aimAngle, fireOnce, resetEmitter, stepEmitter, type EmitterState, type EmitterTuning, type ShotSink } from '../core/emitter';
 import type { Offset } from '../core/formations';
-import { damp, dampAngle } from '../core/math';
+import { circlesOverlap, damp, dampAngle } from '../core/math';
 import { createMotionState, initMotion, resetMotion, stepMotion, type MotionContext, type MotionState } from '../core/motion';
 import { Pool, swapRemove } from '../core/Pool';
 import { pickWeighted } from '../core/weighted';
@@ -21,6 +22,8 @@ import type { BulletSystem } from './BulletSystem';
 import type { EnemyKilledEvent, GameContext } from './GameContext';
 
 export interface Enemy extends MotionState {
+  /** Unique per spawn (pooled records are reused): piercing bolts and homing targets track it. */
+  uid: number;
   def: EnemyDef;
   move: MoveSpec;
   hp: number;
@@ -89,6 +92,8 @@ export class EnemySystem implements ShotSink {
   private readonly killed: EnemyKilledEvent;
   private readonly escaped = { group: -1, site: -1 };
   private readonly fxEvent = { x: 0, z: 0 };
+  private readonly hitEvent = { x: 0, z: 0, armored: false };
+  private nextUid = 1;
   /** Enemy currently firing (ShotSink context). */
   private shooter: Enemy | null = null;
   private playerAlive = true;
@@ -135,6 +140,7 @@ export class EnemySystem implements ShotSink {
     const pool = this.pools.get(def.id);
     if (!pool) throw new Error(`enemy ${def.id} was not preloaded for this mission`);
     const e = pool.acquire();
+    e.uid = this.nextUid++;
     const dx = offset ? (mirror ? -offset.dx : offset.dx) : 0;
     const dz = offset ? offset.dz : 0;
     const slot = offset ? offset.index : 0;
@@ -250,10 +256,27 @@ export class EnemySystem implements ShotSink {
     return e.def.armor !== undefined && e.parts.length > 0;
   }
 
-  /** Applies damage; returns true if the enemy died from it. */
-  damage(e: Enemy, amount: number): boolean {
+  /**
+   * A hit at (x, z) from a player weapon: damage, plus impact sparks (`sparks`; beams and splash
+   * ask for them sparingly) while it survives. Returns true if it died.
+   */
+  hitAt(e: Enemy, amount: number, x: number, z: number, armorPierce: number, sparks: boolean): boolean {
+    const armored = this.isArmored(e);
+    if (this.damage(e, amount, armorPierce)) return true;
+    if (sparks) {
+      const h = this.hitEvent;
+      h.x = x;
+      h.z = z;
+      h.armored = armored;
+      this.ctx.bus.emit('enemyHit', h);
+    }
+    return false;
+  }
+
+  /** Applies damage (armour soaks it unless pierced); returns true if the enemy died from it. */
+  damage(e: Enemy, amount: number, armorPierce = 0): boolean {
     if (e.dead) return false;
-    if (this.isArmored(e)) amount *= e.def.armor as number;
+    if (this.isArmored(e)) amount *= armorScale(e.def.armor as number, armorPierce);
     if (e.shield > 0) {
       const soaked = Math.min(e.shield, amount);
       e.shield -= soaked;
@@ -454,6 +477,7 @@ export class EnemySystem implements ShotSink {
     view.node.setPosition(0, PARK_Y, 0);
     const motion = createMotionState();
     const e = motion as Enemy;
+    e.uid = 0;
     e.def = def;
     e.move = def.move;
     e.hp = e.maxHp = def.hp;
@@ -485,4 +509,30 @@ export class EnemySystem implements ShotSink {
     const color = on ? (e.boss || e.parent ? FLASH_BOSS : FLASH_ON) : e.elite?.id === 'armored' ? ARMORED : FLASH_OFF;
     for (let i = 0; i < e.view.flash.length; i++) e.view.flash[i].setProperty('emissive', color);
   }
+}
+
+/** Circle (x, z, r) against the enemy's body: its radius, or its hull circles. */
+export function enemyTouches(e: Enemy, x: number, z: number, r: number): boolean {
+  const hull = e.def.hull;
+  if (!hull) return circlesOverlap(x, z, r, e.x, e.z, e.def.radius);
+  for (let i = 0; i < hull.length; i++) {
+    const c = hull[i];
+    if (circlesOverlap(x, z, r, e.x + c.x, e.z + c.z, c.r)) return true;
+  }
+  return false;
+}
+
+/** A beam of half-width `hw` from (x0, z0) to (x1, z1) touches the enemy's body. */
+export function enemyOnSegment(e: Enemy, x0: number, z0: number, x1: number, z1: number, hw: number): boolean {
+  const hull = e.def.hull;
+  if (!hull) {
+    const r = e.def.radius + hw;
+    return distToSegment2(e.x, e.z, x0, z0, x1, z1) <= r * r;
+  }
+  for (let i = 0; i < hull.length; i++) {
+    const c = hull[i];
+    const r = c.r + hw;
+    if (distToSegment2(e.x + c.x, e.z + c.z, x0, z0, x1, z1) <= r * r) return true;
+  }
+  return false;
 }

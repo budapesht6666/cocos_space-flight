@@ -25,9 +25,11 @@ enum Kind {
   Deflect,
   /** Escape pods: green. */
   Rescue,
+  /** Plasma Orb splashes: teal. */
+  Plasma,
 }
 
-const KINDS = [Kind.SparkHot, Kind.SparkFire, Kind.HitSpark, Kind.Flash, Kind.Fireball, Kind.Debris, Kind.Cyan, Kind.Pop, Kind.Deflect, Kind.Rescue];
+const KINDS = [Kind.SparkHot, Kind.SparkFire, Kind.HitSpark, Kind.Flash, Kind.Fireball, Kind.Debris, Kind.Cyan, Kind.Pop, Kind.Deflect, Kind.Rescue, Kind.Plasma];
 
 /** Particles made up front for each kind (data/visuals.ts). */
 const POOL_SIZE: Record<Kind, number> = {
@@ -41,6 +43,7 @@ const POOL_SIZE: Record<Kind, number> = {
   [Kind.Pop]: FX_POOLS.pop,
   [Kind.Deflect]: FX_POOLS.deflect,
   [Kind.Rescue]: FX_POOLS.rescue,
+  [Kind.Plasma]: FX_POOLS.plasma,
 };
 
 /** Explosion scheduled for later (boss death chains). */
@@ -109,6 +112,7 @@ export class FxSystem {
       [Kind.Pop]: kit.glow(COLORS.bulletPop, 2.2),
       [Kind.Deflect]: kit.glow(COLORS.deflect, 1.6),
       [Kind.Rescue]: kit.glow(COLORS.rescue, 2.4),
+      [Kind.Plasma]: kit.glow(COLORS.plasma, 2.4),
     };
     for (const kind of KINDS) {
       const mesh = kind === Kind.Debris ? kit.cube : kit.plane;
@@ -191,6 +195,22 @@ export class FxSystem {
       this.burst(Kind.Cyan, e.x, e.z, 24, 12);
       ctx.shake(NOVA_FX.shake);
       ctx.hitstop(NOVA_FX.hitstop);
+    });
+    ctx.bus.on('blast', (e) => {
+      this.ring(e.x, e.z, 0.3, e.radius * 2, 0.26, COLORS.plasma);
+      this.burst(Kind.Plasma, e.x, e.z, 4, e.radius * 4);
+    });
+    ctx.bus.on('bulletBlocked', (e) => {
+      this.bulletPop(e.x, e.z);
+      this.burst(Kind.Cyan, e.x, e.z, 3, 4);
+    });
+    ctx.bus.on('special', (e) => {
+      const kind = e.def.kind;
+      const color = kind === 'overdrive' ? COLORS.overdrive : kind === 'warp' ? COLORS.warp : COLORS.shield;
+      this.ring(e.x, e.z, 0.5, kind === 'warp' ? NOVA_FX.ringSize : 7, kind === 'warp' ? 0.9 : 0.45, color);
+      this.emit(Kind.Flash, e.x, 0.3, e.z, 0, 0, 0, 0.2, 4, 0);
+      this.burst(kind === 'overdrive' ? Kind.SparkHot : Kind.Cyan, e.x, e.z, 16, 8);
+      ctx.shake(0.3);
     });
     ctx.bus.on('playerDied', (e) => {
       this.explode(e.x, e.z, 'large');

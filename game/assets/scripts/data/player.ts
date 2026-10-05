@@ -37,7 +37,7 @@ export const SHIPS: Record<ShipId, PlayerShipDef> = {
     id: 'executioner',
     name: 'EXECUTIONER',
     role: 'HEAVY GUNSHIP',
-    perks: ['+2 hull, +1 shield', 'Primary damage +15%', 'Slower (×0.85)'],
+    perks: ['+2 hull, +1 shield, slower (×0.85)', 'Primary damage +15%', 'Secondary reloads 20% faster'],
     model: 'models/ships/executioner',
     size: 1.65,
     hitboxRadius: 0.25,
@@ -141,14 +141,6 @@ export const ENERGY = {
   /** Gain multiplier, indexed by energy gain level - 1. */
   gainLevels: [1, 1.25, 1.5] as readonly number[],
   maxCharges: 3,
-};
-
-export const NOVA_BOMB = {
-  /** Damage to every enemy on screen. */
-  damage: 30,
-  invulnerableTime: 1.2,
-  /** Score per enemy bullet erased. */
-  bulletScore: 5,
 };
 
 /** Mission intro and outro choreography, seconds. */

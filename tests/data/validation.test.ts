@@ -20,9 +20,10 @@ import { PATHS } from '../../game/assets/scripts/data/paths';
 import { PATTERNS } from '../../game/assets/scripts/data/patterns';
 import { PICKUPS } from '../../game/assets/scripts/data/pickups';
 import { DEFAULT_PAINT, DEFAULT_SHIP, ENERGY, GENERATOR_LEVELS, MAGNET_RADIUS, PAINT_ORDER, PAINTS, SHIP_ORDER, SHIPS, shipModel, shipModelFile } from '../../game/assets/scripts/data/player';
+import { propPath } from '../../game/assets/scripts/data/props';
 import { SET_PIECES } from '../../game/assets/scripts/data/setPieces';
 import type { MoveSpec } from '../../game/assets/scripts/data/types';
-import { ENEMY_BULLETS, PULSE_CANNON, WEAPON_LEVELS } from '../../game/assets/scripts/data/weapons';
+import { BOLTS, DRONES, ENEMY_BULLETS, PRIMARIES, SECONDARIES, SPECIALS, WEAPON_LEVELS, WEAPONS } from '../../game/assets/scripts/data/weapons';
 import { WORLD } from '../../game/assets/scripts/data/world';
 
 function checkMove(m: MoveSpec, where: string): void {
@@ -138,9 +139,40 @@ describe('patterns and bullets', () => {
     }
   });
 
-  it('weapon defines all four Power forms', () => {
-    expect(PULSE_CANNON.powerForms).toHaveLength(4);
-    for (const form of PULSE_CANNON.powerForms) expect(form.length).toBeGreaterThan(0);
+  it('every weapon defines all four Power forms and sane numbers', () => {
+    for (const [key, w] of Object.entries(WEAPONS)) {
+      expect(w.id, key).toBe(key);
+      expect(w.forms, key).toHaveLength(4);
+      if (w.kind === 'bolts') {
+        expect(BOLTS[w.bolt], `${key} bolt`).toBeDefined();
+        expect(w.interval * w.speed * w.damage * w.radius, key).toBeGreaterThan(0);
+        for (const form of w.forms) expect(form.streams.length, key).toBeGreaterThan(0);
+        if (w.burst) expect(w.burst.count * w.burst.gap, key).toBeLessThan(w.interval);
+        if (w.life !== undefined) expect(w.life, key).toBeGreaterThan(0);
+        if (w.falloff !== undefined) expect(w.falloff, key).toBeLessThanOrEqual(1);
+        if (w.splashDamage) for (const form of w.forms) expect(form.splash, `${key} splash radius`).toBeGreaterThan(0);
+      } else if (w.kind === 'beam') {
+        for (const form of w.forms) expect(form.width * form.damage, key).toBeGreaterThan(0);
+      } else {
+        expect(w.decay, key).toBeLessThanOrEqual(1);
+        for (const form of w.forms) expect(form.targets, key).toBeGreaterThan(0);
+      }
+    }
+    expect(Object.keys(WEAPONS).sort()).toEqual([...Object.keys(PRIMARIES), ...Object.keys(SECONDARIES)].sort());
+  });
+
+  it('drones and Specials are complete', () => {
+    for (const [key, d] of Object.entries(DRONES)) {
+      expect(d.id, key).toBe(key);
+      expect(d.levels.length, key).toBe(UPGRADES[d.id].values[UPGRADES[d.id].values.length - 1]);
+      const model = path.resolve(__dirname, '../../game/assets/resources', `${propPath(d.prop).slice(0, propPath(d.prop).lastIndexOf('/'))}.glb`);
+      expect(fs.existsSync(model), model).toBe(true);
+    }
+    for (const [key, s] of Object.entries(SPECIALS)) {
+      expect(s.id, key).toBe(key);
+      expect(s.label.length, key).toBeLessThanOrEqual(5);
+      if (s.kind !== 'nova') expect(s.time, key).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -201,9 +233,11 @@ describe('pickups and player', () => {
     for (const v of UPGRADES.generator.values) expect(GENERATOR_LEVELS[v - 1]).toBeDefined();
     for (const v of UPGRADES.magnet.values) expect(MAGNET_RADIUS[v - 1]).toBeDefined();
     for (const v of UPGRADES.energy.values) expect(ENERGY.gainLevels[v - 1]).toBeDefined();
-    for (const v of UPGRADES.pulse.values) expect(WEAPON_LEVELS[v - 1]).toBeDefined();
+    for (const id of [...Object.keys(PRIMARIES), ...Object.keys(SECONDARIES)] as (keyof typeof WEAPONS)[]) {
+      for (const v of UPGRADES[id].values) if (v > 0) expect(WEAPON_LEVELS[v - 1], id).toBeDefined();
+    }
     for (const v of UPGRADES.charges.values) expect(v).toBeLessThanOrEqual(ENERGY.maxCharges);
-    for (const v of UPGRADES.power.values) expect(v).toBeLessThanOrEqual(PULSE_CANNON.powerForms.length);
+    for (const v of UPGRADES.power.values) expect(v).toBeLessThanOrEqual(PRIMARIES.pulse.forms.length);
   });
 
   it('difficulties are complete and get harder', () => {
@@ -342,11 +376,31 @@ describe('economy', () => {
       expect(u.id).toBe(key);
       expect(u.costs.length, key).toBe(u.values.length - 1);
       for (let i = 1; i < u.values.length; i++) expect(u.values[i], key).toBeGreaterThan(u.values[i - 1]);
+      // An arsenal item's first price is its licence, priced on its own; levels after it go up.
+      const licence = u.group !== 'systems' && u.values[0] === 0 ? 1 : 0;
       for (let i = 0; i < u.costs.length; i++) {
         expect(Number.isInteger(u.costs[i]), key).toBe(true);
-        if (i > 0) expect(u.costs[i], key).toBeGreaterThan(u.costs[i - 1]);
+        if (i > licence) expect(u.costs[i], key).toBeGreaterThan(u.costs[i - 1]);
       }
     }
+  });
+
+  it('the arsenal: every weapon, drone and Special for sale; unlocks point at real progress', () => {
+    const groups: Record<string, string[]> = {};
+    for (const id of UPGRADE_ORDER) (groups[UPGRADES[id].group] ??= []).push(id);
+    expect(groups.primary.sort()).toEqual(Object.keys(PRIMARIES).sort());
+    expect(groups.secondary.sort()).toEqual(Object.keys(SECONDARIES).sort());
+    expect(groups.drone.sort()).toEqual(['droneBay', ...Object.keys(DRONES)].sort());
+    expect(groups.special.sort()).toEqual(Object.keys(SPECIALS).sort());
+    for (const id of UPGRADE_ORDER) {
+      const u = UPGRADES[id];
+      if (!u.unlock) continue;
+      if ('mission' in u.unlock) expect(MISSIONS[u.unlock.mission], id).toBeDefined();
+      else expect(u.unlock.medals, id).toBeLessThanOrEqual(SECTORS[0].missions.length * 4 * CAMPAIGN_DIFFICULTIES.length);
+    }
+    // The stock kit is owned from the start.
+    expect(UPGRADES.pulse.values[0]).toBe(1);
+    expect(UPGRADES.nova.values[0]).toBe(1);
   });
 
   it('weapon levels only make the gun stronger', () => {

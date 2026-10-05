@@ -1,24 +1,35 @@
 ---
 name: add-weapon
-description: Add or retune a player weapon in Space Flight — Power I–IV bullet forms, fire rate, damage, bolt look — through data in data/weapons.ts, and check it in game. Use when asked «добавь оружие», «новое оружие», «поправь Pulse Cannon», «сделай Scatter Gun», «настрой Power».
+description: Add or retune a player weapon, drone or Special in Space Flight — Primary/Secondary Power I–IV forms, fire rate, damage, range, pierce, splash, homing, beams, chain lightning, bolt looks, hangar price and unlock — through data, check it against the balance table and in game. Use when asked «добавь оружие», «новое оружие», «поправь Pulse Cannon», «сделай Scatter Gun сильнее», «настрой Power», «новый дрон», «новая спецспособность», «перебалансируй оружие».
 ---
 
-# Add weapon
+# Add weapon (arsenal)
 
-Player weapons live in `data/weapons.ts` as `WeaponDef`; `game/PlayerSystem.ts` fires the current Power form every `fireInterval`. Today only straight bolts exist (Pulse Cannon). GDD §7 lists the arsenal for stage 5.
+The arsenal is data (stage 5): combat in `data/weapons.ts`, hangar name / price / unlock in `data/economy.ts`, behaviour shared by kind in `game/WeaponSystem.ts` (guns), `game/DroneSystem.ts` (drones), `game/PlayerSystem.ts` (Specials). Math is engine-free in `core/arsenal.ts`; the balance table is `core/balance.ts` → `npm run balance` → `docs/BALANCE.md`. GDD §7, §14.
 
 ## What data alone can do
 
-A `WeaponDef` with `powerForms[0..3]` — each form is a list of streams `{ x, angleDeg }` (offset across the ship, angle from straight up). That covers Pulse Cannon variants and **Scatter Gun**-like fans (more streams, wider angles), plus fire rate, bullet speed, damage, hit radius and bolt size/colour (`color` should stay in the cyan-blue family: player shots ≠ enemy shots).
+`WeaponDef` (`data/types.ts`) has three kinds:
 
-## What needs code (stage 5)
+- **`bolts`** — projectiles. Per Power form (`forms[0..3]`): `streams` (`x` across, `z` back from the nose, `angleDeg` from straight up — 180 shoots backwards), `damage` and `scale` multipliers, `splash` radius. Per weapon: `interval`, `burst { count, gap }`, `speed`, `damage`, `radius`, `life` + `falloff` (range, damage drop), `pierce` (enemies per bolt), `splashDamage` (fraction to neighbours), `homing { turnRate, delay }`, `jitterDeg`, `armorPierce`, and `bolt` — a look in `BOLTS` (size, colour, glow, round, pool). Covers Pulse, Scatter, Seeker, Plasma and all Secondaries.
+- **`beam`** — a continuous beam from the nose to the top of the screen: `dps`, `armorPierce`, `color`, per form `width`, `damage`, optional angled `side` beams.
+- **`chain`** — lightning: `interval`, `damage`, `decay` per jump, `range` (to the target's edge), `jump`, per form `targets` and `damage`.
 
-Homing (Seeker Missiles), beams (Ion Laser, Rail Lance), chains (Tesla Arc), area damage (Plasma Orbs), damage falloff with distance, secondary slots with their own cooldowns, drones. Add a `kind` to `WeaponDef` and a small engine-free behaviour in `core/` with Vitest tests first, then wire it into `PlayerSystem`/`BulletSystem`. Keep bullets pooled and instanced: one `BulletLook` (material) per visual, ≤ 1 draw call each.
+Drones (`DRONES`): `gun` (share of the Primary's peak DPS), `guardian` (orbit, block radius, recharge), `collector` (reach, speed); levels 1–3. Specials (`SPECIALS`): `nova`, `overdrive`, `phase`, `warp` with times and strengths; `label` ≤ 5 letters (the HUD button).
+
+Player shots stay in the cool family (blue, cyan, teal, violet, white): pink and orange are enemy bullets.
+
+## What needs code
+
+A new behaviour no field covers (e.g. a bouncing shot, a mine layer, a drone that shoots homing missiles): add a field or kind to the type, the engine-free math to `core/arsenal.ts` with a Vitest test, the behaviour in the system, and the same rule in `core/balance.ts` so the table stays honest. Keep everything pooled and allocation-free per step; one look = one instanced material.
 
 ## Steps
 
-1. Add the id to `WeaponId` (`data/types.ts`) and the def to `data/weapons.ts`.
-2. Hangar level: weapon levels 1–5 are an upgrade track per weapon — add an `UpgradeId` and an `UPGRADES` entry with `group: 'weapons'` in `data/economy.ts` (values 1..5, four prices); the WEAPONS tab lists it. `WEAPON_LEVELS` (shared) scales damage and fire rate; the ship's `primaryDamage` multiplies on top (`core/loadout.ts`, `PlayerSystem`). Choosing between primaries in the slot is stage 5 work: today `GameWorld.boot()` passes `PULSE_CANNON` and the `pulse` level — switch both there to try a new weapon.
-3. Balance sanity: DPS per Power = streams × damage × level damage × level rate / fireInterval. Pulse LV 1: I ≈ 11, IV ≈ 55; LV 5 ×1.92. Scouts have 3 HP, Gunships 22, the Marauder 520 (×1.4 on Hard).
-4. `npm test` (validation requires 4 Power forms), `npm run typecheck`.
-5. Playtest each Power with `?power=1..4&god=1&seed=7`, `?slowmo=0.25` to inspect the pattern; watch draw calls and the bullet count in `?debug=1`.
+1. **Ids:** add to `PrimaryId` / `SecondaryId` / `DroneId` / `SpecialId` in `data/types.ts`; for a new projectile look, a `BoltId` and its `BOLTS` entry (pool = peak alive at level 5, Power IV, Overdrive).
+2. **Combat data** in `data/weapons.ts`.
+3. **Hangar** in `data/economy.ts`: an `UPGRADES` entry (helpers `gun()`, `drone()`, `special()` — values start at 0 = not owned, first cost = licence) with `unlock` (`{ mission }` or `{ medals }`), and its id in `UPGRADE_ORDER` within its slot's block. The WEAPONS tab lists it by `group`.
+4. **Debug flags** pick ids up automatically (`?primary=<id>` etc., `debug/DebugFlags.ts` reads the tables).
+5. **Balance:** `npm run balance` and read `docs/BALANCE.md`. `npm test` holds the rules: no Primary is the best in more than half the situations, every weapon has a niche (best or ≥ 85% of the best somewhere), every Primary deals 50–110% of the Pulse Cannon on a boss, Secondaries stay below half of it, Power never makes a weapon weaker. Pulse Cannon is the reference: ~11 DPS at Power I, ~56 at IV (level 1); weapon level 5 ×1.92. HP: Scout 3, Gunship 22, Marauder 520, Warden 950 (armour 25% while its modules live).
+6. `npm run typecheck`, `npm test`.
+7. **Playtest** (skill `playtest`): `?mission=s1m1&god=1&power=1..4&seed=7&debug=1&primary=<id>` (+ `secondary`, `drones`, `special`, `level`), `?slowmo=0.25` to inspect a pattern, `gw.freeze = 999` for a clean screenshot. Watch draw calls and shots in `?debug=1`; after a full Hard run with the weapon, `s.playerBullets.pools[i].totalCreated` must not have grown. Then the hangar: buy it (`?credits=50000`, unlock with records or `?unlock=1`), equip, LAUNCH.
+8. Update GDD §7 (and §14 for prices/unlocks), PLAN.

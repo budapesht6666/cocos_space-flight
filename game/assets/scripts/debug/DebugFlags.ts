@@ -1,7 +1,9 @@
 // URL parameters for previews and debug builds, e.g. ?debug=1&god=1&power=4&t=20&slowmo=0.25.
 // Engine-free so it can be unit-tested; the caller passes `location.search`.
 
-import type { Difficulty, EliteId } from '../data/types';
+import type { LoadoutOverride } from '../core/loadout';
+import type { Difficulty, DroneId, EliteId, PrimaryId, SecondaryId, SpecialId } from '../data/types';
+import { DRONES, PRIMARIES, SECONDARIES, SPECIALS } from '../data/weapons';
 
 const DIFFICULTIES: readonly Difficulty[] = ['normal', 'hard', 'insane', 'nightmare'];
 const ELITES: readonly EliteId[] = ['armored', 'swift', 'volatile', 'shielded'];
@@ -35,6 +37,8 @@ export interface DebugFlags {
   /** Post effects forced on or off (`?bloom=0`, `?fxaa=1`), or null for the defaults in data. */
   bloom: boolean | null;
   fxaa: boolean | null;
+  /** Try any arsenal without buying it: `?primary=ion&secondary=rail&drones=gunDrone,guardian&special=warp&level=5`. */
+  loadout: LoadoutOverride;
 }
 
 export function parseDebugFlags(search: string): DebugFlags {
@@ -57,6 +61,13 @@ export function parseDebugFlags(search: string): DebugFlags {
   const scale = num('scale', NaN);
   const power = num('power', NaN);
   const difficulty = (params.get('difficulty') ?? '').toLowerCase();
+  const pick = <T extends string>(key: string, table: object): T | null => {
+    const raw = params.get(key);
+    return raw !== null && Object.prototype.hasOwnProperty.call(table, raw) ? (raw as T) : null;
+  };
+  const rawDrones = params.get('drones');
+  const level = num('level', NaN);
+  const secondary = params.get('secondary');
   const elite = (params.get('elite') ?? '').toLowerCase();
   return {
     overlay: flag('debug'),
@@ -74,6 +85,13 @@ export function parseDebugFlags(search: string): DebugFlags {
     scale: Number.isFinite(scale) ? Math.min(1, Math.max(0.3, scale)) : null,
     bloom: toggle('bloom'),
     fxaa: toggle('fxaa'),
+    loadout: {
+      primary: pick<PrimaryId>('primary', PRIMARIES),
+      secondary: secondary === 'none' ? 'none' : pick<SecondaryId>('secondary', SECONDARIES),
+      drones: rawDrones === null ? null : (rawDrones.split(',').filter((id) => Object.prototype.hasOwnProperty.call(DRONES, id)) as DroneId[]),
+      special: pick<SpecialId>('special', SPECIALS),
+      level: Number.isFinite(level) ? Math.round(level) : null,
+    },
   };
 }
 

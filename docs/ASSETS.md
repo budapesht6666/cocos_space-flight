@@ -53,6 +53,8 @@
 
 Враги — только в Red и Purple, игрок — в Orange, Blue и Green (см. GDD §6).
 
+**Дроны (этап 5)** — Kenney Space Kit (см. Credits): `craft_speederA`, `satelliteDish_detailed`, `craft_miner`. Рендер кандидатов — `.playwright-mcp/drone-candidates.png` (локальный снимок).
+
 ### Эффекты (текстуры частиц)
 
 | Статус | Пак | Что внутри | Лицензия |
@@ -134,7 +136,7 @@
 Свои процедурные модели (пользователю понравились, остаются): астероиды — low-poly камень (`core/rock.ts`); кредиты — золотые кубики.
 
 **Выбор этапа 2** (пользователь делегировал: «на твой вкус, главное производительность»):
-- **Kenney Space Kit** — модули станций (`platform_large`, `hangar_smallA`, `corridor_detailed`, `machine_generatorLarge`, `satelliteDish_large`, `structure_detailed`) и турели (`turret_single`, `turret_double`). 76–876 треугольников, у турели отдельная поворотная башня.
+- **Kenney Space Kit** — модули станций (`platform_large`, `hangar_smallA`, `corridor_detailed`, `machine_generatorLarge`, `satelliteDish_large`, `structure_detailed`), турели (`turret_single`, `turret_double`) и дроны (`craft_speederA`, `satelliteDish_detailed`, `craft_miner`). 76–876 треугольников, у турели отдельная поворотная башня.
 - **Quaternius Ultimate Space Kit** — иконки пикапов: Bullets → P, Health → R, Sphere → S (красная сфера перекрашена в голубой: красный — цвет врагов), Thunder → E. Тот же автор, что и корабли.
 - **Конвейер** `npm run build:props` (`tools/assets/build-props.mjs`): каждая модель → один меш с вершинными цветами, без текстур. Kenney-материалы (metal, metalDark, dark, metalRed) перекрашиваются в тёмную палитру (светлые серые под HDR-солнцем уходят в белое), у турелей акцент — красный; цвета пикапов берутся из атласа Quaternius. В игре все пропсы рисуются одним инстансируемым материалом (`RenderKit.props()`).
 - Исходники: `art-source/kenney-space-kit/` (все GLB пака и `License.txt`), `art-source/quaternius-ultimate-space-kit/pickup_*.glb` (скачаны с poly.pizza: Bullets Pickup, Pickup Health, Pickup Sphere, Pickup Thunder).
@@ -144,5 +146,6 @@
 - **Dreadnought** — Imperial из пака Quaternius. Красной расцветки у нас нет (скачаны только Blue, Green, Orange), поэтому `build-ships.mjs` перекрашивает Orange: оранжевые тона → красный с затемнением, серые темнее (как в Red-вариантах пака). Бортовые пушки — `turret_double` Kenney.
 - **Шрифт Orbitron** — логотип, заголовки, баннеры, кнопки. Bold 700 и Black 900, латинский сабсет (~16 KB каждый). Цифры HUD пока системным жирным.
 - Новые модули Kenney для станций Сектора 1 (refinery, depot, bastion) Claude выбрал сам — в рамках делегирования этапа 2 («станции и турели на твой вкус»).
+- **Дроны (этап 5)** — Kenney Space Kit, выбрал Claude по поручению пользователя («подбери релевантные»): Gun Drone — истребитель `craft_speederA` (280 треугольников), Guardian — тарелка-излучатель `satelliteDish_detailed` (390), Collector — шахтёрский `craft_miner` с захватами (384). В `build-props` (`drone_gun`, `drone_guardian`, `drone_collector`): тёмная палитра станций, акцент — цвет дрона (синий, циан, золото), не красный; модель нормализована к 1, размер в игре — `DRONES[].size`. Под моделью — ореол цвета дрона, чтобы тёмный корпус читался на фоне космоса.
 - **Иконки PWA** — свой рендер Spitfire из игры (`game/build-templates/web-mobile/icons/`).
 - Escape Pod — процедурная капсула из примитивов `RenderKit`, декор астероидных полей — те же процедурные камни, что у астероидов.
