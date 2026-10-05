@@ -2,7 +2,8 @@
 // Engine-free so it can be unit-tested; the caller passes `location.search`.
 
 import type { LoadoutOverride } from '../core/loadout';
-import type { Difficulty, DroneId, EliteId, PrimaryId, SecondaryId, SpecialId } from '../data/types';
+import type { Difficulty, DroneId, EliteId, PrimaryId, QualityId, SecondaryId, SpecialId } from '../data/types';
+import { QUALITY } from '../data/visuals';
 import { DRONES, PRIMARIES, SECONDARIES, SPECIALS } from '../data/weapons';
 
 const DIFFICULTIES: readonly Difficulty[] = ['normal', 'hard', 'insane', 'nightmare'];
@@ -32,8 +33,13 @@ export interface DebugFlags {
   credits: number | null;
   /** Wipe the save once per page load (`?reset=1`), before `credits`. */
   reset: boolean;
-  /** Fixed 3D resolution (`?scale=0.5`, 0.3..1) instead of the adaptive one, or null. */
+  /**
+   * Graphics quality tier fixed for the page (`?quality=high`) instead of the adaptive one, or null.
+   * `?scale=0.5` (0.3..1) and `?msaa=1` override that knob of the tier; any of the three fixes it.
+   */
+  quality: QualityId | null;
   scale: number | null;
+  msaa: boolean | null;
   /** Post effects forced on or off (`?bloom=0`, `?fxaa=1`), or null for the defaults in data. */
   bloom: boolean | null;
   fxaa: boolean | null;
@@ -69,6 +75,7 @@ export function parseDebugFlags(search: string): DebugFlags {
   const level = num('level', NaN);
   const secondary = params.get('secondary');
   const elite = (params.get('elite') ?? '').toLowerCase();
+  const quality = (params.get('quality') ?? '').toLowerCase();
   return {
     overlay: flag('debug'),
     god: flag('god'),
@@ -82,7 +89,9 @@ export function parseDebugFlags(search: string): DebugFlags {
     unlock: flag('unlock'),
     credits: Number.isFinite(credits) ? Math.min(1e9, Math.max(0, Math.floor(credits))) : null,
     reset: flag('reset'),
+    quality: QUALITY.tiers.some((t) => t.id === quality) ? (quality as QualityId) : null,
     scale: Number.isFinite(scale) ? Math.min(1, Math.max(0.3, scale)) : null,
+    msaa: toggle('msaa'),
     bloom: toggle('bloom'),
     fxaa: toggle('fxaa'),
     loadout: {

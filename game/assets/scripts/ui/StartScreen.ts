@@ -19,12 +19,13 @@ import { CameraRig } from '../fx/CameraRig';
 import { Nebula } from '../fx/Nebula';
 import { RenderKit } from '../fx/RenderKit';
 import { keepRenderTargets } from '../fx/PipelineFix';
-import { pipelineSettings, RenderScaler, setShadingScale } from '../fx/RenderScaler';
+import { pipelineSettings, RenderScaler } from '../fx/RenderScaler';
 import { Starfield } from '../fx/Starfield';
 import type { BackdropContext } from '../game/GameContext';
 import { Playfield } from '../game/Playfield';
 import { SaveService } from '../services/SaveService';
 import { SCENES, SceneRouter } from '../services/SceneRouter';
+import { ScreenFit } from '../services/ScreenFit';
 import { HangarPage } from './HangarPage';
 import type { MenuHost, MenuPage, PageId } from './MenuPage';
 import { CampaignPage, MainPage, MissionPage } from './MenuPages';
@@ -141,6 +142,7 @@ export class StartScreen extends Component implements MenuHost {
   }
 
   start(): void {
+    ScreenFit.init();
     const debug = readDebugFlags();
     SaveService.applyDevFlags(debug.reset, debug.credits);
     // `?mission=` (and friends) jump straight into the game once per page load: handy on builds.
@@ -246,13 +248,13 @@ export class StartScreen extends Component implements MenuHost {
     if (!this.camera || !this.uiRoot || !this.unlitEffect || !this.standardEffect) {
       throw new Error('StartScreen: camera, uiRoot and effects must be assigned in the scene');
     }
-    // The menu is light: it takes the 3D resolution the game has settled on, without adapting.
+    // The menu is light: it takes the quality tier the game has settled on, without adapting.
     const debug = readDebugFlags();
     const pipe = pipelineSettings(this.camera);
     if (pipe) {
       pipe.bloomEnable = debug.bloom ?? POST_FX.bloom;
       pipe.fxaaEnable = debug.fxaa ?? POST_FX.fxaa;
-      setShadingScale(pipe, debug.scale ?? RenderScaler.currentScale);
+      new RenderScaler(pipe, debug);
     }
     const playfield = new Playfield(WORLD, screenAspect());
     const kit = RenderKit.shared(this.unlitEffect, this.standardEffect);

@@ -16,7 +16,9 @@ describe('parseDebugFlags', () => {
       unlock: false,
       credits: null,
       reset: false,
+      quality: null,
       scale: null,
+      msaa: null,
       bloom: null,
       fxaa: null,
       loadout: { primary: null, secondary: null, drones: null, special: null, level: null },
@@ -24,7 +26,7 @@ describe('parseDebugFlags', () => {
   });
 
   it('reads flags and numbers', () => {
-    expect(parseDebugFlags('?debug=1&god=true&power=3&t=12.5&seed=42&mission=s1m1&difficulty=Hard&unlock=1&credits=5000.7&reset=1&scale=0.55&bloom=0&fxaa=false')).toEqual({
+    expect(parseDebugFlags('?debug=1&god=true&power=3&t=12.5&seed=42&mission=s1m1&difficulty=Hard&unlock=1&credits=5000.7&reset=1&quality=High&scale=0.55&msaa=1&bloom=0&fxaa=false')).toEqual({
       overlay: true,
       god: true,
       power: 3,
@@ -37,7 +39,9 @@ describe('parseDebugFlags', () => {
       unlock: true,
       credits: 5000,
       reset: true,
+      quality: 'high',
       scale: 0.55,
+      msaa: true,
       bloom: false,
       fxaa: false,
       loadout: { primary: null, secondary: null, drones: null, special: null, level: null },
@@ -55,6 +59,8 @@ describe('parseDebugFlags', () => {
     expect(parseDebugFlags('?scale=0.1').scale).toBe(0.3);
     expect(parseDebugFlags('?bloom=1').bloom).toBe(true);
     expect(parseDebugFlags('?fxaa=yes').fxaa).toBe(true);
+    expect(parseDebugFlags('?quality=max').quality).toBeNull();
+    expect(parseDebugFlags('?msaa=0').msaa).toBe(false);
   });
 
   it('borrows a loadout: known ids only', () => {

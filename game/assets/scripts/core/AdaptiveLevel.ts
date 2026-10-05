@@ -17,7 +17,7 @@ export interface AdaptiveSpec {
 const HITCH = 0.1;
 
 export class AdaptiveLevel {
-  level = 0;
+  level: number;
   private backoff = 1;
   private sum = 0;
   private frames = 0;
@@ -25,7 +25,15 @@ export class AdaptiveLevel {
   /** Just stepped up to try: a slow window now means the try failed. */
   private probing = false;
 
-  constructor(private readonly spec: AdaptiveSpec) {}
+  /** @param start the step to begin at (0 = the best) */
+  constructor(private readonly spec: AdaptiveSpec, start = 0) {
+    this.level = Math.min(spec.steps - 1, Math.max(0, Math.floor(start)));
+  }
+
+  /** The best step known to hold: while the step above is on trial, the one it was tried from. */
+  get stable(): number {
+    return this.probing ? this.level + 1 : this.level;
+  }
 
   /** Starts measuring afresh (a new scene) without forgetting the step. */
   restart(): void {

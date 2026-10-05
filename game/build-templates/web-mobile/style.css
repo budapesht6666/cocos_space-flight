@@ -53,6 +53,33 @@ canvas {
   height: 100%;
 }
 
+/* Desktop: the game plays in a portrait column in the middle of the window (services/ScreenFit.ts
+   adds .column). Around it: deep space, a faint glow behind the column and a sparse starfield in
+   tiles of different sizes, so the pattern does not visibly repeat. Static, so free to draw. */
+body.column {
+  background-color: #02030a;
+  background-image:
+    radial-gradient(ellipse 50% 75% at 50% 50%, rgba(34, 62, 140, 0.34), rgba(34, 62, 140, 0) 72%),
+    radial-gradient(circle at 23px 41px, rgba(255, 255, 255, 0.4) 0.5px, rgba(255, 255, 255, 0) 1.2px),
+    radial-gradient(circle at 131px 97px, rgba(185, 215, 255, 0.45) 0.6px, rgba(185, 215, 255, 0) 1.4px),
+    radial-gradient(circle at 74px 168px, rgba(255, 255, 255, 0.3) 0.5px, rgba(255, 255, 255, 0) 1.1px),
+    radial-gradient(circle at 211px 29px, rgba(255, 228, 196, 0.5) 0.7px, rgba(255, 228, 196, 0) 1.6px),
+    radial-gradient(circle at 57px 233px, rgba(255, 255, 255, 0.35) 0.5px, rgba(255, 255, 255, 0) 1.2px),
+    radial-gradient(circle at 263px 119px, rgba(200, 225, 255, 0.55) 0.7px, rgba(200, 225, 255, 0) 1.6px),
+    radial-gradient(circle at 389px 302px, rgba(150, 200, 255, 0.75) 1px, rgba(150, 200, 255, 0) 2.2px),
+    radial-gradient(circle at 151px 487px, rgba(255, 240, 220, 0.8) 1.1px, rgba(255, 240, 220, 0) 2.6px);
+  background-size: 100% 100%, 137px 137px, 181px 181px, 229px 229px, 263px 263px, 311px 311px, 353px 353px, 467px 467px, 593px 593px;
+  background-repeat: no-repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat;
+}
+
+/* A thin cyan rim and a soft halo set the column off from the backdrop. */
+body.column #Cocos3dGameContainer {
+  box-shadow:
+    0 0 0 1px rgba(110, 190, 255, 0.22),
+    0 0 48px 2px rgba(40, 140, 255, 0.22),
+    0 0 220px 30px rgba(30, 70, 170, 0.28);
+}
+
 :root {
   --safe-top: env(safe-area-inset-top);
   --safe-right: env(safe-area-inset-right);

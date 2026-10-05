@@ -1,6 +1,6 @@
 // Colours and effect tuning. Linear-ish RGB in 0..1; values above ~0.8 feed the bloom.
 
-import type { Rgb } from './types';
+import type { DeviceKind, DeviceQuality, QualityTier, Rgb } from './types';
 
 export const COLORS = {
   background: [0.012, 0.016, 0.045] as Rgb,
@@ -112,15 +112,38 @@ export const POST_FX = {
   fxaa: false,
 };
 
-/** Adaptive 3D resolution (fx/RenderScaler.ts). */
-export const RENDER_SCALE = {
-  /** Steps of the 3D resolution (fraction of the screen's), best first; the UI stays at full resolution. */
-  levels: [0.7, 0.6, 0.5] as readonly number[],
+/**
+ * Graphics quality (fx/RenderScaler.ts). Tiers best first. The engine caps the canvas at 2 pixels
+ * per CSS pixel, so `scale` 1 renders at that. Each kind of device starts at its tier and moves
+ * along the tiers by measured frame times; the tier it held through a mission is remembered for
+ * its next start.
+ */
+export const QUALITY = {
+  tiers: [
+    { id: 'ultra', scale: 1, msaa: true },
+    { id: 'high', scale: 0.85, msaa: false },
+    { id: 'medium', scale: 0.7, msaa: false },
+    { id: 'low', scale: 0.6, msaa: false },
+    { id: 'lowest', scale: 0.5, msaa: false },
+  ] as readonly QualityTier[],
+  devices: {
+    /** A desktop or laptop GPU has room for everything; a weak integrated one steps down. */
+    desktop: { start: 'ultra', best: 'ultra' },
+    /**
+     * Phones and tablets: fill rate is the limit, and a phone heats up over a session. 70% is what
+     * iPhone 15 Plus was tuned and checked at (60 FPS, no heating), so it is also the ceiling:
+     * trying a tier above costs a dip each time it fails. Raise `best` to 'high' once a phone
+     * holds `?quality=high&debug=1` through a mission; then faster phones climb by themselves.
+     */
+    mobile: { start: 'medium', best: 'medium' },
+    /** No GPU (Chrome on SwiftShader, llvmpipe): as light as it gets. */
+    software: { start: 'lowest', best: 'medium' },
+  } as Record<DeviceKind, DeviceQuality>,
   /** Frame times are averaged over this many seconds. */
   window: 2,
-  /** An average frame slower than this (ms; 18.5 ≈ 54 FPS) steps the resolution down. */
+  /** An average frame slower than this (ms; 18.5 ≈ 54 FPS) steps the tier down. */
   slowFrameMs: 18.5,
-  /** Seconds at a lower step before trying the one above again; doubles after each failed try. */
+  /** Seconds at a lower tier before trying the one above again; doubles after each failed try. */
   retryAfter: 12,
 };
 

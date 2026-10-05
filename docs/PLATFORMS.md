@@ -17,11 +17,12 @@
 |---|---|---|---|
 | Web (`web-mobile`) | Windows | Ничего | С этапа 1, основной цикл |
 | iPhone через Safari | Windows по Wi‑Fi | iPhone в той же сети | С этапа 1 |
+| Браузер на ПК (та же web-сборка) | — | Ничего | Портретная колонка 9:16 по центру широкого окна, качество `ultra` (3D×1 + MSAA); управление — мышь (драг) и клавиатура |
 | **PWA на своём сервере** — основной релиз | Web-сборка на Windows → `npm run deploy:web` на VPS | Сервер уже есть; «Добавить на экран „Домой“» | С этапа 3 |
 | **iOS нативно на свой iPhone** (sideload) | Облачный macOS → неподписанный `.ipa` → Sideloadly на Windows | Бесплатно: обычный Apple ID | Этап 8 |
 | iOS в App Store / TestFlight | macOS + Xcode | $99/год за Apple Developer | **Вне рамок** (бюджет $0) |
 | Android (APK на свои устройства) | Windows (Android Studio, NDK) | Бесплатно; Google Play стоит $25 — не нужен | Опционально |
-| Windows / macOS desktop | Соответствующая ОС | — | Не планируем |
+| Windows / macOS desktop (нативные сборки) | Соответствующая ОС | — | Не планируем: на ПК играют в браузере |
 
 ## Тест на iPhone без Mac (с первого дня)
 

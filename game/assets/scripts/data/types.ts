@@ -701,3 +701,26 @@ export interface UpgradeDef {
   /** Can't be bought before this; null = from the start. */
   unlock: UnlockReq | null;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Graphics quality
+
+export type QualityId = 'ultra' | 'high' | 'medium' | 'low' | 'lowest';
+
+export interface QualityTier {
+  id: QualityId;
+  /** 3D resolution, a fraction of the canvas (the UI always renders at the full one). */
+  scale: number;
+  /** 4× multisampling of the 3D view: smooth edges on the low-poly silhouettes. */
+  msaa: boolean;
+}
+
+/** What a device is, as far as its GPU goes. */
+export type DeviceKind = 'desktop' | 'mobile' | 'software';
+
+export interface DeviceQuality {
+  /** The tier a device of this kind starts at. */
+  start: QualityId;
+  /** The best tier it may climb to while frames keep up. */
+  best: QualityId;
+}

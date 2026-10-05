@@ -29,12 +29,13 @@ import { FxSystem } from '../fx/FxSystem';
 import { Nebula } from '../fx/Nebula';
 import { RenderKit } from '../fx/RenderKit';
 import { keepRenderTargets } from '../fx/PipelineFix';
-import { pipelineSettings, RenderScaler, setShadingScale } from '../fx/RenderScaler';
+import { pipelineSettings, RenderScaler } from '../fx/RenderScaler';
 import { Starfield } from '../fx/Starfield';
 import { InputService } from '../services/InputService';
 import { ScreenFade } from '../ui/ScreenFade';
 import { SaveService } from '../services/SaveService';
 import { SceneRouter, type MenuEntry } from '../services/SceneRouter';
+import { ScreenFit } from '../services/ScreenFit';
 import { Hud } from '../ui/Hud';
 import { BulletSystem, type BulletLook } from './BulletSystem';
 import { CollisionSystem } from './CollisionSystem';
@@ -126,6 +127,7 @@ export class GameWorld extends Component {
   private resultsShown = false;
 
   start(): void {
+    ScreenFit.init();
     game.on(Game.EVENT_HIDE, this.onHide, this);
     // Covered from the first frame until everything is loaded and built.
     if (this.hudRoot) this.fade = new ScreenFade(this.hudRoot, this.titleFont);
@@ -273,6 +275,7 @@ export class GameWorld extends Component {
     hud.tick(dt);
     if (s.mission.phase === 'results' && !this.resultsShown) {
       this.resultsShown = true;
+      this.scaler?.remember();
       this.showResults(s);
     }
     s.overlay?.tick(dt);
@@ -419,8 +422,7 @@ export class GameWorld extends Component {
     if (pipe) {
       pipe.bloomEnable = debug.bloom ?? POST_FX.bloom;
       pipe.fxaaEnable = debug.fxaa ?? POST_FX.fxaa;
-      if (debug.scale !== null) setShadingScale(pipe, debug.scale);
-      else this.scaler = new RenderScaler(pipe);
+      this.scaler = new RenderScaler(pipe, debug);
     }
     const playfield = new Playfield(WORLD, screenAspect());
     const kit = RenderKit.shared(this.unlitEffect, this.standardEffect);
@@ -486,9 +488,8 @@ export class GameWorld extends Component {
           () => ({ enemies: enemies.count, bullets: playerBullets.count, enemyBullets: enemyBullets.count, pickups: pickups.count, fx: fx.count + decor.count }),
           () => {
             const t = missionDirector.timeline;
-            const scale = this.scaler ? this.scaler.scale : debug.scale;
             const kit = `${loadout.primary.id}${loadout.secondary ? `+${loadout.secondary.id}` : ''}`;
-            return `${mission.id} ${difficulty}  t ${t.time.toFixed(1)}s ${missionDirector.phase}${t.holding !== 'none' ? `/${t.holding}` : ''}  P${player.firePower} ${kit}${debug.god ? '  GOD' : ''}  3D×${scale ?? '?'}`;
+            return `${mission.id} ${difficulty}  t ${t.time.toFixed(1)}s ${missionDirector.phase}${t.holding !== 'none' ? `/${t.holding}` : ''}  P${player.firePower} ${kit}${debug.god ? '  GOD' : ''}  ${this.scaler?.label ?? ''}`;
           },
         )
       : null;
