@@ -29,10 +29,10 @@ Playwright MCP runs with a 390×844 viewport and `vision` caps (`.mcp.json`).
 
 - Move: `browser_mouse_drag_xy` (mouse drags arrive as touches; relative drag moves the ship by the same fraction of the screen).
 - Tap (play again on the results screen): `browser_mouse_click_xy` with `delay: 60`.
-- On-screen buttons (CSS px at 390×844): pause ≈ (357, 53), NOVA ≈ (330, 765); pause panel RESUME ≈ (195, 389), RESTART ≈ (195, 454), MENU ≈ (195, 519); results RETRY ≈ (76, 660), NEXT ≈ (195, 660, only after a win), MENU ≈ (314, 660). Keys: `Space` = Nova Bomb, `Escape`/`P` = pause, `Enter` = tap / RETRY.
-- Start screen (no URL flags): tap anywhere → menu; NORMAL ≈ (126, 462), HARD ≈ (264, 462); mission cards 1-1 ≈ (195, 552), 1-2 ≈ (195, 645), 1-3 ≈ (195, 738). Keys: Enter/Space = start, 1–3 = mission, ←/→ = difficulty. The StartScreen component: `cc.director.getScene().getChildByName('World').getComponent('StartScreen')`.
+- On-screen buttons (CSS px at 390×844): pause ≈ (357, 53), NOVA ≈ (330, 765); pause panel RESUME ≈ (195, 389), RESTART ≈ (195, 454), MENU ≈ (195, 519); results buttons on one row at y ≈ 660, centred: with NEXT (after a win, next mission open) RETRY ≈ 55, NEXT ≈ 148, HANGAR ≈ 242, MENU ≈ 335; without NEXT RETRY ≈ 101, HANGAR ≈ 195, MENU ≈ 289. Keys: `Space` = Nova Bomb, `Escape`/`P` = pause, `Enter` = tap / RETRY.
+- Menu (no URL flags; CSS px at 390×844). Title: tap anywhere → Main. Main: CONTINUE/PLAY ≈ (195, 625), CAMPAIGN ≈ (195, 700), HANGAR ≈ (195, 763). Every other page: BACK ≈ (48, 43), wallet top right. Campaign: sector ◀ ≈ (35, 110), ▶ ≈ (355, 110); mission cards 1-1 ≈ (195, 218), 1-2 ≈ (195, 325), 1-3 ≈ (195, 432). Mission: difficulty rows NORMAL ≈ (195, 155), HARD ≈ (195, 263); HANGAR ≈ (80, 790), LAUNCH ≈ (265, 790). Hangar: tabs SHIP ≈ (78, 91), SYSTEMS ≈ (195, 91), WEAPONS ≈ (312, 91); SHIP — ship ◀ ≈ (32, 329), ▶ ≈ (358, 329), paints ≈ (128 / 195 / 262, 733); SYSTEMS — BUY buttons x ≈ 310, rows y ≈ 152 + 64·i (hull, shield, generator, magnet, charges, energy, power); WEAPONS — Pulse Cannon BUY ≈ (310, 170); LAUNCH ≈ (195, 793). Keys (CLAUDE.md «Отладка»): Enter/Space = start, Esc = back, 1–3 = mission page, ←/→ = sector / difficulty / ship, Tab = hangar tab, Enter = CONTINUE / LAUNCH. In the preview, keys reach the game without the canvas having focus, and the first mouse click after a key press only focuses the canvas — click once on empty space (or tap the title) before clicking buttons. Drive the menu from the page: `const ss = cc.director.getScene().getChildByName('World').getComponent('StartScreen'); ss.open('main' | 'campaign' | 'mission' | 'hangar'); ss.pick = { mission, difficulty }; ss.pages.get('hangar').showTab('systems'); ss.launch()`. Give credits or a ship: edit `localStorage['spaceflight.save']` (JSON: credits, upgrades, ship, paints, records, last) and reload — the save is cached in memory after the first read.
 - Press UI buttons from the page without coordinates: `gw.input.pressed.add('retry' | 'next' | 'menu' | 'pause')` (`'menu'` works on the pause and results panels).
-- URL flags (CLAUDE.md «Отладка»): `mission=s1m1..s1m3`, `difficulty=hard`, `t=<sec>` (mission clock, skips the intro), `god=1`, `power=1..4`, `seed=7`, `slowmo=0.05..4`, `elite=1` / `elite=volatile`. Runs with cheats are "practice": not recorded. Reset records: `localStorage.removeItem('spaceflight.records')`.
+- URL flags (CLAUDE.md «Отладка»): `mission=s1m1..s1m3`, `difficulty=hard`, `t=<sec>` (mission clock, skips the intro), `god=1`, `power=1..4`, `seed=7`, `slowmo=0.05..4`, `elite=1` / `elite=volatile`, `unlock=1` (all ships, missions, difficulties open), `credits=50000` (set the wallet, once per page load), `reset=1` (wipe progress, once per page load). Runs with cheats are "practice": no records, no credits. Reset progress: `localStorage.removeItem('spaceflight.save')`.
 - Force situations from the page — the live systems are reachable through the `GameWorld` component:
   ```js
   const gw = cc.director.getScene().getChildByName('World').getComponent('GameWorld');
@@ -43,6 +43,8 @@ Playwright MCP runs with a 390×844 viewport and `vision` caps (`.mcp.json`).
   gw.specialQueued = true;                            // Nova Bomb
   s.ctx.bus.on('shieldHit', e => ...);                // observe events: enemyKilled, playerHit, graze, pickupCollected, novaBomb, banner…
   s.mission.phase, s.mission.timeline.time, s.mission.timeline.holding, s.mission.result (medals mask, pods)
+  s.mission.finish(true)                              // end the mission now (results, rewards, records — unless practice)
+  gw.loadout, s.player.damage, s.player.fireInterval  // what the hangar gave the ship
   s.score.stats (pods), s.mission.podsTotal, s.player.vitals, s.enemyBullets.count
   s.enemies.boss, boss.parts, s.enemies.isArmored(boss), e.elite                // bosses, parts, elites
   s.ctx.bus.on('podsLaunched' | 'podLost' | 'armorBroken' | 'enemyShieldBroken', ...)
@@ -65,11 +67,16 @@ Playwright MCP runs with a 390×844 viewport and `vision` caps (`.mcp.json`).
   After `refresh_assets` the editor reloads the page a second or two later: attach the autopilot after that reload, or the evaluate dies with "Execution context was destroyed".
 - **Boss timing:** `?t=<boss t>&power=4&god=1` with the autopilot aiming at `boss.parts[0] ?? boss`; wrap `s.mission.tick` to count game time between `armorBroken`, the 66/33% HP marks and the kill.
   Compare enemy pool sizes with `missionNeeds` (`Array.from(s.enemies.pools).map(([id, p]) => id + ':' + p.totalCreated)`): growth means a mid-game `instantiate`.
+- **Pools must not grow in a fight** (growth = mid-game `instantiate` = a hitch on iPhone): compare `totalCreated` before and after a Hard boss kill — `s.fx.pools` (by kind: SparkHot, SparkFire, HitSpark, Flash, Fireball, Debris, Cyan, Pop, Deflect, Rescue), `s.fx.ringPool`, `s.enemyBullets.pools`, `s.playerBullets.pools`, `s.pickups.pools` (Map). Sizes live in data (`FX_POOLS`, `BULLET_POOLS`, `pool` in pickups); `freeCount` near 0 at a peak means raise them.
+- **Memory across scene switches:** cycle Menu → Game → Menu several times (`ss.launch()`, then `gw.toMenu('main')`, waiting until `!c.fade.covering`) and read `cc.director.root.device.memoryStatus` (`textureSize`, `bufferSize`) on each side — the numbers must not climb.
+- **Render scale:** `?debug=1` shows `3D×0.7` in our label (adaptive; `gw.scaler.scale`). Force a step down from the page: `for (let i = 0; i < 200; i++) gw.scaler.tick(0.05)`. Fixed: `?scale=0.5`; post effects: `?bloom=0`, `?fxaa=1` (FXAA is off by default).
+- **Render targets must not be rebuilt per frame** (Cocos 3.8.8 release-build bug, worked around in `fx/PipelineFix.ts`; the editor preview never shows it — check on a release build): wrap `cc.director.root.device.createFramebuffer` and count calls per frame (`cc.director.getTotalFrames()`) — must be 0 in play. For a CPU profile of a release build use `browser_run_code_unsafe` with a CDP session (`Profiler.start` / `Profiler.stop`) and sum samples by function name.
+- **Release builds over HTTP get cached:** serve them with `npm run serve:web` (no-store), or disable the cache in a CDP session (`Network.setCacheDisabled`) — otherwise the browser may run the previous build's bundle after a rebuild.
 - Short-lived effects disappear before a screenshot lands — use `?slowmo=0.25` or `gw.freeze = 999`.
 
 ## 3b. Release build and the live site
 
-- Build (CLAUDE.md «Команды»), then serve `game/build/web-mobile` with `python -m http.server 8080` and open `http://localhost:8080/` — the first frame can be black while it loads; check again after a few seconds.
+- Build (CLAUDE.md «Команды»), then serve it with `npm run serve:web` (CLI build) or `python tools/serve_web.py game/build/web-mobile` and open `http://localhost:8080/` — the first frame can be black while it loads; check again after a few seconds.
 - Live: `https://spaceflight.p1gog.duckdns.org/` after `npm run deploy:web`. Check `navigator.serviceWorker.getRegistrations()` and `caches.keys()` (one `spaceflight-<build>` cache).
 
 ## 4. Check

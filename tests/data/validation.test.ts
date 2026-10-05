@@ -2,12 +2,16 @@
 // Adding content (an enemy, a pattern, a mission) should only ever need data edits — these tests
 // are the safety net for that.
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { formationSize } from '../../game/assets/scripts/core/formations';
 import { MAX_PATH_POINTS } from '../../game/assets/scripts/core/motion';
-import { countPods, missionNeeds } from '../../game/assets/scripts/core/missionNeeds';
+import { countPods, missionNeeds, missionPrefabPaths } from '../../game/assets/scripts/core/missionNeeds';
+import { CAMPAIGN_DIFFICULTIES, SECTORS } from '../../game/assets/scripts/data/campaign';
 import { DECOR } from '../../game/assets/scripts/data/decor';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../../game/assets/scripts/data/difficulty';
+import { UPGRADE_ORDER, UPGRADES } from '../../game/assets/scripts/data/economy';
 import { ELITE_IDS, ELITES } from '../../game/assets/scripts/data/elites';
 import { ENEMIES } from '../../game/assets/scripts/data/enemies';
 import { MEDALS } from '../../game/assets/scripts/data/medals';
@@ -15,10 +19,10 @@ import { MISSION_ORDER, MISSIONS, nextMission } from '../../game/assets/scripts/
 import { PATHS } from '../../game/assets/scripts/data/paths';
 import { PATTERNS } from '../../game/assets/scripts/data/patterns';
 import { PICKUPS } from '../../game/assets/scripts/data/pickups';
-import { DEFAULT_LOADOUT, ENERGY, GENERATOR_LEVELS, MAGNET_RADIUS, SPITFIRE } from '../../game/assets/scripts/data/player';
+import { DEFAULT_PAINT, DEFAULT_SHIP, ENERGY, GENERATOR_LEVELS, MAGNET_RADIUS, PAINT_ORDER, PAINTS, SHIP_ORDER, SHIPS, shipModel, shipModelFile } from '../../game/assets/scripts/data/player';
 import { SET_PIECES } from '../../game/assets/scripts/data/setPieces';
 import type { MoveSpec } from '../../game/assets/scripts/data/types';
-import { ENEMY_BULLETS, PULSE_CANNON } from '../../game/assets/scripts/data/weapons';
+import { ENEMY_BULLETS, PULSE_CANNON, WEAPON_LEVELS } from '../../game/assets/scripts/data/weapons';
 import { WORLD } from '../../game/assets/scripts/data/world';
 
 function checkMove(m: MoveSpec, where: string): void {
@@ -171,17 +175,35 @@ describe('pickups and player', () => {
     expect(MEDALS.map((m) => m.id)).toEqual(['hunter', 'exterminator', 'rescuer', 'untouchable']);
   });
 
-  it('player hitbox is smaller than the ship, graze ring bigger', () => {
-    expect(SPITFIRE.hitboxRadius).toBeLessThan(SPITFIRE.bodyRadius);
-    expect(SPITFIRE.grazeRadius).toBeGreaterThan(SPITFIRE.bodyRadius);
-    expect(SPITFIRE.startHeight).toBeGreaterThan(WORLD.playerTopLimit);
+  it('ships: hitbox the same for all, smaller than the ship, graze ring bigger; every paint has a model', () => {
+    expect(SHIP_ORDER.slice().sort()).toEqual(Object.keys(SHIPS).sort());
+    expect(PAINT_ORDER.slice().sort()).toEqual(Object.keys(PAINTS).sort());
+    expect(SHIPS[DEFAULT_SHIP].unlock).toBeNull();
+    expect(PAINTS[DEFAULT_PAINT]).toBeDefined();
+    for (const [key, ship] of Object.entries(SHIPS)) {
+      expect(ship.id).toBe(key);
+      expect(ship.hitboxRadius, key).toBe(SHIPS[DEFAULT_SHIP].hitboxRadius);
+      expect(ship.hitboxRadius, key).toBeLessThan(ship.bodyRadius);
+      expect(ship.grazeRadius, key).toBeGreaterThan(ship.bodyRadius);
+      expect(ship.startHeight, key).toBeGreaterThan(WORLD.playerTopLimit);
+      expect(ship.engines.length, key).toBeGreaterThan(0);
+      expect(ship.perks.length, key).toBeGreaterThan(0);
+      if (ship.unlock) expect(SECTORS[ship.unlock.sector - 1], `${key} unlock sector`).toBeDefined();
+      for (const paint of PAINT_ORDER) {
+        const file = path.resolve(__dirname, '../../game/assets/resources', `${shipModelFile(ship.id, paint)}.glb`);
+        expect(fs.existsSync(file), file).toBe(true);
+        expect(shipModel(ship.id, paint)).toBe(`${shipModelFile(ship.id, paint)}/${ship.id}_${paint}`);
+      }
+    }
   });
 
-  it('loadout levels exist in their tables', () => {
-    expect(GENERATOR_LEVELS[DEFAULT_LOADOUT.generator - 1]).toBeDefined();
-    expect(MAGNET_RADIUS[DEFAULT_LOADOUT.magnet - 1]).toBeDefined();
-    expect(ENERGY.gainLevels[DEFAULT_LOADOUT.energyGain - 1]).toBeDefined();
-    expect(DEFAULT_LOADOUT.specialCharges).toBeLessThanOrEqual(ENERGY.maxCharges);
+  it('every upgrade level exists in the tables it indexes', () => {
+    for (const v of UPGRADES.generator.values) expect(GENERATOR_LEVELS[v - 1]).toBeDefined();
+    for (const v of UPGRADES.magnet.values) expect(MAGNET_RADIUS[v - 1]).toBeDefined();
+    for (const v of UPGRADES.energy.values) expect(ENERGY.gainLevels[v - 1]).toBeDefined();
+    for (const v of UPGRADES.pulse.values) expect(WEAPON_LEVELS[v - 1]).toBeDefined();
+    for (const v of UPGRADES.charges.values) expect(v).toBeLessThanOrEqual(ENERGY.maxCharges);
+    for (const v of UPGRADES.power.values) expect(v).toBeLessThanOrEqual(PULSE_CANNON.powerForms.length);
   });
 
   it('difficulties are complete and get harder', () => {
@@ -271,6 +293,16 @@ describe('missions', () => {
         expect(countPods(m)).toBeGreaterThan(0);
       });
 
+      it('every prefab it loads exists (menu preloading uses the same list)', () => {
+        const paths = missionPrefabPaths(missionNeeds(m));
+        expect(paths.length).toBeGreaterThan(0);
+        for (const p of paths) {
+          // 'models/ships/bob_red/bob_red' is the prefab inside models/ships/bob_red.glb.
+          const file = path.resolve(__dirname, '../../game/assets/resources', `${p.slice(0, p.lastIndexOf('/'))}.glb`);
+          expect(fs.existsSync(file), file).toBe(true);
+        }
+      });
+
       it('parts never spawn on their own', () => {
         for (const e of m.events) if (e.type === 'spawn' || e.type === 'boss') expect(ENEMIES[e.enemy].move.kind).not.toBe('attached');
       });
@@ -303,7 +335,40 @@ describe('missions', () => {
   }
 });
 
+describe('economy', () => {
+  it('upgrades: one per id, one cost per level, prices and values only go up', () => {
+    expect(UPGRADE_ORDER.slice().sort()).toEqual(Object.keys(UPGRADES).sort());
+    for (const [key, u] of Object.entries(UPGRADES)) {
+      expect(u.id).toBe(key);
+      expect(u.costs.length, key).toBe(u.values.length - 1);
+      for (let i = 1; i < u.values.length; i++) expect(u.values[i], key).toBeGreaterThan(u.values[i - 1]);
+      for (let i = 0; i < u.costs.length; i++) {
+        expect(Number.isInteger(u.costs[i]), key).toBe(true);
+        if (i > 0) expect(u.costs[i], key).toBeGreaterThan(u.costs[i - 1]);
+      }
+    }
+  });
+
+  it('weapon levels only make the gun stronger', () => {
+    expect(WEAPON_LEVELS[0]).toEqual({ damage: 1, rate: 1 });
+    for (let i = 1; i < WEAPON_LEVELS.length; i++) {
+      expect(WEAPON_LEVELS[i].damage).toBeGreaterThan(WEAPON_LEVELS[i - 1].damage);
+      expect(WEAPON_LEVELS[i].rate).toBeGreaterThanOrEqual(WEAPON_LEVELS[i - 1].rate);
+    }
+  });
+});
+
 describe('campaign', () => {
+  it('sectors hold every mission once, in campaign order; medal thresholds are reachable', () => {
+    SECTORS.forEach((s, i) => expect(s.id).toBe(i + 1));
+    expect(SECTORS.reduce<string[]>((all, s) => all.concat(s.missions), [])).toEqual(MISSION_ORDER.slice());
+    for (const s of SECTORS) {
+      if (s.missions.length > 0) expect(s.missions.length, s.name).toBe(3);
+      expect(s.medalsToAdvance, s.name).toBeLessThanOrEqual(3 * 4 * CAMPAIGN_DIFFICULTIES.length);
+    }
+    expect(CAMPAIGN_DIFFICULTIES).toEqual(DIFFICULTY_ORDER.slice(0, CAMPAIGN_DIFFICULTIES.length));
+  });
+
   it('lists every mission once, in order, with NEXT following it', () => {
     expect(MISSION_ORDER.slice().sort()).toEqual(Object.keys(MISSIONS).sort());
     for (let i = 0; i < MISSION_ORDER.length - 1; i++) expect(nextMission(MISSION_ORDER[i])).toBe(MISSION_ORDER[i + 1]);

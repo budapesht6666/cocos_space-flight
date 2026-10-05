@@ -76,6 +76,47 @@ export const NOVA_FX = {
   maxPops: 60,
 };
 
+/**
+ * Effect particles made up front per kind at mission load. Peaks measured on full Hard runs and
+ * the Marauder and Warden kills, plus a margin. Effects never grow mid-fight: past a peak, extra
+ * sparks are skipped — a few sparks less is invisible, a hitch on iPhone is not.
+ */
+export const FX_POOLS = {
+  sparkHot: 130,
+  sparkFire: 90,
+  hitSpark: 50,
+  flash: 8,
+  fireball: 32,
+  debris: 64,
+  cyan: 40,
+  pop: 60,
+  deflect: 32,
+  rescue: 40,
+  rings: 10,
+};
+
+/**
+ * Post effects on the game and menu cameras. FXAA runs at the full screen resolution, the most
+ * expensive pass per pixel; with the 3D view upscaled from 70% it made no visible difference on
+ * iPhone, so it is off (`?fxaa=1` turns it on to compare).
+ */
+export const POST_FX = {
+  bloom: true,
+  fxaa: false,
+};
+
+/** Adaptive 3D resolution (fx/RenderScaler.ts). */
+export const RENDER_SCALE = {
+  /** Steps of the 3D resolution (fraction of the screen's), best first; the UI stays at full resolution. */
+  levels: [0.7, 0.6, 0.5] as readonly number[],
+  /** Frame times are averaged over this many seconds. */
+  window: 2,
+  /** An average frame slower than this (ms; 18.5 ≈ 54 FPS) steps the resolution down. */
+  slowFrameMs: 18.5,
+  /** Seconds at a lower step before trying the one above again; doubles after each failed try. */
+  retryAfter: 12,
+};
+
 export const BOSS_FX = {
   /** Follow-up blasts around a dead boss: delay (s), offset (units), size. */
   chain: [
@@ -84,8 +125,9 @@ export const BOSS_FX = {
     { t: 0.42, dx: 0.2, dz: -0.9, size: 'medium' },
     { t: 0.6, dx: 0, dz: 0, size: 'large' },
   ] as const,
-  hitstop: 0.18,
+  /** Real seconds the world holds still on the kill, before the slow motion. */
+  hitstop: 0.15,
   /** Slow motion after a boss dies: time scale and how long it lasts (real seconds, eased back). */
-  slowmoScale: 0.3,
-  slowmoTime: 1.6,
+  slowmoScale: 0.35,
+  slowmoTime: 1.4,
 };

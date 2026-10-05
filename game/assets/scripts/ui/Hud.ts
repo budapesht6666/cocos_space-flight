@@ -2,13 +2,14 @@
 // escape pods, the Special and pause buttons, the boss bar, banners, and the pause and results
 // panels. Setters only touch labels and redraw graphics when the shown value changes.
 
-import { Color, Graphics, Label, Node, TTFFont, UITransform } from 'cc';
+import { Color, Graphics, Label, Node, TTFFont, UITransform, Widget } from 'cc';
+import type { RunRewards } from '../core/economy';
 import { hasMedal, MEDAL_BITS } from '../core/medals';
 import { MEDALS } from '../data/medals';
 import type { BannerStyle } from '../game/GameContext';
 import type { MissionResult } from '../game/MissionDirector';
 import type { ButtonId } from '../services/InputService';
-import { contains, drawMedal, UI, uiButton, uiLabel, uiNode, uiPanel } from './UiKit';
+import { contains, drawCoin, drawMedal, UI, uiButton, uiLabel, uiNode, uiPanel } from './UiKit';
 
 const SPECIAL_READY = new Color(30, 90, 140, 220);
 const SPECIAL_EMPTY = new Color(16, 24, 40, 200);
@@ -46,6 +47,8 @@ const MEDAL_ROW_Y = 150;
 const MEDAL_SPACING = 168;
 const MEDAL_RADIUS = 46;
 const RESULT_BUTTON_Y = -440;
+const RESULT_BUTTON_WIDTH = 160;
+const RESULT_BUTTON_GAP = 14;
 
 export interface HudFonts {
   /** Orbitron Bold: banners, titles, buttons. */
@@ -60,6 +63,10 @@ export interface ResultsExtras {
   newBest: boolean;
   /** Medals earned for the first time (bit mask). */
   newMedals: number;
+  /** Credits the run paid; null for practice runs, which pay nothing. */
+  rewards: RunRewards | null;
+  /** Wallet after the run. */
+  balance: number;
   hasNext: boolean;
 }
 
@@ -99,6 +106,7 @@ export class Hud {
   private readonly medalNames: Label[] = [];
   private readonly retryButton: Node;
   private readonly nextButton: Node;
+  private readonly hangarButton: Node;
   private readonly menuButton: Node;
   private shown = { score: -1, combo: -1, hull: -1, hullMax: -1, shield: -1, shieldMax: -1, shieldFill: -1, credits: -1, charges: -1, energy: -1, boss: -1, armored: false, pods: -1, podsTotal: -1 };
   private time = 0;
@@ -176,11 +184,13 @@ export class Hud {
       label.string = m.name;
       this.medalNames.push(label);
     });
-    this.resultsBody = uiLabel(p, 'ResultsBody', 28, UI.white, { centerX: true, centerY: true, dy: -140 });
-    this.resultsBody.lineHeight = 44;
-    this.retryButton = uiButton(p, 'RETRY', 200, 88, { centerX: true, centerY: true, dx: -220, dy: RESULT_BUTTON_Y }, font, 28);
-    this.nextButton = uiButton(p, 'NEXT', 200, 88, { centerX: true, centerY: true, dx: 0, dy: RESULT_BUTTON_Y }, font, 28);
-    this.menuButton = uiButton(p, 'MENU', 200, 88, { centerX: true, centerY: true, dx: 220, dy: RESULT_BUTTON_Y }, font, 28);
+    this.resultsBody = uiLabel(p, 'ResultsBody', 28, UI.white, { centerX: true, centerY: true, dy: -150 });
+    this.resultsBody.lineHeight = 40;
+    const button = (text: string): Node => uiButton(p, text, RESULT_BUTTON_WIDTH, 88, { centerX: true, centerY: true, dy: RESULT_BUTTON_Y }, font, 24);
+    this.retryButton = button('RETRY');
+    this.nextButton = button('NEXT');
+    this.hangarButton = button('HANGAR');
+    this.menuButton = button('MENU');
     this.resultsPanel.active = false;
   }
 
@@ -360,16 +370,33 @@ export class Hud {
     });
 
     const rate = Math.round(r.killRate * 100);
-    const lines = [
-      `CREDITS  ${r.credits.toLocaleString('en-US')}`,
-      `KILLS  ${r.kills}/${r.spawned}  (${rate}%)`,
-    ];
+    const money = (n: number): string => n.toLocaleString('en-US');
+    const lines: string[] = [];
+    const pay = extras.rewards;
+    if (pay) {
+      lines.push(`CREDITS  +${money(pay.collected)}`);
+      const bonus: string[] = [];
+      if (pay.clear > 0) bonus.push(`CLEAR +${money(pay.clear)}`);
+      if (pay.medals > 0) bonus.push(`MEDALS +${money(pay.medals)}`);
+      if (bonus.length > 0) lines.push(bonus.join('  ·  '));
+    } else {
+      lines.push(`CREDITS  ${money(r.credits)}  ·  PRACTICE, NOT KEPT`);
+    }
+    lines.push(`BALANCE  ${money(extras.balance)}`);
+    lines.push(`KILLS  ${r.kills}/${r.spawned}  (${rate}%)`);
     if (r.podsTotal > 0) lines.push(`ESCAPE PODS  ${r.pods}/${r.podsTotal}`);
-    lines.push(`BEST COMBO  ×${r.bestMultiplier}`, `GRAZES  ${r.grazes}`, `HULL LOST  ${r.hullLost}`);
+    lines.push(`BEST COMBO  ×${r.bestMultiplier}  ·  GRAZES  ${r.grazes}`, `HULL LOST  ${r.hullLost}`);
     if (r.shieldBonus > 0) lines.push(`SHIELD BONUS  +${r.shieldBonus.toLocaleString('en-US')}`);
     if (r.noDamageBonus > 0) lines.push(`NO DAMAGE  +${r.noDamageBonus.toLocaleString('en-US')}`);
     this.resultsBody.string = lines.join('\n');
     this.nextButton.active = extras.hasNext && r.complete;
+    // Centre the row of buttons that are showing.
+    const row = [this.retryButton, this.nextButton, this.hangarButton, this.menuButton].filter((b) => b.active);
+    row.forEach((b, i) => {
+      const widget = b.getComponent(Widget) as Widget;
+      widget.horizontalCenter = (i - (row.length - 1) / 2) * (RESULT_BUTTON_WIDTH + RESULT_BUTTON_GAP);
+      widget.updateAlignment();
+    });
   }
 
   /** Which on-screen button is under a UI-space point (for InputService). */
@@ -383,6 +410,7 @@ export class Hud {
     if (this.resultsPanel.active) {
       if (contains(this.retryButton, x, y)) return 'retry';
       if (contains(this.nextButton, x, y)) return 'next';
+      if (contains(this.hangarButton, x, y)) return 'hangar';
       if (contains(this.menuButton, x, y)) return 'menu';
       return null;
     }
@@ -480,19 +508,5 @@ function drawStatusIcons(g: Graphics): void {
   g.close();
   g.fill();
 
-  // Credits: coin with an inner ring and a diamond.
-  g.fillColor = UI.gold;
-  g.circle(cx, ROW_CREDITS, 16);
-  g.fill();
-  g.lineWidth = 3;
-  g.strokeColor = UI.ink;
-  g.circle(cx, ROW_CREDITS, 11);
-  g.stroke();
-  g.fillColor = UI.ink;
-  g.moveTo(cx, ROW_CREDITS + 6.5);
-  g.lineTo(cx + 4.5, ROW_CREDITS);
-  g.lineTo(cx, ROW_CREDITS - 6.5);
-  g.lineTo(cx - 4.5, ROW_CREDITS);
-  g.close();
-  g.fill();
+  drawCoin(g, cx, ROW_CREDITS, 16);
 }

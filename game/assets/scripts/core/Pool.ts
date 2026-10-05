@@ -24,6 +24,11 @@ export class Pool<T> {
     return this.create();
   }
 
+  /** A free item, or null when none is left — never creates one (cosmetic effects at a peak). */
+  tryAcquire(): T | null {
+    return this.free.pop() ?? null;
+  }
+
   release(item: T): void {
     this.onRelease?.(item);
     this.free.push(item);

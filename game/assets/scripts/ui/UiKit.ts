@@ -1,5 +1,5 @@
-// Building blocks for UI built in code (HUD, start screen): nodes anchored with Widget, outlined
-// labels, buttons and medal badges drawn with Graphics. Colours are shared so screens match.
+// Building blocks for UI built in code (HUD, menu): nodes anchored with Widget, outlined labels,
+// buttons, icons and medal badges drawn with Graphics. Colours are shared so screens match.
 
 import { Color, Graphics, Label, Layers, Node, TTFFont, UITransform, Vec2, Widget } from 'cc';
 import type { MedalId } from '../data/types';
@@ -21,6 +21,7 @@ export const UI = {
   buttonHot: new Color(30, 80, 120, 240),
   card: new Color(10, 20, 40, 215),
   cardEdge: new Color(60, 110, 160, 255),
+  cardLocked: new Color(8, 12, 24, 200),
   ink: new Color(10, 14, 26, 255),
 };
 
@@ -52,9 +53,11 @@ export function uiLabel(parent: Node, name: string, size: number, color: Color, 
   node.layer = Layers.Enum.UI_2D;
   parent.addChild(node);
   const transform = node.addComponent(UITransform);
-  // Edge-anchored labels grow away from their edge when the text changes length.
-  if (anchor.left !== undefined) transform.setAnchorPoint(0, 0.5);
-  else if (anchor.right !== undefined) transform.setAnchorPoint(1, 0.5);
+  // Edge-anchored labels grow away from their edge when the text changes length or line count
+  // (the Widget aligns only once, so the anchor point decides the direction of growth).
+  const ax = anchor.left !== undefined ? 0 : anchor.right !== undefined ? 1 : 0.5;
+  const ay = anchor.top !== undefined ? 1 : anchor.bottom !== undefined ? 0 : 0.5;
+  transform.setAnchorPoint(ax, ay);
   const label = node.addComponent(Label);
   if (font) {
     label.useSystemFont = false;
@@ -71,6 +74,13 @@ export function uiLabel(parent: Node, name: string, size: number, color: Color, 
   label.outlineWidth = 3;
   align(node, anchor);
   return label;
+}
+
+/** Puts a label at (x, y) in its parent, growing rightwards ('left'), leftwards ('right') or both ways. */
+export function placeLabel(label: Label, x: number, y: number, align: 'left' | 'center' | 'right' = 'center'): void {
+  label.node.getComponent(UITransform)?.setAnchorPoint(align === 'left' ? 0 : align === 'right' ? 1 : 0.5, 0.5);
+  label.horizontalAlign = align === 'left' ? Label.HorizontalAlign.LEFT : align === 'right' ? Label.HorizontalAlign.RIGHT : Label.HorizontalAlign.CENTER;
+  label.node.setPosition(x, y);
 }
 
 /** Rounded button with a centred caption; returns the node to hit-test. */
@@ -92,6 +102,76 @@ export function drawButton(g: Graphics, width: number, height: number, hot: bool
   g.lineWidth = 3;
   g.strokeColor = UI.buttonEdge;
   g.roundRect(-width / 2, -height / 2, width, height, 18);
+  g.stroke();
+}
+
+/** Calls `fn` when a touch that started on the node ends on it; the node dips while held. */
+export function onTap(node: Node, fn: () => void): void {
+  node.on(Node.EventType.TOUCH_START, () => node.setScale(0.97, 0.97, 1));
+  node.on(Node.EventType.TOUCH_CANCEL, () => node.setScale(1, 1, 1));
+  node.on(Node.EventType.TOUCH_END, () => {
+    node.setScale(1, 1, 1);
+    fn();
+  });
+}
+
+/** Rounded card; `edge` overrides the border colour (selection), `locked` dims it. */
+export function drawCard(g: Graphics, width: number, height: number, edge: Color | null = null, locked = false): void {
+  g.clear();
+  g.fillColor = locked ? UI.cardLocked : UI.card;
+  g.roundRect(-width / 2, -height / 2, width, height, 20);
+  g.fill();
+  g.lineWidth = edge ? 5 : 3;
+  g.strokeColor = edge ?? (locked ? UI.faint : UI.cardEdge);
+  g.roundRect(-width / 2, -height / 2, width, height, 20);
+  g.stroke();
+}
+
+/** Credit coin: gold disc, inner ring and a diamond. `r` ~16 at HUD size. */
+export function drawCoin(g: Graphics, x: number, y: number, r: number): void {
+  g.fillColor = UI.gold;
+  g.circle(x, y, r);
+  g.fill();
+  g.lineWidth = Math.max(1.5, r * 0.19);
+  g.strokeColor = UI.ink;
+  g.circle(x, y, r * 0.69);
+  g.stroke();
+  g.fillColor = UI.ink;
+  const d = r * 0.4;
+  g.moveTo(x, y + d);
+  g.lineTo(x + d * 0.7, y);
+  g.lineTo(x, y - d);
+  g.lineTo(x - d * 0.7, y);
+  g.close();
+  g.fill();
+}
+
+/** Padlock, `size` ~ its height. */
+export function drawLock(g: Graphics, x: number, y: number, size: number, color: Color): void {
+  const w = size * 0.8;
+  const h = size * 0.55;
+  const top = y - size * 0.5 + h;
+  const r = w * 0.3;
+  // Shackle: straight legs out of the body, a half circle on top.
+  g.lineWidth = Math.max(2, size * 0.12);
+  g.strokeColor = color;
+  g.moveTo(x - r, top);
+  g.lineTo(x - r, top + size * 0.12);
+  g.arc(x, top + size * 0.12, r, Math.PI, 0, false);
+  g.lineTo(x + r, top);
+  g.stroke();
+  g.fillColor = color;
+  g.roundRect(x - w / 2, y - size * 0.5, w, h, size * 0.08);
+  g.fill();
+}
+
+/** Chevron pointing left (dir -1) or right (dir 1). */
+export function drawChevron(g: Graphics, x: number, y: number, size: number, dir: number, color: Color): void {
+  g.lineWidth = Math.max(3, size * 0.18);
+  g.strokeColor = color;
+  g.moveTo(x - dir * size * 0.25, y + size * 0.5);
+  g.lineTo(x + dir * size * 0.25, y);
+  g.lineTo(x - dir * size * 0.25, y - size * 0.5);
   g.stroke();
 }
 

@@ -18,7 +18,7 @@ Homing (Seeker Missiles), beams (Ion Laser, Rail Lance), chains (Tesla Arc), are
 ## Steps
 
 1. Add the id to `WeaponId` (`data/types.ts`) and the def to `data/weapons.ts`.
-2. Until the hangar (stage 4) exists, the weapon in use is passed in `GameWorld.boot()` (`PULSE_CANNON`) — switch it there to try a new one.
-3. Balance sanity: DPS per Power = streams × damage / fireInterval. Pulse: I ≈ 11, IV ≈ 55. Scouts have 3 HP, Gunships 22, the Marauder 520 (×1.4 on Hard).
+2. Hangar level: weapon levels 1–5 are an upgrade track per weapon — add an `UpgradeId` and an `UPGRADES` entry with `group: 'weapons'` in `data/economy.ts` (values 1..5, four prices); the WEAPONS tab lists it. `WEAPON_LEVELS` (shared) scales damage and fire rate; the ship's `primaryDamage` multiplies on top (`core/loadout.ts`, `PlayerSystem`). Choosing between primaries in the slot is stage 5 work: today `GameWorld.boot()` passes `PULSE_CANNON` and the `pulse` level — switch both there to try a new weapon.
+3. Balance sanity: DPS per Power = streams × damage × level damage × level rate / fireInterval. Pulse LV 1: I ≈ 11, IV ≈ 55; LV 5 ×1.92. Scouts have 3 HP, Gunships 22, the Marauder 520 (×1.4 on Hard).
 4. `npm test` (validation requires 4 Power forms), `npm run typecheck`.
 5. Playtest each Power with `?power=1..4&god=1&seed=7`, `?slowmo=0.25` to inspect the pattern; watch draw calls and the bullet count in `?debug=1`.

@@ -47,8 +47,26 @@ export interface WorldDef {
 // ---------------------------------------------------------------------------------------------
 // Player
 
+export type ShipId = 'spitfire' | 'executioner' | 'striker';
+
+/** Hangar paints (cosmetic). Red and Purple stay enemy colours (GDD §6). */
+export type PaintId = 'orange' | 'blue' | 'green';
+
+export interface PaintDef {
+  id: PaintId;
+  name: string;
+  /** Swatch colour in the hangar. */
+  swatch: Rgb;
+}
+
 export interface PlayerShipDef {
-  /** resources path of the ship prefab. */
+  id: ShipId;
+  name: string;
+  /** Short role line for the hangar. */
+  role: string;
+  /** What sets the ship apart, one hangar line each. */
+  perks: readonly string[];
+  /** resources path of the ship prefabs without the paint: `${model}_${paint}`. */
   model: string;
   /** Visual size: the model is normalised to 1 unit, this scales it. */
   size: number;
@@ -75,9 +93,20 @@ export interface PlayerShipDef {
   startHeight: number;
   /** Engine nozzles on the normalised model: [x across, z towards the tail]. */
   engines: readonly (readonly [number, number])[];
+  /** Added on top of the hangar's hull and shield (GDD §6). */
+  hullBonus: number;
+  shieldBonus: number;
+  /** Extra Special charges, both at the start and on top of the maximum. */
+  chargeBonus: number;
+  /** Multipliers: Energy gain, Primary damage, Secondary cooldown. */
+  energyGain: number;
+  primaryDamage: number;
+  secondaryCooldown: number;
+  /** Beat this sector's boss to fly the ship; null = available from the start. */
+  unlock: { sector: number } | null;
 }
 
-/** What the player brings into a mission. The hangar (stage 4) will build it from upgrades. */
+/** What the player brings into a mission: hangar upgrades plus the ship's own modifiers. */
 export interface Loadout {
   hull: number;
   /** Shield capacity, units. */
@@ -86,11 +115,15 @@ export interface Loadout {
   generator: number;
   /** Magnet level 1..5: pickup attraction radius. */
   magnet: number;
-  /** Special charges at mission start. */
+  /** Special charges at mission start, and the most it can hold. */
   specialCharges: number;
-  /** Energy gain level 1..3. */
+  maxCharges: number;
+  /** Energy gain multiplier. */
   energyGain: number;
   startPower: number;
+  /** Primary weapon level 1..5 and the ship's damage multiplier. */
+  weaponLevel: number;
+  primaryDamage: number;
 }
 
 export interface GeneratorLevel {
@@ -112,8 +145,16 @@ export interface BulletStream {
   angleDeg: number;
 }
 
+/** What one weapon level (1..5, bought in the hangar) multiplies. */
+export interface WeaponLevel {
+  damage: number;
+  /** Fire rate multiplier: the fire interval is divided by it. */
+  rate: number;
+}
+
 export interface WeaponDef {
   id: WeaponId;
+  name: string;
   fireInterval: number;
   bulletSpeed: number;
   damage: number;
@@ -375,6 +416,8 @@ export interface PickupDef {
   prop?: PropId;
   /** Escape pod: a procedural capsule that has to be flown over — the magnet ignores it (GDD §8). */
   pod?: boolean;
+  /** Made up front at mission load (more are made only if a peak goes past it). */
+  pool: number;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -487,4 +530,37 @@ export interface MedalDef {
   name: string;
   /** One line for the results screen. */
   hint: string;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Campaign and economy
+
+export interface SectorDef {
+  /** 1-based. */
+  id: number;
+  name: string;
+  /** Missions in order, the last one ends with the sector boss; empty while the sector is not built. */
+  missions: readonly MissionId[];
+  boss: string;
+  /** Card stripe colour, the sector palette. */
+  color: Rgb;
+  /** Medals earned in this sector (any difficulty) needed, with the boss beaten, to open the next one. */
+  medalsToAdvance: number;
+}
+
+export type UpgradeId = 'hull' | 'shield' | 'generator' | 'magnet' | 'charges' | 'energy' | 'power' | 'pulse';
+
+export interface UpgradeDef {
+  id: UpgradeId;
+  name: string;
+  /** Hangar tab. */
+  group: 'systems' | 'weapons';
+  /** One hangar line on what it does. */
+  hint: string;
+  /** Value at each level; index 0 is the base, before any purchase. */
+  values: readonly number[];
+  /** `costs[i]` buys level i + 1, so there is one cost fewer than values. */
+  costs: readonly number[];
+  /** How values print: a plain count, a roman numeral (Power) or a level number. */
+  format: 'count' | 'roman' | 'level';
 }

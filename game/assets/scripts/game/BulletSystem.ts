@@ -44,7 +44,8 @@ export class BulletSystem {
     name: string,
     private readonly looks: readonly BulletLook[],
     private readonly y: number,
-    prewarm: number,
+    /** Bullets made up front, per look. */
+    prewarm: readonly number[],
     /** Spawns beyond this many live bullets are dropped (performance budget). */
     private readonly cap: number,
   ) {
@@ -63,7 +64,7 @@ export class BulletSystem {
           b.node.setPosition(0, PARK_Y, 0);
         },
       );
-      pool.prewarm(prewarm);
+      pool.prewarm(prewarm[index] ?? 0);
       this.pools.push(pool);
     });
   }

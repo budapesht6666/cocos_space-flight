@@ -2,6 +2,7 @@
 
 import { ENEMIES } from '../data/enemies';
 import { PICKUPS } from '../data/pickups';
+import { propPath } from '../data/props';
 import { SET_PIECES } from '../data/setPieces';
 import type { EnemyId, MissionDef, PickupKind, PropId, SetPieceId } from '../data/types';
 import { formationSize } from './formations';
@@ -75,6 +76,23 @@ export function missionNeeds(mission: MissionDef): MissionNeeds {
     if (prop) props.add(prop);
   }
   return { enemies, setPieces, props, pods: countPods(mission) };
+}
+
+/** resources path of an enemy's prefab; null for looks built from props or procedural meshes. */
+export function enemyPrefabPath(id: EnemyId): string | null {
+  const look = ENEMIES[id].look;
+  return look.kind === 'model' ? look.path : look.kind === 'prop' ? propPath(look.prop) : null;
+}
+
+/** Every prefab a mission loads (enemies, station modules, pickup icons), for preloading. */
+export function missionPrefabPaths(needs: MissionNeeds): string[] {
+  const paths: string[] = [];
+  for (const [id] of needs.enemies) {
+    const path = enemyPrefabPath(id);
+    if (path) paths.push(path);
+  }
+  for (const id of needs.props) paths.push(propPath(id));
+  return paths;
 }
 
 /** Escape pods offered by a mission: every set piece launches its pods once its turrets fall. */

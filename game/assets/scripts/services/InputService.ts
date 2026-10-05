@@ -7,7 +7,7 @@
 
 import { EventKeyboard, EventTouch, Input, KeyCode, Vec2, input } from 'cc';
 
-export type ButtonId = 'special' | 'pause' | 'resume' | 'restart' | 'menu' | 'retry' | 'next';
+export type ButtonId = 'special' | 'pause' | 'resume' | 'restart' | 'menu' | 'retry' | 'next' | 'hangar';
 
 /** Returns the button under a UI-space point, or null. */
 export type ButtonHitTest = (x: number, y: number) => ButtonId | null;

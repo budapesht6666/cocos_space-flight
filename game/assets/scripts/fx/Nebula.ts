@@ -1,5 +1,6 @@
-// Big plane far below the playfield showing a nebula baked once at start-up (core/nebula.ts).
-// Scrolling is a UV offset, so the per-pixel cost is a single texture fetch — cheap on phones.
+// Big plane far below the playfield showing a nebula baked once per page load (core/nebula.ts,
+// cached in the shared RenderKit, so scene switches don't bake it again). Scrolling is a UV
+// offset, so the per-pixel cost is a single texture fetch — cheap on phones.
 
 import { Material, MeshRenderer, Node, Vec4 } from 'cc';
 import { bakeNebula } from '../core/nebula';
@@ -13,7 +14,7 @@ export class Nebula {
   private offset = 0;
 
   constructor(private readonly ctx: BackdropContext) {
-    const baked = bakeNebula({
+    const baked = ctx.kit.bake('nebula', () => bakeNebula({
       width: NEBULA.textureWidth,
       height: NEBULA.textureHeight,
       cellsX: NEBULA.cellsX,
@@ -24,9 +25,9 @@ export class Nebula {
       colorC: NEBULA.colorC,
       intensity: NEBULA.intensity,
       seed: NEBULA.seed,
-    });
-    const texture = ctx.kit.textureFromRgba(baked.data, baked.width, baked.height, true);
-    this.material = ctx.kit.backdrop(texture, baked.scale);
+    }));
+    const texture = ctx.kit.bake('nebulaTexture', () => ctx.kit.textureFromRgba(baked.data, baked.width, baked.height, true));
+    this.material = ctx.kit.backdrop('nebula', texture, baked.scale);
     this.node = new Node('Nebula');
     this.node.layer = ctx.worldRoot.layer;
     ctx.worldRoot.addChild(this.node);

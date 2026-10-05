@@ -12,7 +12,8 @@
     "deploy:web": "node tools/deploy-web.mjs",
     "build:web": "node tools/build-web.mjs",
     "release:web": "node tools/build-web.mjs && node tools/deploy-web.mjs --from .cache/cli-game/build/web-mobile",
-    "hooks:install": "git config core.hooksPath tools/hooks"
+    "hooks:install": "git config core.hooksPath tools/hooks",
+    "serve:web": "python tools/serve_web.py"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",

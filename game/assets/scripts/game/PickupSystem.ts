@@ -57,7 +57,7 @@ export class PickupSystem {
           p.node.setPosition(0, PARK_Y, 0);
         },
       );
-      pool.prewarm(def.prop ? 2 : def.pod ? 4 : 24);
+      pool.prewarm(def.pool);
       this.pools.set(kind, pool);
     }
     ctx.bus.on('enemyKilled', (e) => this.drop(e.def.drops, e.x, e.z));

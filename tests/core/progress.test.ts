@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { earnedMedals, hasMedal, killRate, medalCount, MEDAL_BITS, type MedalStats } from '../../game/assets/scripts/core/medals';
-import { applyRun, emptyBook, getRecord, parseBook, RECORDS_VERSION } from '../../game/assets/scripts/core/records';
+import { applyRun, getRecord, sanitizeRecords, type RecordMap } from '../../game/assets/scripts/core/records';
 import { pickWeighted } from '../../game/assets/scripts/core/weighted';
 
 const perfect: MedalStats = { complete: true, kills: 50, spawned: 50, pods: 3, podsTotal: 3, hullLost: 0 };
@@ -38,38 +38,36 @@ describe('medals', () => {
 
 describe('records', () => {
   it('keeps the best score, accumulates medals and counts clears', () => {
-    const book = emptyBook();
-    const first = applyRun(book, 's1m1', 'normal', { complete: true, score: 1000, medals: MEDAL_BITS.hunter, killRate: 0.8 });
+    const records: RecordMap = {};
+    const first = applyRun(records, 's1m1', 'normal', { complete: true, score: 1000, medals: MEDAL_BITS.hunter, killRate: 0.8 });
     expect(first.newBest).toBe(true);
     expect(first.newMedals).toBe(MEDAL_BITS.hunter);
-    const second = applyRun(book, 's1m1', 'normal', { complete: true, score: 800, medals: MEDAL_BITS.untouchable, killRate: 0.6 });
+    expect(first.firstClear).toBe(true);
+    const second = applyRun(records, 's1m1', 'normal', { complete: true, score: 800, medals: MEDAL_BITS.untouchable, killRate: 0.6 });
     expect(second.newBest).toBe(false);
     expect(second.newMedals).toBe(MEDAL_BITS.untouchable);
-    const r = getRecord(book, 's1m1', 'normal')!;
+    expect(second.firstClear).toBe(false);
+    const r = getRecord(records, 's1m1', 'normal')!;
     expect(r.score).toBe(1000);
     expect(r.medals).toBe(MEDAL_BITS.hunter | MEDAL_BITS.untouchable);
     expect(r.killRate).toBe(0.8);
     expect(r.clears).toBe(2);
-    expect(getRecord(book, 's1m1', 'hard')).toBeNull();
+    expect(getRecord(records, 's1m1', 'hard')).toBeNull();
   });
 
   it('a failed run can set the high score but earns no medals or clears', () => {
-    const book = emptyBook();
-    const u = applyRun(book, 's1m2', 'hard', { complete: false, score: 5000, medals: MEDAL_BITS.hunter, killRate: 1 });
+    const records: RecordMap = {};
+    const u = applyRun(records, 's1m2', 'hard', { complete: false, score: 5000, medals: MEDAL_BITS.hunter, killRate: 1 });
     expect(u.newBest).toBe(true);
+    expect(u.firstClear).toBe(false);
     expect(u.record).toEqual({ score: 5000, medals: 0, killRate: 0, clears: 0 });
   });
 
-  it('round-trips through JSON and survives garbage', () => {
-    const book = emptyBook();
-    applyRun(book, 's1m1', 'normal', { complete: true, score: 1234, medals: 15, killRate: 1 });
-    book.last = { mission: 's1m1', difficulty: 'hard' };
-    expect(parseBook(JSON.stringify(book))).toEqual(book);
-    expect(parseBook(null)).toEqual(emptyBook());
-    expect(parseBook('{nope')).toEqual(emptyBook());
-    expect(parseBook(JSON.stringify({ version: RECORDS_VERSION + 1, records: {} }))).toEqual(emptyBook());
-    const dirty = parseBook(JSON.stringify({ version: RECORDS_VERSION, records: { a: { score: -5, medals: 255, killRate: 7, clears: 'x' } } }));
-    expect(dirty.records.a).toEqual({ score: 0, medals: 15, killRate: 1, clears: 0 });
+  it('sanitizes untrusted records', () => {
+    expect(sanitizeRecords(null)).toEqual({});
+    expect(sanitizeRecords('x')).toEqual({});
+    const dirty = sanitizeRecords({ a: { score: -5, medals: 255, killRate: 7, clears: 'x' }, b: null, c: { score: 12.7, clears: 2.9 } });
+    expect(dirty).toEqual({ a: { score: 0, medals: 15, killRate: 1, clears: 0 }, c: { score: 12, medals: 0, killRate: 0, clears: 2 } });
   });
 });
 

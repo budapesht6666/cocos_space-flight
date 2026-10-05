@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { approach, circlesOverlap, clamp, damp, dampAngle, wrap } from '../../game/assets/scripts/core/math';
+import { approach, circlesOverlap, clamp, damp, dampAngle, smoothstep, wrap } from '../../game/assets/scripts/core/math';
 
 describe('math', () => {
+  it('smoothstep eases in and out within 0..1', () => {
+    expect(smoothstep(-1)).toBe(0);
+    expect(smoothstep(0.5)).toBe(0.5);
+    expect(smoothstep(2)).toBe(1);
+    expect(smoothstep(0.1)).toBeLessThan(0.1);
+  });
+
   it('clamps', () => {
     expect(clamp(5, 0, 3)).toBe(3);
     expect(clamp(-1, 0, 3)).toBe(0);

@@ -39,7 +39,8 @@
 - `game/tsconfig.json` — наш (strict, `skipLibCheck`: `cc.d.ts` ссылается на WebGPU-типы, которых нет). `game/temp/tsconfig.cocos.json` генерирует редактор, не трогать.
 - Cocos при создании проекта делает свой `git init` в `game/`. Вложенный `.git` удалён: репозиторий один, в корне.
 - Терминал VS Code (и Claude Code в нём) выставляет `ELECTRON_RUN_AS_NODE=1` — с ней `CocosCreator.exe` из командной строки стартует как Node (`bad option: --project`). Для CLI снимать переменную.
-- Сцены: `Menu` (стартовая в сборке, `ui/StartScreen.ts`) и `Game`. Превью играет сцену, открытую в редакторе; из Menu ссылка с `?mission=` сразу запускает игру.
+- Сцены: `Menu` (стартовая в сборке: меню и ангар — `ui/StartScreen.ts` и страницы) и `Game`. Превью играет сцену, открытую в редакторе; из Menu ссылка с `?mission=` сразу запускает игру.
+- Без MCP редактор пересобирает скрипты, только когда его окно получает фокус: переключить фокус на VS Code и обратно (PowerShell, `WScript.Shell.AppActivate`), дождаться новых файлов в `game/temp/programming/packer-driver/targets/preview/chunks`.
 
 ## Команды
 
@@ -53,7 +54,7 @@
 | Релизная сборка (CLI) | без `ELECTRON_RUN_AS_NODE`: `"C:\ProgramData\cocos\editors\Creator\3.8.8\CocosCreator.exe" --project game --build "configPath=<абсолютный путь>\build-configs\web-mobile.json"`. Код выхода **36 = успех**. Не на проекте, открытом в редакторе (проверено на копии) |
 | Выкатить на сервер | само при коммите в `main` (хук `tools/hooks/post-commit`, на новом клоне — `npm run hooks:install`). Вручную: `npm run release:web` (CLI-сборка на зеркале `.cache/cli-game` + выкатка) или `npm run deploy:web` (выкатить сборку из редактора). → https://spaceflight.p1gog.duckdns.org/, `ssh vps`; устройство — PLATFORMS.md «PWA», скилл `vps-ops` |
 | CLI-сборка без выкатки | `npm run build:web` → `.cache/cli-game/build/web-mobile` (редактор может быть открыт) |
-| Раздать сборку на iPhone по Wi‑Fi | в `game/build/web-mobile`: `python -m http.server 8080 --bind 0.0.0.0` (Python 3.12 разрешён брандмауэром); на телефоне `http://192.168.1.43:8080/?debug=1` |
+| Раздать сборку на iPhone по Wi‑Fi | `npm run serve:web` (CLI-сборка из `.cache/cli-game`; другую папку — `python tools/serve_web.py <папка>`). Отдаёт с `Cache-Control: no-store`: голый `python -m http.server` позволяет браузеру закэшировать `index.html`, и после пересборки грузится старый бандл. Python 3.12 разрешён брандмауэром; на телефоне `http://192.168.1.43:8080/?debug=1` |
 | Модели кораблей | `npm run build:ships` (`tools/assets/build-ships.mjs`; исходники пака — в `art-source/`, вне git) |
 | Пропсы: станции, турели, иконки пикапов | `npm run build:props` (`tools/assets/build-props.mjs`: вершинные цвета, один меш на модель; исходники — в `art-source/`) |
 
@@ -114,9 +115,9 @@
 
 ## Отладка (URL-параметры превью и debug-сборок)
 
-`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1` (s1m1–s1m3; из Menu — сразу в игру), `?difficulty=hard` (normal, hard, insane, nightmare), `?elite=1` / `?elite=volatile` (каждый враг волны — элита).
-Прогоны с `god`, `t`, `power`, `elite`, `slowmo` — practice: рекорды и медали не пишутся (localStorage `spaceflight.records`).
-Клавиши в превью: стрелки/WASD, Space — Nova Bomb, Esc/P — пауза, Enter — тап и RETRY на результатах; в меню 1–3 — миссия, ←/→ — сложность. Держать список актуальным здесь и в ARCHITECTURE §12.
+`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1` (s1m1–s1m3; из Menu — сразу в игру), `?difficulty=hard` (normal, hard, insane, nightmare), `?elite=1` / `?elite=volatile` (каждый враг волны — элита), `?unlock=1` (открыты все секторы, миссии, сложности и корабли), `?credits=50000` (кошелёк = 50 000, раз за загрузку страницы), `?reset=1` (стереть прогресс, раз за загрузку страницы; с `credits` — сначала стирает), `?scale=0.5` (фиксированное разрешение 3D вместо адаптивного), `?bloom=0`, `?fxaa=1` (A/B пост-эффектов на телефоне; по умолчанию bloom вкл., FXAA выкл.).
+Прогоны с `god`, `t`, `power`, `elite`, `slowmo`, `unlock` — practice: рекорды, медали и кредиты не пишутся. Сохранение — localStorage `spaceflight.save` (сброс: `localStorage.clear()`).
+Клавиши в превью: стрелки/WASD, Space — Nova Bomb, Esc/P — пауза, Enter — тап и RETRY на результатах. Меню: Enter — старт с титула и CONTINUE, Esc/Backspace — назад, 1–3 — страница миссии Сектора 1; в кампании ←/→ — сектор, на странице миссии ←/→ — сложность и Enter — LAUNCH; в ангаре Tab — вкладка, ←/→ — корабль, Enter — LAUNCH. Держать список актуальным здесь и в ARCHITECTURE §12.
 
 ## Рендер — грабли, на которые уже наступили
 
@@ -125,6 +126,12 @@
 - `Label.CacheMode.CHAR` портит жирный шрифт и интервалы — для HUD не использовать.
 - Canvas, созданный скриптом, нуждается в `Widget` на все края — иначе остаётся со старым размером.
 - На iPhone узкое место — **fill rate** (Retina ×3). Полноэкранный процедурный шейдер туманности уронил FPS до 49: тяжёлое запекаем в текстуру, 3D рендерим в 70% (`shadingScale`). На ПК этого не видно — проверять на телефоне.
+- **Ресурсы, созданные в рантайме (`new Material`, `Texture2D`, меши), сцена не освобождает.** Всё общее — в `RenderKit.shared` (один на загрузку страницы), инстансы материалов узлов — через `kit.track` (движок не уничтожает их вместе с рендерером). Иначе каждый переход меню ⇄ игра течёт видеопамятью.
+- **Пулы прогревать по замеренному пику**, эффекты в бою не растят пулы (`tryAcquire`): `instantiate` сотни узлов при взрыве босса давал на iPhone провал до 18 FPS.
+- **Hitstop — в реальном времени** и не во время slow-mo: в симуляционном времени при ×0.3 стоп-кадр растягивался втрое и ощущался фризом. В slow-mo — укороченный шаг каждый кадр, не фиксированный раз в несколько кадров.
+- `shadingScale` на лету меняется только вместе с `rendering.forceResizeAllWindows()` (таргеты пересоздаются при «ресайзе окна»).
+- **Баг render graph Cocos 3.8.8 в релизной сборке:** список `pipeline.resourceUses` пуст, и исполнитель в начале каждого кадра удаляет все MANAGED-таргеты (сцена, глубина, bloom), а потом создаёт их заново с framebuffer'ами — 6 штук за кадр, у каждого `gl.checkFramebufferStatus` с остановкой GPU. На iPhone это 13–19 мс Renderer при любом разрешении. В превью редактора бага нет — **сравнивать только на релизе**. Обход — `fx/PipelineFix.ts` (`keepRenderTargets()` в `update` компонентов сцен). Проверка: счётчик `device.createFramebuffer` за кадр должен быть 0 (скилл `playtest`).
+- Пост-эффекты: bloom включён, FXAA выключен (`POST_FX` в `data/visuals.ts`: полноэкранный проход, на iPhone разницы не видно). A/B: `?fxaa=1`, `?bloom=0`.
 - **Мерить производительность — только на релизной сборке.** Превью редактора — отладочный движок: CPU-время там в разы выше, и в консоли висит ошибка `[Physics] … builtinMaterial`, которой в сборке нет.
 - `const enum` не использовать (Babel в Cocos), только обычный `enum`. Целевой стандарт ES2015: без `trimEnd`, `Object.entries` и т.п. Оператор `satisfies` тоже не использовать.
 - Один `MaterialInstance` нельзя ставить в shared-слот нескольких рендереров («Can't set a material instance to a sharedMaterial slot»): общий материал + `getMaterialInstance(0)` у каждого.

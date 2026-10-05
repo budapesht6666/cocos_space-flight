@@ -37,7 +37,7 @@ Set pieces (`data/setPieces.ts`): `outpost`, `relay`, `refinery` (mining platfor
 
 ## Verify
 
-1. Add the id to `MissionId` (`data/types.ts`), the def to `MISSIONS` and the id to `MISSION_ORDER` (the start screen lists missions in that order, NEXT follows it).
+1. Add the id to `MissionId` (`data/types.ts`), the def to `MISSIONS`, the id to `MISSION_ORDER` (NEXT and CONTINUE follow it) and to its sector's `missions` in `data/campaign.ts` (the campaign page lists them; the last mission of a sector is its boss mission, which opens the next sector and the ship unlocked by it). A new sector: fill its `missions`, it stops being "coming soon".
 2. `npm test` — validation checks sorting, references, trail stagger, Power bonuses, boss at the end, preloading.
 3. Play it: `http://localhost:7456/?mission=<id>&debug=1&seed=7`. Full run fast: `&god=1&slowmo=4` with the autopilot snippet from the `playtest` skill; check the results screen (medals, pods N/N). Then a real run on Normal without god mode, and `&difficulty=hard`.
 4. Update `docs/PLAN.md` and, if the mission introduces something, `docs/GDD.md`.

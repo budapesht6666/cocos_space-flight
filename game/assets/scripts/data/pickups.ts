@@ -4,13 +4,14 @@
 import type { PickupDef, PickupKind } from './types';
 
 export const PICKUPS: Record<PickupKind, PickupDef> = {
-  credit: { kind: 'credit', credits: 5, size: 0.24, color: [1.0, 0.78, 0.25] },
-  bigCredit: { kind: 'bigCredit', credits: 25, size: 0.4, color: [1.0, 0.78, 0.25] },
-  power: { kind: 'power', credits: 0, size: 0.85, color: [1.0, 0.55, 0.1], prop: 'pickup_power' },
-  repair: { kind: 'repair', credits: 0, size: 0.85, color: [0.35, 1.0, 0.45], prop: 'pickup_repair' },
-  shield: { kind: 'shield', credits: 0, size: 0.85, color: [0.3, 0.8, 1.0], prop: 'pickup_shield' },
-  energy: { kind: 'energy', credits: 0, size: 0.85, color: [1.0, 0.92, 0.3], prop: 'pickup_energy' },
-  pod: { kind: 'pod', credits: 0, size: 0.7, color: [0.45, 1.0, 0.6], pod: true },
+  // Pools: peaks of a Hard run (s1m3 had 45 credits on screen at once) plus a margin.
+  credit: { kind: 'credit', credits: 5, size: 0.24, color: [1.0, 0.78, 0.25], pool: 64 },
+  bigCredit: { kind: 'bigCredit', credits: 25, size: 0.4, color: [1.0, 0.78, 0.25], pool: 40 },
+  power: { kind: 'power', credits: 0, size: 0.85, color: [1.0, 0.55, 0.1], prop: 'pickup_power', pool: 2 },
+  repair: { kind: 'repair', credits: 0, size: 0.85, color: [0.35, 1.0, 0.45], prop: 'pickup_repair', pool: 2 },
+  shield: { kind: 'shield', credits: 0, size: 0.85, color: [0.3, 0.8, 1.0], prop: 'pickup_shield', pool: 2 },
+  energy: { kind: 'energy', credits: 0, size: 0.85, color: [1.0, 0.92, 0.3], prop: 'pickup_energy', pool: 2 },
+  pod: { kind: 'pod', credits: 0, size: 0.7, color: [0.45, 1.0, 0.6], pod: true, pool: 4 },
 };
 
 export const PICKUP_MOTION = {

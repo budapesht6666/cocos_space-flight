@@ -54,3 +54,18 @@ export function halfWidthAt(f: Framing, z: number): number {
   const depth = f.camY * Math.sin(pitch) + (f.camZ - z) * Math.cos(pitch);
   return depth * Math.tan((f.spec.hFovDeg * DEG) / 2);
 }
+
+/**
+ * Z of the point at height `y` that the camera shows at `fraction` of the screen height from the
+ * top (0 = top edge, 1 = bottom edge). For placing objects above the plane where the UI expects
+ * them: on the plane itself the visible range is topZ..bottomZ, but not linearly.
+ */
+export function zAtScreen(f: Framing, fraction: number, y = 0): number {
+  const pitch = f.spec.pitchDeg * DEG;
+  const tanHalfV = Math.tan((f.spec.hFovDeg * DEG) / 2) / f.aspect;
+  // Up / forward ratio of the view ray through that screen row, in camera space.
+  const t = (1 - 2 * fraction) * tanHalfV;
+  const dy = y - f.camY;
+  const dz = (-dy * (t * Math.sin(pitch) + Math.cos(pitch))) / (t * Math.cos(pitch) - Math.sin(pitch));
+  return f.camZ + dz;
+}

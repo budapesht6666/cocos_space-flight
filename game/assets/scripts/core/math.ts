@@ -28,6 +28,12 @@ export function approach(current: number, target: number, maxDelta: number): num
   return Math.max(current - maxDelta, target);
 }
 
+/** 0..1 → 0..1 with a gentle start and end. */
+export function smoothstep(t: number): number {
+  const k = clamp(t, 0, 1);
+  return k * k * (3 - 2 * k);
+}
+
 export function inverseLerp(a: number, b: number, value: number): number {
   return a === b ? 0 : (value - a) / (b - a);
 }

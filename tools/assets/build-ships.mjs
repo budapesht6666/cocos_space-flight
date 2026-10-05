@@ -37,7 +37,17 @@ const RECOLORS = {
 
 /** ship: pack folder name, color: texture variant, out: output file name (no extension). */
 const SHIPS = [
+  // Player ships in the three hangar paints (Red and Purple belong to enemies, GDD §6).
   { ship: 'Spitfire', color: 'Orange', out: 'spitfire_orange' },
+  { ship: 'Spitfire', color: 'Blue', out: 'spitfire_blue' },
+  { ship: 'Spitfire', color: 'Green', out: 'spitfire_green' },
+  { ship: 'Executioner', color: 'Orange', out: 'executioner_orange' },
+  { ship: 'Executioner', color: 'Blue', out: 'executioner_blue' },
+  { ship: 'Executioner', color: 'Green', out: 'executioner_green' },
+  { ship: 'Striker', color: 'Orange', out: 'striker_orange' },
+  { ship: 'Striker', color: 'Blue', out: 'striker_blue' },
+  { ship: 'Striker', color: 'Green', out: 'striker_green' },
+  // Enemies.
   { ship: 'Bob', color: 'Red', out: 'bob_red' },
   { ship: 'Dispatcher', color: 'Red', out: 'dispatcher_red' },
   { ship: 'Challenger', color: 'Purple', out: 'challenger_purple' },

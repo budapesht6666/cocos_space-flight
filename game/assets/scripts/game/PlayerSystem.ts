@@ -9,6 +9,7 @@ import { SHIELD_CELL, WASTED_PICKUP_SCORE } from '../data/pickups';
 import { ENERGY, GENERATOR_LEVELS, MAGNET_RADIUS, NOVA_BOMB, SHIP_FLIGHT } from '../data/player';
 import type { Loadout, PickupKind, PlayerShipDef, WeaponDef } from '../data/types';
 import { COLORS } from '../data/visuals';
+import { WEAPON_LEVELS } from '../data/weapons';
 import { toColor } from '../fx/RenderKit';
 import type { InputService } from '../services/InputService';
 import type { BulletSystem } from './BulletSystem';
@@ -40,6 +41,9 @@ export class PlayerSystem {
   /** Blinking after a hull hit. */
   private blink = 0;
   private readonly spec: VitalsSpec;
+  /** Primary weapon after its hangar level and the ship's damage bonus. */
+  private readonly damage: number;
+  private readonly fireInterval: number;
   private readonly ship: Node;
   private readonly model: Node;
   private readonly engines: Node[] = [];
@@ -71,10 +75,13 @@ export class PlayerSystem {
       hullInvulnerable: def.invulnerableTime,
       shieldInvulnerable: def.shieldInvulnerableTime,
       startCharges: loadout.specialCharges,
-      maxCharges: ENERGY.maxCharges,
-      energyGain: ENERGY.gainLevels[clamp(loadout.energyGain, 1, ENERGY.gainLevels.length) - 1],
+      maxCharges: loadout.maxCharges,
+      energyGain: loadout.energyGain,
     };
     this.vitals = new Vitals(this.spec);
+    const level = WEAPON_LEVELS[clamp(loadout.weaponLevel, 1, WEAPON_LEVELS.length) - 1];
+    this.damage = weapon.damage * level.damage * loadout.primaryDamage;
+    this.fireInterval = weapon.fireInterval / level.rate;
 
     this.ship = new Node('Player');
     this.ship.layer = ctx.worldRoot.layer;
@@ -191,7 +198,7 @@ export class PlayerSystem {
       this.fireCooldown -= dt;
       while (this.fireCooldown <= 0) {
         this.fire();
-        this.fireCooldown += this.weapon.fireInterval;
+        this.fireCooldown += this.fireInterval;
       }
     } else {
       this.input.consumeDrag(this.drag); // no steering during scripted flight
@@ -321,7 +328,7 @@ export class PlayerSystem {
     const noseZ = this.z - 0.45 * this.def.size;
     for (let i = 0; i < form.length; i++) {
       const s = form[i];
-      this.bullets.spawn(0, this.x + s.x, noseZ, s.angleDeg * DEG, w.bulletSpeed, w.damage, w.bulletRadius);
+      this.bullets.spawn(0, this.x + s.x, noseZ, s.angleDeg * DEG, w.bulletSpeed, this.damage, w.bulletRadius);
     }
   }
 }

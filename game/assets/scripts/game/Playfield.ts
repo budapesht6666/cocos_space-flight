@@ -1,6 +1,6 @@
 // Visible gameplay area for the current screen shape. Engine-free.
 
-import { computeFraming, halfWidthAt, type Framing } from '../core/Framing';
+import { computeFraming, halfWidthAt, zAtScreen, type Framing } from '../core/Framing';
 import { clamp } from '../core/math';
 import type { FieldMapper } from '../core/motion';
 import type { WorldDef } from '../data/types';
@@ -30,6 +30,11 @@ export class Playfield implements FieldMapper {
   /** Z at a fraction of the visible height: 0 = top edge, 1 = bottom edge. */
   zAt(fraction: number): number {
     return this.topZ + (this.bottomZ - this.topZ) * fraction;
+  }
+
+  /** Z where a point at height `y` shows at `fraction` of the screen height from the top. */
+  zAtScreen(fraction: number, y = 0): number {
+    return zAtScreen(this.framing, fraction, y);
   }
 
   halfWidth(z: number): number {

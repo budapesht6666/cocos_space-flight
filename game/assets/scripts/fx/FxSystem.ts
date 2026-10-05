@@ -5,7 +5,7 @@ import { Material, MeshRenderer, Node, Color } from 'cc';
 import { Pool, swapRemove } from '../core/Pool';
 import { lerp } from '../core/math';
 import type { ExplosionSize, Rgb } from '../data/types';
-import { BOSS_FX, COLORS, EXPLOSIONS, NOVA_FX } from '../data/visuals';
+import { BOSS_FX, COLORS, EXPLOSIONS, FX_POOLS, NOVA_FX } from '../data/visuals';
 import type { GameContext } from '../game/GameContext';
 import { toColor } from './RenderKit';
 
@@ -28,6 +28,20 @@ enum Kind {
 }
 
 const KINDS = [Kind.SparkHot, Kind.SparkFire, Kind.HitSpark, Kind.Flash, Kind.Fireball, Kind.Debris, Kind.Cyan, Kind.Pop, Kind.Deflect, Kind.Rescue];
+
+/** Particles made up front for each kind (data/visuals.ts). */
+const POOL_SIZE: Record<Kind, number> = {
+  [Kind.SparkHot]: FX_POOLS.sparkHot,
+  [Kind.SparkFire]: FX_POOLS.sparkFire,
+  [Kind.HitSpark]: FX_POOLS.hitSpark,
+  [Kind.Flash]: FX_POOLS.flash,
+  [Kind.Fireball]: FX_POOLS.fireball,
+  [Kind.Debris]: FX_POOLS.debris,
+  [Kind.Cyan]: FX_POOLS.cyan,
+  [Kind.Pop]: FX_POOLS.pop,
+  [Kind.Deflect]: FX_POOLS.deflect,
+  [Kind.Rescue]: FX_POOLS.rescue,
+};
 
 /** Explosion scheduled for later (boss death chains). */
 interface Delayed {
@@ -114,7 +128,7 @@ export class FxSystem {
           p.node.setPosition(0, PARK_Y, 0);
         },
       );
-      pool.prewarm(kind === Kind.Flash ? 4 : kind === Kind.Fireball ? 12 : kind === Kind.Pop ? 60 : kind === Kind.Rescue ? 12 : 24);
+      pool.prewarm(POOL_SIZE[kind]);
       this.pools[kind] = pool;
     }
     this.ringPool = new Pool<Ring>(() => {
@@ -131,7 +145,7 @@ export class FxSystem {
     }, (r) => {
       r.node.setPosition(0, PARK_Y, 0);
     });
-    this.ringPool.prewarm(6);
+    this.ringPool.prewarm(FX_POOLS.rings);
 
     ctx.bus.on('enemyKilled', (e) => {
       this.explode(e.x, e.z, e.def.explosion);
@@ -220,6 +234,7 @@ export class FxSystem {
         Math.cos(angle) * speed, rng.range(-2, 3), Math.sin(angle) * speed + this.scrollDrift(),
         rng.range(0.6, 1.1), rng.range(0.08, 0.18), 1.2,
       );
+      if (!p) continue;
       p.spinX = rng.range(-540, 540);
       p.spinY = rng.range(-540, 540);
       p.spinZ = rng.range(-540, 540);
@@ -334,8 +349,10 @@ export class FxSystem {
     return 2.5;
   }
 
-  private emit(kind: Kind, x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size: number, drag: number): Particle {
-    const p = this.pools[kind].acquire();
+  /** Starts a particle; null when the kind's pool is used up (the particle is skipped). */
+  private emit(kind: Kind, x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size: number, drag: number): Particle | null {
+    const p = this.pools[kind].tryAcquire();
+    if (!p) return null;
     p.x = x;
     p.y = y;
     p.z = z;
@@ -364,7 +381,8 @@ export class FxSystem {
   }
 
   private ring(x: number, z: number, from: number, to: number, life: number, rgb: Rgb = COLORS.sparkHot): void {
-    const r = this.ringPool.acquire();
+    const r = this.ringPool.tryAcquire();
+    if (!r) return;
     r.color.r = Math.round(rgb[0] * 255);
     r.color.g = Math.round(rgb[1] * 255);
     r.color.b = Math.round(rgb[2] * 255);

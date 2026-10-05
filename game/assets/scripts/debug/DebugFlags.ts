@@ -24,6 +24,17 @@ export interface DebugFlags {
   difficulty: Difficulty | null;
   /** Every wave enemy becomes this elite (`?elite=volatile`), or a random one (`?elite=1`). */
   elite: EliteId | 'random' | null;
+  /** Every sector, mission, difficulty and ship is open (`?unlock=1`); nothing is saved as earned. */
+  unlock: boolean;
+  /** Developer wallet: set the credits to this once per page load (`?credits=50000`), or null. */
+  credits: number | null;
+  /** Wipe the save once per page load (`?reset=1`), before `credits`. */
+  reset: boolean;
+  /** Fixed 3D resolution (`?scale=0.5`, 0.3..1) instead of the adaptive one, or null. */
+  scale: number | null;
+  /** Post effects forced on or off (`?bloom=0`, `?fxaa=1`), or null for the defaults in data. */
+  bloom: boolean | null;
+  fxaa: boolean | null;
 }
 
 export function parseDebugFlags(search: string): DebugFlags {
@@ -37,7 +48,13 @@ export function parseDebugFlags(search: string): DebugFlags {
     const raw = params.get(key);
     return raw !== null && raw !== '0' && raw !== 'false';
   };
+  const toggle = (key: string): boolean | null => {
+    const raw = params.get(key);
+    return raw === null ? null : raw !== '0' && raw !== 'false';
+  };
   const seed = num('seed', NaN);
+  const credits = num('credits', NaN);
+  const scale = num('scale', NaN);
   const power = num('power', NaN);
   const difficulty = (params.get('difficulty') ?? '').toLowerCase();
   const elite = (params.get('elite') ?? '').toLowerCase();
@@ -51,6 +68,12 @@ export function parseDebugFlags(search: string): DebugFlags {
     mission: params.get('mission') || null,
     difficulty: DIFFICULTIES.indexOf(difficulty as Difficulty) >= 0 ? (difficulty as Difficulty) : null,
     elite: ELITES.indexOf(elite as EliteId) >= 0 ? (elite as EliteId) : flag('elite') ? 'random' : null,
+    unlock: flag('unlock'),
+    credits: Number.isFinite(credits) ? Math.min(1e9, Math.max(0, Math.floor(credits))) : null,
+    reset: flag('reset'),
+    scale: Number.isFinite(scale) ? Math.min(1, Math.max(0.3, scale)) : null,
+    bloom: toggle('bloom'),
+    fxaa: toggle('fxaa'),
   };
 }
 

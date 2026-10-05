@@ -47,7 +47,7 @@ export function createEnemyView(
       for (const meshRenderer of model.getComponentsInChildren(MeshRenderer)) {
         if (look.kind === 'prop') meshRenderer.setSharedMaterial(kit.props(), 0);
         const material = meshRenderer.getMaterialInstance(0);
-        if (material) flash.push(material);
+        if (material) flash.push(kit.track(material));
       }
       if (look.kind === 'prop' && look.aim) {
         head = findNode(model, look.aim);
@@ -60,7 +60,7 @@ export function createEnemyView(
       const radius = look.size / 2;
       rock.setScale(radius, radius, radius);
       const material = rock.getComponent(MeshRenderer)?.getMaterialInstance(0);
-      if (material) flash.push(material);
+      if (material) flash.push(kit.track(material));
       break;
     }
     case 'assembly': {
@@ -80,7 +80,7 @@ export function createEnemyView(
           meshRenderer.setSharedMaterial(kit.props(), 0);
           meshRenderer.shadowCastingMode = MeshRenderer.ShadowCastingMode.OFF;
           const material = meshRenderer.getMaterialInstance(0);
-          if (material) flash.push(material);
+          if (material) flash.push(kit.track(material));
         }
       }
       for (const light of look.lights) {

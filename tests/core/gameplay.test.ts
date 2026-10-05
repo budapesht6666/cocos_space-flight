@@ -1,8 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { computeFraming, halfWidthAt } from '../../game/assets/scripts/core/Framing';
+import { computeFraming, halfWidthAt, zAtScreen } from '../../game/assets/scripts/core/Framing';
 import { formationOffsets } from '../../game/assets/scripts/core/formations';
 
 describe('Framing', () => {
+  it('maps screen rows back to the plane, and lifts objects above it', () => {
+    const spec = { width: 10, pitchDeg: 70, hFovDeg: 30, focusZ: 0 };
+    const f = computeFraming(spec, 390 / 844);
+    expect(zAtScreen(f, 0)).toBeCloseTo(f.topZ, 4);
+    expect(zAtScreen(f, 1)).toBeCloseTo(f.bottomZ, 4);
+    // The middle row looks at the focus point; the plane is compressed towards the top.
+    expect(zAtScreen(f, 0.5)).toBeCloseTo(spec.focusZ, 4);
+    expect(zAtScreen(f, 0.25) - f.topZ).toBeGreaterThan(zAtScreen(f, 0.75) - zAtScreen(f, 0.5));
+    // A point above the plane must sit further down the world to show on the same row.
+    expect(zAtScreen(f, 0.4, 1)).toBeGreaterThan(zAtScreen(f, 0.4, 0));
+  });
+
   const spec = { width: 10, pitchDeg: 70, hFovDeg: 30, focusZ: 0 };
 
   it('shows exactly the configured width at the focus point', () => {

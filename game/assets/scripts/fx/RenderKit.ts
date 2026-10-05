@@ -1,8 +1,13 @@
 // Shared runtime render resources: procedural textures, primitive meshes and cached materials.
 // Materials that share mesh + material are GPU-instanced (USE_INSTANCING), so hundreds of
 // bullets or sparks cost one draw call per colour.
+//
+// One kit lives for the whole page load and serves every scene (RenderKit.shared): nothing it
+// makes belongs to a scene, so switching Menu ⇄ Game neither rebuilds nor leaks it. Material
+// instances made for single nodes do belong to the scene: they are tracked and destroyed after
+// the scene is gone (releaseScene), since the engine doesn't free them with their renderers.
 
-import { Color, EffectAsset, ImageAsset, Material, Mesh, MeshRenderer, Node, Texture2D, Vec3, primitives, utils } from 'cc';
+import { Color, Director, EffectAsset, ImageAsset, Material, Mesh, MeshRenderer, Node, Texture2D, Vec3, director, primitives, utils } from 'cc';
 import { buildRock } from '../core/rock';
 import type { Rgb } from '../data/types';
 
@@ -24,6 +29,8 @@ const UNLIT_ADD = 2;
  */
 const HDR_UNLIT_SCALE = 0.4;
 
+let shared: RenderKit | null = null;
+
 export class RenderKit {
   readonly glowTexture: Texture2D;
   readonly ringTexture: Texture2D;
@@ -35,8 +42,17 @@ export class RenderKit {
   /** Unit-radius low-poly rocks. */
   readonly rocks: readonly Mesh[];
   private readonly cache = new Map<string, Material>();
+  private readonly bakes = new Map<string, unknown>();
+  /** Per-node material instances of the current scene. */
+  private sceneInstances: Material[] = [];
 
-  constructor(
+  /** The page's kit; the effects are the same builtin assets in every scene. */
+  static shared(unlitEffect: EffectAsset, standardEffect: EffectAsset): RenderKit {
+    if (!shared) shared = new RenderKit(unlitEffect, standardEffect);
+    return shared;
+  }
+
+  private constructor(
     private readonly unlitEffect: EffectAsset,
     private readonly standardEffect: EffectAsset,
   ) {
@@ -81,9 +97,38 @@ export class RenderKit {
     return this.cached(`ring:${rgb}:${intensity}`, () => this.additive(this.ringTexture, rgb, intensity));
   }
 
-  /** Additive ring material — NOT shared: rings fade individually via mainColor alpha. */
+  /** Additive ring material — NOT shared: rings fade individually via mainColor alpha. Scene-owned. */
   ringInstance(rgb: Rgb, intensity = 1): Material {
-    return this.additive(this.ringTexture, rgb, intensity, false);
+    return this.track(this.additive(this.ringTexture, rgb, intensity, false));
+  }
+
+  /** Registers a material instance made for one node of the current scene (see releaseScene). */
+  track<T extends Material>(material: T): T {
+    this.sceneInstances.push(material);
+    return material;
+  }
+
+  /**
+   * The scene that used the kit is being destroyed: its material instances go as soon as the next
+   * scene has launched — by then the old renderers are gone, so nothing draws with them.
+   */
+  releaseScene(): void {
+    const list = this.sceneInstances;
+    if (list.length === 0) return;
+    this.sceneInstances = [];
+    director.once(Director.EVENT_AFTER_SCENE_LAUNCH, () => {
+      for (const m of list) m.destroy();
+    });
+  }
+
+  /** Something expensive to make (a baked texture), made once per page load. */
+  bake<T>(key: string, make: () => T): T {
+    let value = this.bakes.get(key) as T | undefined;
+    if (value === undefined) {
+      value = make();
+      this.bakes.set(key, value);
+    }
+    return value;
   }
 
   /** Lit solid colour material (shared, instanced): debris, rocks, station blocks, credits. */
@@ -110,14 +155,16 @@ export class RenderKit {
     });
   }
 
-  /** Opaque unlit textured material for the backdrop; `scale` restores a normalised bake's brightness. */
-  backdrop(texture: Texture2D, scale: number): Material {
-    const material = new Material();
-    material.initialize({ effectAsset: this.unlitEffect, technique: UNLIT_OPAQUE, defines: { USE_TEXTURE: true } });
-    material.setProperty('mainTexture', texture);
-    material.setProperty('mainColor', new Color(255, 255, 255, 255));
-    material.setProperty('colorScale', new Vec3(scale, scale, scale));
-    return material;
+  /** Opaque unlit textured material for a backdrop (cached by `key`); `scale` restores a normalised bake's brightness. */
+  backdrop(key: string, texture: Texture2D, scale: number): Material {
+    return this.cached(`backdrop:${key}`, () => {
+      const material = new Material();
+      material.initialize({ effectAsset: this.unlitEffect, technique: UNLIT_OPAQUE, defines: { USE_TEXTURE: true } });
+      material.setProperty('mainTexture', texture);
+      material.setProperty('mainColor', new Color(255, 255, 255, 255));
+      material.setProperty('colorScale', new Vec3(scale, scale, scale));
+      return material;
+    });
   }
 
   /** Wraps raw RGBA8 pixels in a texture. */

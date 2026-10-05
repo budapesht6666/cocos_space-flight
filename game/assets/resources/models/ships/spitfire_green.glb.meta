@@ -1,0 +1,143 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "0cfd9b34-f618-49f1-bd87-d46283a949b9",
+  "files": [],
+  "subMetas": {
+    "0842b": {
+      "importer": "gltf-mesh",
+      "uuid": "0cfd9b34-f618-49f1-bd87-d46283a949b9@0842b",
+      "displayName": "",
+      "id": "0842b",
+      "name": "Cube.017.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 3512
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "390a7": {
+      "importer": "gltf-embeded-image",
+      "uuid": "0cfd9b34-f618-49f1-bd87-d46283a949b9@390a7",
+      "displayName": "",
+      "id": "390a7",
+      "name": "spitfire_green_albedo.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": false,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".jpg",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "e39f7": {
+      "importer": "texture",
+      "uuid": "0cfd9b34-f618-49f1-bd87-d46283a949b9@e39f7",
+      "displayName": "",
+      "id": "e39f7",
+      "name": "UnnamedTexture.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "linear",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "0cfd9b34-f618-49f1-bd87-d46283a949b9@390a7"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "1e293": {
+      "importer": "gltf-material",
+      "uuid": "0cfd9b34-f618-49f1-bd87-d46283a949b9@1e293",
+      "displayName": "",
+      "id": "1e293",
+      "name": "spitfire_green_mat.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "2e9a7": {
+      "importer": "gltf-scene",
+      "uuid": "0cfd9b34-f618-49f1-bd87-d46283a949b9@2e9a7",
+      "displayName": "",
+      "id": "2e9a7",
+      "name": "spitfire_green.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "spitfire_green_albedo",
+        "uri": "0cfd9b34-f618-49f1-bd87-d46283a949b9@390a7"
+      }
+    ],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "0cfd9b34-f618-49f1-bd87-d46283a949b9@0842b"
+      ],
+      "skeletons": [],
+      "textures": [
+        "0cfd9b34-f618-49f1-bd87-d46283a949b9@e39f7"
+      ],
+      "materials": [
+        "0cfd9b34-f618-49f1-bd87-d46283a949b9@1e293"
+      ],
+      "scenes": [
+        "0cfd9b34-f618-49f1-bd87-d46283a949b9@2e9a7"
+      ]
+    }
+  }
+}

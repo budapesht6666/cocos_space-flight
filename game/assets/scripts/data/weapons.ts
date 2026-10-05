@@ -1,7 +1,8 @@
-import type { EnemyBulletDef, EnemyBulletId, WeaponDef } from './types';
+import type { EnemyBulletDef, EnemyBulletId, WeaponDef, WeaponLevel } from './types';
 
 export const PULSE_CANNON: WeaponDef = {
   id: 'pulse',
+  name: 'PULSE CANNON',
   fireInterval: 0.09,
   bulletSpeed: 30,
   damage: 1,
@@ -30,6 +31,15 @@ export const PULSE_CANNON: WeaponDef = {
   ],
 };
 
+/** Weapon levels 1..5 bought in the hangar (GDD §7): damage and fire rate, indexed by level - 1. */
+export const WEAPON_LEVELS: readonly WeaponLevel[] = [
+  { damage: 1, rate: 1 },
+  { damage: 1.12, rate: 1.05 },
+  { damage: 1.25, rate: 1.1 },
+  { damage: 1.4, rate: 1.15 },
+  { damage: 1.6, rate: 1.2 },
+];
+
 /** Enemy bullets: pink-orange glow with a white core, always drawn above everything (GDD §2). */
 export const ENEMY_BULLETS: Record<EnemyBulletId, EnemyBulletDef> = {
   orb: { radius: 0.13, size: 0.55, color: [1.0, 0.25, 0.55] },
@@ -38,3 +48,10 @@ export const ENEMY_BULLETS: Record<EnemyBulletId, EnemyBulletDef> = {
 
 /** Total enemy bullets alive at once (performance budget: 500). */
 export const ENEMY_BULLET_CAP = 500;
+
+/**
+ * Bullets made up front at mission load, per look (player bolt; enemy orb, large orb). Peaks: the
+ * Warden on Hard keeps ~210 orbs alive; Power IV at weapon level 5 ~70 bolts. A pool that grows
+ * mid-fight instantiates nodes, which hitches on iPhone.
+ */
+export const BULLET_POOLS = { player: [80], enemy: [260, 120] };
