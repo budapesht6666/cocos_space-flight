@@ -1,0 +1,143 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e",
+  "files": [],
+  "subMetas": {
+    "f051b": {
+      "importer": "gltf-mesh",
+      "uuid": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@f051b",
+      "displayName": "",
+      "id": "f051b",
+      "name": "Cube.016.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 2152
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "a3f72": {
+      "importer": "gltf-embeded-image",
+      "uuid": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@a3f72",
+      "displayName": "",
+      "id": "a3f72",
+      "name": "zenith_red_albedo.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": false,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".jpg",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "e39f7": {
+      "importer": "texture",
+      "uuid": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@e39f7",
+      "displayName": "",
+      "id": "e39f7",
+      "name": "UnnamedTexture.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "linear",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@a3f72"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "23e02": {
+      "importer": "gltf-material",
+      "uuid": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@23e02",
+      "displayName": "",
+      "id": "23e02",
+      "name": "zenith_red_mat.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "079b7": {
+      "importer": "gltf-scene",
+      "uuid": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@079b7",
+      "displayName": "",
+      "id": "079b7",
+      "name": "zenith_red.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "zenith_red_albedo",
+        "uri": "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@a3f72"
+      }
+    ],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@f051b"
+      ],
+      "skeletons": [],
+      "textures": [
+        "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@e39f7"
+      ],
+      "materials": [
+        "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@23e02"
+      ],
+      "scenes": [
+        "5c0f1d57-fde9-43ef-970a-e30aa0aeec7e@079b7"
+      ]
+    }
+  }
+}

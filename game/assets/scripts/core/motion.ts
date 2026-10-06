@@ -107,6 +107,9 @@ export function initMotion(m: MoveSpec, s: MotionState, ctx: MotionContext, rng:
     s.vz = m.speed;
     s.spin = rng.sign() * m.spin * rng.range(0.6, 1);
     s.yaw = rng.range(0, 360);
+  } else if (m.kind === 'shard') {
+    // Straight down unless whoever spawned it flings it (a splitting parent sets vx, vz).
+    s.vz = m.speed;
   }
 }
 
@@ -142,8 +145,59 @@ export function stepMotion(m: MoveSpec, s: MotionState, ctx: MotionContext, dt: 
     case 'ground':
       s.z += ctx.scrollSpeed * dt;
       break;
+    case 'shard':
+      stepShard(m, s, ctx, dt);
+      break;
+    case 'serpent':
+      stepSerpent(m, s, ctx, dt);
+      break;
   }
   return (s.x - prevX) / dt;
+}
+
+function stepShard(m: Extract<MoveSpec, { kind: 'shard' }>, s: MotionState, ctx: MotionContext, dt: number): void {
+  let speed = Math.hypot(s.vx, s.vz);
+  let angle = speed > 1e-4 ? Math.atan2(s.vx, s.vz) : 0;
+  if (s.t < m.homeTime) {
+    // Turn towards the ship, at most `turn` degrees per second.
+    const want = Math.atan2(ctx.targetX - s.x, ctx.targetZ - s.z);
+    let diff = want - angle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    const max = (m.turn / RAD) * dt;
+    angle += Math.max(-max, Math.min(max, diff));
+  }
+  // The fling settles into the shard's own speed.
+  speed += (m.speed - speed) * Math.min(1, 3 * dt);
+  s.vx = Math.sin(angle) * speed;
+  s.vz = Math.cos(angle) * speed;
+  s.x += s.vx * dt;
+  s.z += s.vz * dt;
+  s.yaw = Math.atan2(-s.vx, -s.vz) * RAD;
+}
+
+function stepSerpent(m: Extract<MoveSpec, { kind: 'serpent' }>, s: MotionState, ctx: MotionContext, dt: number): void {
+  const field = ctx.field;
+  const holdZ = field.zAt(m.depth);
+  const fromX = s.x;
+  const fromZ = s.z;
+  if (s.phase === 'enter') {
+    const speed = Math.max(1.5, Math.min(m.enterSpeed, (holdZ - s.z) * 2.5));
+    s.z += speed * dt;
+    if (s.z >= holdZ - 0.05) {
+      s.phase = 'hold';
+      s.phaseTime = 0;
+    }
+  } else {
+    // A figure eight: across and back once while dipping twice.
+    const w = (Math.PI * 2 * s.phaseTime) / m.period;
+    const side = s.mirror ? -1 : 1;
+    s.x = s.baseX + side * m.width * field.halfWidth(holdZ) * Math.sin(w);
+    s.z = holdZ + m.height * (field.zAt(1) - field.zAt(0)) * Math.sin(2 * w);
+  }
+  const dx = s.x - fromX;
+  const dz = s.z - fromZ;
+  if (dx * dx + dz * dz > 1e-10) s.yaw = dampAngle(s.yaw, Math.atan2(-dx, -dz) * RAD, 5, dt);
 }
 
 const sample: CurveSample = { x: 0, z: 0, dx: 0, dz: 0 };

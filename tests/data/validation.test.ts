@@ -17,7 +17,7 @@ import { ENEMIES } from '../../game/assets/scripts/data/enemies';
 import { MEDALS } from '../../game/assets/scripts/data/medals';
 import { MISSION_ORDER, MISSIONS, nextMission } from '../../game/assets/scripts/data/missions';
 import { PATHS } from '../../game/assets/scripts/data/paths';
-import { PATTERNS } from '../../game/assets/scripts/data/patterns';
+import { LASERS, PATTERNS } from '../../game/assets/scripts/data/patterns';
 import { PICKUPS } from '../../game/assets/scripts/data/pickups';
 import { DEFAULT_PAINT, DEFAULT_SHIP, ENERGY, GENERATOR_LEVELS, MAGNET_RADIUS, PAINT_ORDER, PAINTS, SHIP_ORDER, SHIPS, shipModel, shipModelFile } from '../../game/assets/scripts/data/player';
 import { propPath } from '../../game/assets/scripts/data/props';
@@ -67,7 +67,7 @@ describe('enemies', () => {
       expect(e.score, key).toBeGreaterThanOrEqual(0);
       expect(e.name.length, key).toBeGreaterThan(0);
       if (e.look.kind === 'model') expect(e.look.path, key).toMatch(/^models\//);
-      if (e.look.kind === 'assembly') for (const m of e.look.modules) expect(m.prop, key).toMatch(/^station_/);
+      if (e.look.kind === 'assembly') for (const m of e.look.modules) expect(m.prop, key).toMatch(/^(station|hull)_/);
       expect(e.look.size, key).toBeGreaterThan(0);
       checkMove(e.move, key);
       if (e.hull) {
@@ -119,9 +119,73 @@ describe('enemies', () => {
         const child = ENEMIES[e.split.enemy];
         expect(child, e.id).toBeDefined();
         expect(child.split, `${e.id} splits into something that splits again`).toBeUndefined();
-        expect(child.move.kind, 'fragments need drift movement to fly apart').toBe('drift');
+        expect(['drift', 'shard'], 'fragments need drift or shard movement to fly apart').toContain(child.move.kind);
       }
       if (e.ground) expect(e.move.kind, e.id).toBe('ground');
+    }
+  });
+});
+
+describe('stage 7 mechanics: lasers, broods, shells, mines, serpents', () => {
+  it('lasers exist and can be dodged: a warning first, a beam of some width', () => {
+    for (const [id, l] of Object.entries(LASERS)) {
+      expect(l.warn, id).toBeGreaterThanOrEqual(0.8);
+      expect(l.fire, id).toBeGreaterThan(0);
+      expect(l.width, id).toBeGreaterThan(0);
+      expect(l.length, id).toBeGreaterThan(20);
+      expect(l.count, id).toBeGreaterThanOrEqual(1);
+      if (l.count > 1) expect(l.gapDeg, `${id}: a fan needs a gap`).toBeGreaterThan(0);
+      expect(l.cooldown, id).toBeGreaterThan(0);
+    }
+    for (const e of Object.values(ENEMIES)) {
+      for (const ref of e.lasers ?? []) {
+        expect(LASERS[ref.laser], `${e.id} → ${ref.laser}`).toBeDefined();
+        if (ref.minDifficulty) expect(DIFFICULTY_ORDER).toContain(ref.minDifficulty);
+      }
+    }
+  });
+
+  it('broods launch existing free-flying minions that launch nothing themselves', () => {
+    for (const e of Object.values(ENEMIES)) {
+      for (const b of e.broods ?? []) {
+        const minion = ENEMIES[b.enemy];
+        expect(minion, `${e.id} → ${b.enemy}`).toBeDefined();
+        expect(minion.broods, `${b.enemy}: minions don't launch minions`).toBeUndefined();
+        expect(minion.move.kind, b.enemy).not.toBe('attached');
+        expect(minion.ground, b.enemy).not.toBe(true);
+        expect(b.hatches.length, e.id).toBeGreaterThan(0);
+        expect(b.interval, e.id).toBeGreaterThan(0);
+        expect(b.alive, e.id).toBeGreaterThanOrEqual(b.hatches.length);
+        for (const [x, z] of b.hatches) expect(Math.hypot(x, z), `${e.id}: hatch outside the hull`).toBeLessThanOrEqual(e.radius);
+      }
+      if (e.shell) {
+        expect(e.broods?.length ?? 0, `${e.id}: a shell opens only when it launches`).toBeGreaterThan(0);
+        expect(e.shell.armor).toBeGreaterThanOrEqual(0);
+        expect(e.shell.armor).toBeLessThan(1);
+        expect(e.shell.open).toBeGreaterThan(0);
+      }
+      if (e.vents) expect(e.shell, `${e.id}: vents show an open shell`).toBeDefined();
+    }
+  });
+
+  it('mines blow up into a pattern; death patterns exist', () => {
+    for (const e of Object.values(ENEMIES)) {
+      if (e.deathPattern) expect(PATTERNS[e.deathPattern], e.id).toBeDefined();
+      if (e.proximity) {
+        expect(e.deathPattern, `${e.id}: a mine needs something to blow up into`).toBeDefined();
+        expect(e.proximity.radius, e.id).toBeGreaterThan(e.radius);
+        expect(e.proximity.fuse, e.id).toBeGreaterThan(0.3);
+        expect(e.obstacle, `${e.id}: mines go off by themselves, so they don't count towards the kill rate`).toBe(true);
+      }
+    }
+  });
+
+  it('serpents carry segments that fit on their trail', () => {
+    for (const e of Object.values(ENEMIES)) {
+      if (e.move.kind !== 'serpent') continue;
+      expect(e.parts?.length ?? 0, e.id).toBeGreaterThan(0);
+      expect(e.move.spacing, e.id).toBeGreaterThan(0);
+      expect(e.move.period, e.id).toBeGreaterThan(0);
     }
   });
 });
@@ -341,6 +405,17 @@ describe('missions', () => {
         for (const e of m.events) if (e.type === 'spawn' || e.type === 'boss') expect(ENEMIES[e.enemy].move.kind).not.toBe('attached');
       });
 
+      it('preloads the minions its launchers can have alive, and laser strips if anyone fires lasers', () => {
+        const needs = missionNeeds(m);
+        let lasers = false;
+        for (const [id, count] of needs.enemies) {
+          const def = ENEMIES[id];
+          if (def.lasers) lasers = true;
+          for (const b of def.broods ?? []) expect(needs.enemies.get(b.enemy) ?? 0, `${id} → ${b.enemy}`).toBeGreaterThanOrEqual(b.alive * count);
+        }
+        expect(needs.lasers).toBe(lasers);
+      });
+
       it('preloads every enemy it can spawn', () => {
         const needs = missionNeeds(m);
         for (const e of m.events) {
@@ -421,6 +496,14 @@ describe('campaign', () => {
       expect(s.medalsToAdvance, s.name).toBeLessThanOrEqual(3 * 4 * CAMPAIGN_DIFFICULTIES.length);
     }
     expect(CAMPAIGN_DIFFICULTIES).toEqual(DIFFICULTY_ORDER.slice(0, CAMPAIGN_DIFFICULTIES.length));
+  });
+
+  it('later sectors pay more; each has its own backdrop', () => {
+    for (let i = 1; i < SECTORS.length; i++) expect(SECTORS[i].pay, SECTORS[i].name).toBeGreaterThan(SECTORS[i - 1].pay);
+    expect(SECTORS[0].pay).toBe(1);
+    const seeds = new Set(SECTORS.map((s) => s.nebula.seed));
+    expect(seeds.size).toBe(SECTORS.length);
+    for (const s of SECTORS) expect(s.nebula.intensity, s.name).toBeGreaterThan(0);
   });
 
   it('lists every mission once, in order, with NEXT following it', () => {

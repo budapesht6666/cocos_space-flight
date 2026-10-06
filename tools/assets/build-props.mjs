@@ -75,6 +75,9 @@ const PROPS = [
   { src: path.join(KENNEY, 'supports_high.glb'), out: 'station_lattice', palette: STATION },
   { src: path.join(KENNEY, 'rock_crystalsLargeA.glb'), out: 'station_ore', palette: STATION },
   { src: path.join(KENNEY, 'craft_cargoA.glb'), out: 'station_hauler', palette: STATION },
+  // Enemy hulls built from station parts, in turret colours (red accents: enemy): the Leviathan's segments.
+  { src: path.join(KENNEY, 'machine_barrelLarge.glb'), out: 'hull_tank', palette: TURRET },
+  { src: path.join(KENNEY, 'pipe_ring.glb'), out: 'hull_pipe', palette: TURRET },
   // Turrets: the `turret` node (and its barrels) rotates.
   { src: path.join(KENNEY, 'turret_single.glb'), out: 'turret_single', palette: TURRET, head: 'turret' },
   { src: path.join(KENNEY, 'turret_double.glb'), out: 'turret_double', palette: TURRET, head: 'turret' },

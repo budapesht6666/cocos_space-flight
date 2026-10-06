@@ -4,9 +4,10 @@
 import type { PickupDef, PickupKind } from './types';
 
 export const PICKUPS: Record<PickupKind, PickupDef> = {
-  // Pools: peaks of a Hard run (s1m3 had 45 credits on screen at once) plus a margin.
-  credit: { kind: 'credit', credits: 5, size: 0.24, color: [1.0, 0.78, 0.25], pool: 64 },
-  bigCredit: { kind: 'bigCredit', credits: 25, size: 0.4, color: [1.0, 0.78, 0.25], pool: 40 },
+  // Pools: peaks of a Hard run (s1m3 had 45 credits on screen at once) plus a margin, times 1.5
+  // for Insane and Nightmare (credits ×3 instead of ×2).
+  credit: { kind: 'credit', credits: 5, size: 0.24, color: [1.0, 0.78, 0.25], pool: 96 },
+  bigCredit: { kind: 'bigCredit', credits: 25, size: 0.4, color: [1.0, 0.78, 0.25], pool: 60 },
   power: { kind: 'power', credits: 0, size: 0.85, color: [1.0, 0.55, 0.1], prop: 'pickup_power', pool: 2 },
   repair: { kind: 'repair', credits: 0, size: 0.85, color: [0.35, 1.0, 0.45], prop: 'pickup_repair', pool: 2 },
   shield: { kind: 'shield', credits: 0, size: 0.85, color: [0.3, 0.8, 1.0], prop: 'pickup_shield', pool: 2 },

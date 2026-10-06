@@ -48,6 +48,11 @@ export function sectorOf(mission: MissionId): SectorDef | null {
   return null;
 }
 
+/** How much a mission's credits are worth (its sector's pay). */
+export function missionPay(mission: MissionId): number {
+  return sectorOf(mission)?.pay ?? 1;
+}
+
 /** Medals earned in a sector over the campaign difficulties, and how many there are. */
 export function sectorMedals(records: RecordMap, sector: SectorDef): { earned: number; total: number } {
   let earned = 0;

@@ -13,9 +13,15 @@ export interface EnemyView {
   flash: renderer.MaterialInstance[];
   /** Elite marker ring (parked below the view when unused). */
   marker: MeshRenderer;
+  /** Glows shown while a shell is open (EnemyDef.vents), parked when shut. */
+  vents: Node[];
+  /** A mine's blinking light, or null. */
+  beacon: Node | null;
 }
 
 const ROCK: Rgb = [0.34, 0.3, 0.28];
+const MINE: Rgb = [0.2, 0.18, 0.22];
+const MINE_BEACON: Rgb = [1.0, 0.2, 0.15];
 /** Default vertical squash of assembly modules: station props are tall for a flying hull. */
 const ASSEMBLY_HEIGHT = 0.6;
 export const MARKER_PARK_Y = -1000;
@@ -34,6 +40,7 @@ export function createEnemyView(
   parent.addChild(node);
   const flash: renderer.MaterialInstance[] = [];
   let head: Node | null = null;
+  let beacon: Node | null = null;
 
   switch (look.kind) {
     case 'model':
@@ -56,11 +63,22 @@ export function createEnemyView(
       break;
     }
     case 'rock': {
-      const rock = kit.meshNode('rock', node, kit.rocks[variant % kit.rocks.length], kit.solid(ROCK, 0.05, 0.95));
+      const shared = kit.solid(look.color ?? ROCK, look.metallic ?? 0.05, look.roughness ?? 0.95);
+      const rock = kit.meshNode('rock', node, kit.rocks[variant % kit.rocks.length], shared);
       const radius = look.size / 2;
       rock.setScale(radius, radius, radius);
       const material = rock.getComponent(MeshRenderer)?.getMaterialInstance(0);
       if (material) flash.push(kit.track(material));
+      break;
+    }
+    case 'mine': {
+      const mine = kit.meshNode('mine', node, kit.mine, kit.solid(MINE, 0.6, 0.45));
+      const radius = look.size / 2;
+      mine.setScale(radius, radius, radius);
+      const material = mine.getComponent(MeshRenderer)?.getMaterialInstance(0);
+      if (material) flash.push(kit.track(material));
+      beacon = kit.meshNode('beacon', node, kit.plane, kit.glow(MINE_BEACON, 2.6));
+      beacon.setPosition(0, radius * 0.7, 0);
       break;
     }
     case 'assembly': {
@@ -95,7 +113,15 @@ export function createEnemyView(
   const markerNode = kit.meshNode('elite', node, kit.plane, kit.ringGlow([1, 1, 1], 1.6));
   markerNode.setPosition(0, MARKER_PARK_Y, 0);
   const marker = markerNode.getComponent(MeshRenderer) as MeshRenderer;
-  return { node, head, flash, marker };
+  // Vents sit in the node's frame, which faces +Z: mirrored like assembly modules.
+  const vents: Node[] = [];
+  for (const v of def.vents ?? []) {
+    const glow = kit.meshNode('vent', node, kit.plane, kit.glow(v.color, 2.4));
+    glow.setScale(v.size, 1, v.size);
+    glow.setPosition(-v.x, MARKER_PARK_Y, -v.z);
+    vents.push(glow);
+  }
+  return { node, head, flash, marker, vents, beacon };
 }
 
 function findNode(root: Node, name: string): Node | null {

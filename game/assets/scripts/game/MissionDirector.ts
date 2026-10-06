@@ -80,7 +80,7 @@ export class MissionDirector implements LevelHost {
     for (const e of mission.events) if (e.type === 'spawn') this.offsets.set(e, formationOffsets(e.formation));
 
     ctx.bus.on('enemyKilled', (e) => {
-      if (e.group >= 0) this.memberGone(e.group, false, e.x, e.z);
+      if (e.group >= 0) this.memberGone(e.group, e.self, e.x, e.z);
     });
     ctx.bus.on('enemyEscaped', (e) => {
       if (e.group >= 0) this.memberGone(e.group, true, 0, 0);

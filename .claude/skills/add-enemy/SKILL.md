@@ -13,11 +13,14 @@ Coordinates in content: x in half-widths of the field (-1 left edge … 1 right 
 
 | Part | Where | Options |
 |---|---|---|
-| Look | `EnemyDef.look` | `model` (ship glb with its own texture, `tools/assets/build-ships.mjs`; a missing colour variant can be recoloured there, see `RECOLORS`), `prop` (vertex-coloured prop from `tools/assets/build-props.mjs`; `aim` names the child node that turns towards the player, e.g. turret `head`), `rock` (procedural asteroid), `assembly` (station modules + glow lights put together, world units with +Z = down the screen — boss hulls like the Warden) |
-| Movement | `EnemyDef.move` (`data/types.ts` → `MoveSpec`) | `straight`, `sine`, `dive` (aim then ram), `path` (Catmull-Rom through points, `data/paths.ts`), `hover` (enter, sway, leave; `time: Infinity` for bosses), `drift` (asteroids), `ground` (on set pieces) |
+| Look | `EnemyDef.look` | `model` (ship glb with its own texture, `tools/assets/build-ships.mjs`; a missing colour variant can be recoloured there, see `RECOLORS`; `darken` for light-grey hulls that blow out to white), `prop` (vertex-coloured prop from `tools/assets/build-props.mjs`; `aim` names the child node that turns towards the player, e.g. turret `head`), `rock` (procedural asteroid; `color`/`metallic`/`roughness` — ice), `mine` (procedural spiked ball with a blinking beacon), `assembly` (station modules + glow lights put together, world units with +Z = down the screen — boss hulls like the Warden; `hull_*` props are station parts in enemy red) |
+| Movement | `EnemyDef.move` (`data/types.ts` → `MoveSpec`) | `straight`, `sine`, `dive` (aim then ram), `path` (Catmull-Rom through points, `data/paths.ts`), `hover` (enter, sway, leave; `time: Infinity` for bosses), `drift` (asteroids, mines), `ground` (on set pieces), `shard` (flung by a splitting parent, then homes in for `homeTime`), `serpent` (figure eight; its `parts` trail behind it `spacing` apart along the path it swam — Leviathan) |
 | Attacks | `EnemyDef.attacks[]` → `data/patterns.ts` | Emitter fields: `count`, `gapDeg` (fan) or `ring`, `aim`, `angleDeg`, `spinDeg` (spiral), `volleys` + `volleyInterval` (burst), `cooldown`, `delay`, `densityStep` (difficulty), `speedStep`. Gate with `minDifficulty`; boss phases with `hpBelow` / `hpAbove` |
 | Drops | `EnemyDef.drops` | credits, big credits, optional `extra` pickup with chance |
-| Flags | | `ground` (set-piece target, can't be rammed), `obstacle` (not counted in kill rate), `split` (fragments must use `drift`), `bank` (roll scale; 0 for platforms) |
+| Flags | | `ground` (set-piece target, can't be rammed), `obstacle` (not counted in kill rate), `split` (fragments use `drift` or `shard`; they don't count towards the kill rate), `bank` (roll scale; 0 for platforms), `spin` (turns around itself, °/s — Spinner) |
+| Lasers | `EnemyDef.lasers[]` → `LASERS` in `data/patterns.ts` | A warning line (`warn`, aimed when it appears — keep ≥ 0.8 s), then a beam `width` wide for `fire` s; `count` + `gapDeg` fan, `sweepDeg` turns it while firing. Phases and `minDifficulty` like attacks. A shot hurts once; the Nova Bomb cancels lasers (`game/LaserSystem.ts`) |
+| Minions | `EnemyDef.broods[]` | Launched from `hatches` every `interval` while in the firing zone, at most `alive` of its own at once (pools are sized from that). Minions fly their own `move`, don't count towards the kill rate. `shell` (`armor`, `open`): armoured except for `open` s after each launch; `vents` glow while open (Hive Mother) |
+| Mines | `proximity`, `deathPattern` | `proximity`: arms when the ship is within `radius`, blows up `fuse` s later (no score or loot); `deathPattern`: fired on any death. Make mines `obstacle` |
 | Boss parts | `EnemyDef.parts`, `armor`, `hull` | `parts`: destructible pieces (`{ enemy, x, z, y }`) — separate enemies with `move: { kind: 'attached' }` that ride on the parent, shoot on their own and die with it. `armor`: damage multiplier on the parent while any part lives (Warden: 0.25, "CORE EXPOSED" when the last part falls). `hull`: extra hit circles for long hulls (keep them inside `radius`) |
 
 Enemy bullets look: `ENEMY_BULLETS` in `data/weapons.ts` (pink-orange with a white core — keep enemy fire readable). Enemies use **Red/Purple** models only (GDD §6).
@@ -30,6 +33,7 @@ Elites (`data/elites.ts`): wave enemies roll Armored / Swift / Volatile / Shield
 2. Add the `EnemyDef` to `ENEMIES` in `data/enemies.ts`; a new pattern goes to `PATTERNS` via `pattern({...})`.
 3. Reference it from a mission (`data/missions.ts`) — spawn event, set-piece turret (`data/setPieces.ts`) or a `boss` event. Pools are sized automatically (`core/missionNeeds.ts`).
 4. Budgets: enemy ≤ 3.5k triangles, heavy ≤ 9k (max 2 on screen), boss ≤ 10k; ≤ 500 enemy bullets total.
+5. Check the model's orientation in game before placing `hull` circles, hatches and vents: +z is towards the ship (the Hive Mother turned out narrow-prow-down).
 
 ## 3. Verify
 

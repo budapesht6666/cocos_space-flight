@@ -1,0 +1,143 @@
+{
+  "ver": "2.3.14",
+  "importer": "gltf",
+  "imported": true,
+  "uuid": "027f2312-7d2d-495d-b65d-5072528f9d46",
+  "files": [],
+  "subMetas": {
+    "43580": {
+      "importer": "gltf-embeded-image",
+      "uuid": "027f2312-7d2d-495d-b65d-5072528f9d46@43580",
+      "displayName": "",
+      "id": "43580",
+      "name": "insurgent_purple_albedo.image",
+      "userData": {
+        "gltfIndex": 0,
+        "fixAlphaTransparencyArtifacts": true,
+        "hasAlpha": false,
+        "type": "texture"
+      },
+      "ver": "1.0.3",
+      "imported": true,
+      "files": [
+        ".jpg",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "0b568": {
+      "importer": "gltf-mesh",
+      "uuid": "027f2312-7d2d-495d-b65d-5072528f9d46@0b568",
+      "displayName": "",
+      "id": "0b568",
+      "name": "Cylinder.001.mesh",
+      "userData": {
+        "gltfIndex": 0,
+        "triangleCount": 8292
+      },
+      "ver": "1.1.1",
+      "imported": true,
+      "files": [
+        ".bin",
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "e39f7": {
+      "importer": "texture",
+      "uuid": "027f2312-7d2d-495d-b65d-5072528f9d46@e39f7",
+      "displayName": "",
+      "id": "e39f7",
+      "name": "UnnamedTexture.texture",
+      "userData": {
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "linear",
+        "anisotropy": 0,
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "027f2312-7d2d-495d-b65d-5072528f9d46@43580"
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "fcc5c": {
+      "importer": "gltf-material",
+      "uuid": "027f2312-7d2d-495d-b65d-5072528f9d46@fcc5c",
+      "displayName": "",
+      "id": "fcc5c",
+      "name": "insurgent_purple_mat.material",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "5b98e": {
+      "importer": "gltf-scene",
+      "uuid": "027f2312-7d2d-495d-b65d-5072528f9d46@5b98e",
+      "displayName": "",
+      "id": "5b98e",
+      "name": "insurgent_purple.prefab",
+      "userData": {
+        "gltfIndex": 0
+      },
+      "ver": "1.0.14",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "imageMetas": [
+      {
+        "name": "insurgent_purple_albedo",
+        "uri": "027f2312-7d2d-495d-b65d-5072528f9d46@43580"
+      }
+    ],
+    "lods": {
+      "enable": false,
+      "hasBuiltinLOD": false,
+      "options": [
+        {
+          "screenRatio": 0.25,
+          "faceCount": 1
+        },
+        {
+          "screenRatio": 0.125,
+          "faceCount": 0.25
+        },
+        {
+          "screenRatio": 0.01,
+          "faceCount": 0.1
+        }
+      ]
+    },
+    "assetFinder": {
+      "meshes": [
+        "027f2312-7d2d-495d-b65d-5072528f9d46@0b568"
+      ],
+      "skeletons": [],
+      "textures": [
+        "027f2312-7d2d-495d-b65d-5072528f9d46@e39f7"
+      ],
+      "materials": [
+        "027f2312-7d2d-495d-b65d-5072528f9d46@fcc5c"
+      ],
+      "scenes": [
+        "027f2312-7d2d-495d-b65d-5072528f9d46@5b98e"
+      ]
+    }
+  }
+}

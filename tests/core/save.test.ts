@@ -239,7 +239,7 @@ describe('arsenal', () => {
     expect(isEquipped(save, 'nova')).toBe(true);
   });
 
-  it('items unlock with progress: missions, then medals; ?unlock=1 opens all', () => {
+  it('items unlock with progress: missions across the sectors, medals; ?unlock=1 opens all', () => {
     const save = newSave();
     expect(upgradeUnlocked(save, 'hull')).toBe(true);
     expect(upgradeUnlocked(save, 'scatter')).toBe(false);
@@ -253,7 +253,10 @@ describe('arsenal', () => {
     clear(save.records, 's1m2', 'normal', ALL);
     expect(campaignMedals(save.records)).toBe(8);
     expect(unlockMet(save.records, { medals: 8 })).toBe(true);
+    expect(upgradeUnlocked(save, 'plasma')).toBe(false);
+    clear(save.records, 's2m1', 'normal');
     expect(upgradeUnlocked(save, 'plasma')).toBe(true);
+    expect(unlockText({ mission: 's2m1' })).toBe('CLEAR MISSION 2-1');
     expect(unlockText({ mission: 's1m2' })).toBe('CLEAR MISSION 1-2');
     expect(unlockText({ medals: 12 })).toBe('EARN 12 MEDALS');
   });
@@ -345,7 +348,8 @@ describe('progress', () => {
     expect(difficultyUnlocked(r, 's1m1', 'normal')).toBe(true);
     expect(difficultyUnlocked(r, 's1m1', 'hard')).toBe(false);
     expect(sectorState(r, SECTORS[0])).toBe('open');
-    expect(sectorState(r, SECTORS[1])).toBe('soon');
+    expect(sectorState(r, SECTORS[1])).toBe('locked');
+    expect(sectorState(r, SECTORS[2])).toBe('locked');
     expect(shipUnlocked(r, SHIPS.spitfire)).toBe(true);
     expect(shipUnlocked(r, SHIPS.executioner)).toBe(false);
     expect(shipUnlocked(r, SHIPS.striker)).toBe(false);
@@ -386,7 +390,22 @@ describe('progress', () => {
     clear(r, 's1m1', 'normal', ALL);
     clear(r, 's1m2', 'hard', MEDAL_BITS.hunter);
     clear(r, 's1m3', 'insane', ALL);
-    expect(sectorMedals(r, SECTORS[0])).toEqual({ earned: 5, total: 24 });
+    clear(r, 's2m1', 'normal', ALL);
+    expect(sectorMedals(r, SECTORS[0])).toEqual({ earned: 9, total: 48 });
+  });
+
+  it('a sector opens when the previous boss is beaten with enough medals there', () => {
+    const r: RecordMap = {};
+    clear(r, 's1m1', 'normal', ALL);
+    clear(r, 's1m2', 'normal');
+    clear(r, 's1m3', 'normal', MEDAL_BITS.hunter);
+    expect(sectorState(r, SECTORS[1])).toBe('locked');
+    clear(r, 's1m3', 'normal', ALL);
+    expect(sectorState(r, SECTORS[1])).toBe('open');
+    expect(missionUnlocked(r, 's2m1')).toBe(true);
+    expect(missionUnlocked(r, 's2m2')).toBe(false);
+    expect(sectorState(r, SECTORS[2])).toBe('locked');
+    expect(continueTarget(r, { mission: 's1m3', difficulty: 'normal' })).toEqual({ mission: 's2m1', difficulty: 'normal' });
   });
 
   it('continue follows the campaign', () => {

@@ -8,7 +8,7 @@ import type { GameContext } from './GameContext';
 export interface RunStats {
   score: number;
   credits: number;
-  /** Non-obstacle kills, for the kill rate. */
+  /** Kills that count towards the kill rate (no obstacles, no launched minions). */
   kills: number;
   grazes: number;
   bestMultiplier: number;
@@ -20,11 +20,13 @@ export class ScoreSystem {
   readonly combo = new Combo(COMBO);
   readonly stats: RunStats = { score: 0, credits: 0, kills: 0, grazes: 0, bestMultiplier: 1, pods: 0 };
 
-  constructor(ctx: GameContext) {
+  /** `pay`: what a credit is worth in this mission's sector (SectorDef.pay). */
+  constructor(ctx: GameContext, pay: number) {
     ctx.bus.on('enemyKilled', (e) => {
+      if (e.self) return;
       const multiplier = this.combo.kill();
       this.stats.score += Math.round(e.def.score * (e.elite ? e.elite.score : 1)) * multiplier;
-      if (!e.def.obstacle) this.stats.kills++;
+      if (e.counted) this.stats.kills++;
       this.stats.bestMultiplier = this.combo.bestMultiplier;
     });
     ctx.bus.on('graze', () => {
@@ -36,7 +38,7 @@ export class ScoreSystem {
       this.stats.score += e.amount;
     });
     ctx.bus.on('pickupCollected', (e) => {
-      this.stats.credits += PICKUPS[e.kind].credits;
+      this.stats.credits += Math.round(PICKUPS[e.kind].credits * pay);
       if (e.kind === 'pod') {
         this.stats.pods++;
         this.stats.score += SCORE.podRescue;

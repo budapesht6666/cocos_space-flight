@@ -6,7 +6,7 @@ import { Graphics, KeyCode, Label, Node } from 'cc';
 import { hasMedal, medalCount } from '../core/medals';
 import { continueTarget, difficultyUnlocked, missionUnlocked, sectorMedals, sectorOf, sectorState, type SectorState } from '../core/progress';
 import { CAMPAIGN_DIFFICULTIES, SECTORS } from '../data/campaign';
-import { DIFFICULTY_ORDER } from '../data/difficulty';
+import { DIFFICULTIES, DIFFICULTY_ORDER } from '../data/difficulty';
 import { MEDALS } from '../data/medals';
 import { MISSIONS } from '../data/missions';
 import type { Difficulty, MissionId } from '../data/types';
@@ -91,7 +91,9 @@ export class MainPage implements MenuPage {
 const MISSION_CARD_HEIGHT = 176;
 const MISSION_CARD_GAP = 22;
 const MISSIONS_TOP = 316;
-const DIFF_MEDAL_R = 13;
+const DIFF_MEDAL_R = 12;
+/** Difficulty rows on a mission card: one per campaign difficulty, centred. */
+const DIFF_ROW_STEP = 38;
 
 interface MissionCard {
   node: Node;
@@ -182,7 +184,7 @@ export class CampaignPage implements MenuPage {
   }
 
   private rowY(r: number): number {
-    return 30 - r * 52;
+    return ((CAMPAIGN_DIFFICULTIES.length - 1) / 2) * DIFF_ROW_STEP - r * DIFF_ROW_STEP;
   }
 
   private arrow(dir: number): Node {
@@ -276,11 +278,11 @@ export class CampaignPage implements MenuPage {
       row.name.color = open ? UI.white : UI.dim;
       const y = this.rowY(r);
       if (!open) {
-        drawLock(g, 150, y, 28, UI.dim);
+        drawLock(g, 150, y, 24, UI.dim);
         return;
       }
       earned += medalCount(record?.medals ?? 0);
-      MEDALS.forEach((m, k) => drawMedal(g, m.id, 148 + k * 36, y, DIFF_MEDAL_R, record !== null && hasMedal(record.medals, m.id)));
+      MEDALS.forEach((m, k) => drawMedal(g, m.id, 150 + k * 34, y, DIFF_MEDAL_R, record !== null && hasMedal(record.medals, m.id)));
     });
     const total = CAMPAIGN_DIFFICULTIES.length * MEDALS.length;
     card.medals.string = `MEDALS  ${earned} / ${total}`;
@@ -298,8 +300,8 @@ export class CampaignPage implements MenuPage {
 
 // ---- Mission: difficulties, medals, LAUNCH --------------------------------------------------
 
-const ROW_HEIGHT = 182;
-const ROW_GAP = 18;
+const ROW_HEIGHT = 160;
+const ROW_GAP = 14;
 const ROWS_TOP = 196;
 const ROW_MEDAL_R = 26;
 
@@ -332,11 +334,11 @@ export class MissionPage implements MenuPage {
       const node = uiNode(this.root, `Row-${difficulty}`, CARD_WIDTH, ROW_HEIGHT, { top: ROWS_TOP + i * (ROW_HEIGHT + ROW_GAP), centerX: true });
       const gfx = node.addComponent(Graphics);
       const name = uiLabel(node, 'Name', 34, UI.white, {}, font);
-      placeLabel(name, LEFT, 50, 'left');
+      placeLabel(name, LEFT, 44, 'left');
       const best = uiLabel(node, 'Best', 24, UI.white, {}, font);
-      placeLabel(best, LEFT, -6, 'left');
+      placeLabel(best, LEFT, -4, 'left');
       const detail = uiLabel(node, 'Detail', 20, UI.dim, {}, font);
-      placeLabel(detail, LEFT, -52, 'left');
+      placeLabel(detail, LEFT, -46, 'left');
       const icons = uiNode(node, 'Icons', 0, 0, {}).addComponent(Graphics);
       const row: DifficultyRow = { difficulty, node, gfx, name, best, detail, icons };
       onTap(node, () => this.select(difficulty));
@@ -434,7 +436,7 @@ export class MissionPage implements MenuPage {
       const played = record !== null && (record.score > 0 || record.clears > 0);
       row.best.string = played ? `BEST  ${record.score.toLocaleString('en-US')}` : 'NOT PLAYED YET';
       row.best.color = played ? UI.gold : UI.dim;
-      row.detail.string = record && record.clears > 0 ? `KILLS ${Math.round(record.killRate * 100)}%  ·  CLEARED ×${record.clears}` : played ? 'NOT CLEARED YET' : '';
+      row.detail.string = record && record.clears > 0 ? `KILLS ${Math.round(record.killRate * 100)}%  ·  CLEARED ×${record.clears}` : DIFFICULTIES[d].note;
       MEDALS.forEach((m, k) => drawMedal(g, m.id, RIGHT - ROW_MEDAL_R - (MEDALS.length - 1 - k) * 62, 6, ROW_MEDAL_R, record !== null && hasMedal(record.medals, m.id)));
     }
   }

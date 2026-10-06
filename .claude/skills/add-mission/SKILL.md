@@ -21,11 +21,15 @@ A mission is a `MissionDef` in `data/missions.ts`: title, sector subtitle, `scro
 | `setPiece` | `piece` (`data/setPieces.ts`), `x` | Ground structure with turrets; scrolls at `groundSpeed` |
 | `waitClear` | optional `timeout` | Use between sections; always give a timeout so a dodging enemy can't stall the mission |
 | `boss` | `enemy`, `x` | WARNING banner (`BOSS_WARNING_TIME`), HP bar, the clock holds until it dies. Last event of the mission |
-| `decor` | `field` (`data/decor.ts`: `asteroidField`, `denseField`, `debris`), `duration` | Background rocks drift far below the flight plane for `duration` seconds. Purely visual: use it to sell an asteroid belt section |
+| `decor` | `field` (`data/decor.ts`), `duration` | Background scenery far below the flight plane for `duration` seconds, purely visual. Sector 1: `asteroidField`, `denseField`, `debris`; Sector 2: `iceField`, `iceDebris`, `iceMoon` (one moon passing, `once` — duration ignored); Sector 3: `nebulaClouds`, `denseClouds` (big glowing planes — fill rate on phones, keep one cloud field at a time) |
 
 New flight paths go to `data/paths.ts` (≤ 8 points; x within ±1.6, depth −0.5…1.6).
 
-Set pieces (`data/setPieces.ts`): `outpost`, `relay`, `refinery` (mining platform), `depot` (fuel spine), `bastion` (fortress with 4 guns). Each may launch **escape pods** (`pods: { count, x, z }`) once all its turrets are destroyed — that's what the Rescuer medal counts. A new piece: modules are `station_*` props (`npm run build:props`), turrets stand on flat platforms.
+Set pieces (`data/setPieces.ts`): `outpost`, `relay`, `refinery` (mining platform), `depot` (fuel spine), `bastion` (fortress with 4 guns), `cryoLab` (Ice Moons: dome and crystals, 3 guns), `beacon` (Nebula Drift: lattice spine with dishes, 4 guns). Each may launch **escape pods** (`pods: { count, x, z }`) once all its turrets are destroyed — that's what the Rescuer medal counts. A new piece: modules are `station_*` props (`npm run build:props`), turrets stand on flat platforms.
+
+## Sectors (GDD §11)
+
+The sector (`data/campaign.ts`) gives the mission its nebula palette and `pay` (credits worth ×1 / ×1.35 / ×1.7). Enemies by sector: 1 — Scout, Dart, Gunship, Asteroid, turrets; 2 adds `iceRock`, `spinner`, `splitter` (→ shards), `mine`, `swarmer`; 3 adds `lancer` (laser), `carrier` (launches Scouts). Mini-bosses: Marauder, Dreadnought, Cyclone, Shatterer, Arbiter, Broodship; bosses: Warden, Hive Mother, Leviathan. Mines and Lancers punish standing still: don't stack 3+ Lancers on Normal; a Carrier on screen is a wave by itself (its Scouts don't count towards the kill rate).
 
 ## Pacing (GDD §11, s1m1 as reference)
 

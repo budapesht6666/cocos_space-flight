@@ -45,11 +45,12 @@
 | Bob | Scout (мясо, формации), Red | ✅ подтверждено |
 | Dispatcher | Dart (камикадзе: силуэт-игла), Red | ✅ подтверждено |
 | Challenger | Gunship, Purple; Red и крупнее — мини-босс Marauder (s1m1) | ✅ подтверждено |
-| Omen | Splitter, Purple | ✅ подтверждено |
-| Zenith | Lancer (снайпер: длинный ствол), Red | ✅ подтверждено |
-| Pancake | Spinner (тарелка с кольцами пуль), Purple | ✅ подтверждено |
-| Imperial | Мини-босс Dreadnought (s1m2, этап 3); позже Carrier и Frigate, Red | ✅ выбран пользователем (этап 3) |
-| Insurgent | Bulwark (тяжёлый, 8.3k треугольников), Purple | ✅ подтверждено |
+| Omen | Splitter и его осколки (Shard), Purple; Red ×4 — мини-босс Shatterer (этап 7) | ✅ в игре |
+| Zenith | Lancer (снайпер: длинный ствол), Red; Purple ×4.2 — мини-босс Arbiter; Red ×3.6 — голова Leviathan (этап 7) | ✅ в игре |
+| Pancake | Spinner (тарелка с кольцами пуль), Purple; Red ×3.8 — мини-босс Cyclone (этап 7) | ✅ в игре |
+| Imperial | Мини-босс Dreadnought (s1m2, этап 3, Red); Carrier и мини-босс Broodship (этап 7, Purple, серые затемнены) | ✅ в игре |
+| Insurgent | Был Bulwark (сектор 4 урезан); стал боссом Hive Mother (этап 7, Purple, 8.3k треугольников, серые затемнены) | ✅ в игре |
+| Dispatcher | Кроме Dart (Red) — Swarmer, рой Hive Mother (Purple, этап 7) | ✅ в игре |
 
 Враги — только в Red и Purple, игрок — в Orange, Blue и Green (см. GDD §6).
 
@@ -132,14 +133,14 @@
 
 | Ассет | Автор | Источник | Лицензия | Где в проекте |
 |---|---|---|---|---|
-| Ultimate Spaceships Pack: корабли игрока Spitfire, Executioner, Striker (Orange, Blue, Green — этап 4); враги Bob (Red), Dispatcher (Red), Challenger (Purple — Gunship; Red — мини-босс Marauder), Imperial (Orange, перекрашен в красный — мини-босс Dreadnought) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
-| Space Kit: platform_large, hangar_smallA, corridor_detailed, machine_generatorLarge, satelliteDish_large, structure_detailed, turret_single, turret_double; этап 3: hangar_roundGlass, hangar_roundA, hangar_largeA, platform_high, machine_barrelLarge, pipe_ring, supports_high, rock_crystalsLargeA, craft_cargoA | Kenney | [kenney.nl](https://kenney.nl/assets/space-kit) | CC0 | `game/assets/resources/models/props/station_*.glb`, `turret_*.glb` (обработаны `tools/assets/build-props.mjs`) |
+| Ultimate Spaceships Pack: корабли игрока Spitfire, Executioner, Striker (Orange, Blue, Green — этап 4); враги Bob (Red), Dispatcher (Red; Purple — этап 7), Challenger (Purple — Gunship; Red — мини-босс Marauder), Imperial (Orange, перекрашен в красный — мини-босс Dreadnought; Purple — этап 7); этап 7: Omen, Pancake, Zenith (Purple и Red), Insurgent (Purple) | Quaternius | [quaternius.com](https://quaternius.com/packs/ultimatespaceships.html) | CC0 | `game/assets/resources/models/ships/*.glb` (обработаны `tools/assets/build-ships.mjs`) |
+| Space Kit: platform_large, hangar_smallA, corridor_detailed, machine_generatorLarge, satelliteDish_large, structure_detailed, turret_single, turret_double; этап 3: hangar_roundGlass, hangar_roundA, hangar_largeA, platform_high, machine_barrelLarge, pipe_ring, supports_high, rock_crystalsLargeA, craft_cargoA; этап 7: machine_barrelLarge и pipe_ring ещё раз — в красной палитре турелей (сегменты Leviathan) | Kenney | [kenney.nl](https://kenney.nl/assets/space-kit) | CC0 | `game/assets/resources/models/props/station_*.glb`, `turret_*.glb`, `hull_*.glb` (обработаны `tools/assets/build-props.mjs`) |
 | Orbitron (Bold 700, Black 900; латиница) | The Orbitron Project Authors (Matt McInerney) | [Google Fonts](https://fonts.google.com/specimen/Orbitron), файлы с [Fontsource](https://fontsource.org/fonts/orbitron) | SIL OFL 1.1 | `game/assets/fonts/Orbitron-*.ttf`, лицензия рядом — `Orbitron-OFL.txt` |
 | Ultimate Space Kit: Bullets Pickup, Pickup Health, Pickup Sphere, Pickup Thunder | Quaternius | [poly.pizza](https://poly.pizza/bundle/Ultimate-Space-Kit-YWh743lqGX) | CC0 | `game/assets/resources/models/props/pickup_*.glb` (обработаны `tools/assets/build-props.mjs`) |
 | NES Shooter Music: Map (меню), Mercury, Venus, Mars (миссии 1-1…1-3), BossIntro + BossMain (босс), Intro Jingle (старт миссии), Win Jingle (победа), Warp Jingle (Time Warp) | SketchyLogic | [OpenGameArt](https://opengameart.org/content/nes-shooter-music-5-tracks-3-jingles) | CC0 | `game/assets/resources/audio/music/*.mp3`, `audio/sfx/warp_0.mp3` (`npm run build:audio`) |
-| Sci-fi Sounds, Impact Sounds, Interface Sounds: выстрелы, попадания, взрывы, щит, пикапы, Special, UI | Kenney | [kenney.nl](https://kenney.nl/assets/sci-fi-sounds), [Impact](https://kenney.nl/assets/impact-sounds), [Interface](https://kenney.nl/assets/interface-sounds) | CC0 | `game/assets/resources/audio/sfx/*` (`npm run build:audio`) |
+| Sci-fi Sounds, Impact Sounds, Interface Sounds: выстрелы, попадания, взрывы, щит, пикапы, Special, UI; этап 7 — заряд и выстрел вражеского лазера, взвод мины, выпуск роя | Kenney | [kenney.nl](https://kenney.nl/assets/sci-fi-sounds), [Impact](https://kenney.nl/assets/impact-sounds), [Interface](https://kenney.nl/assets/interface-sounds) | CC0 | `game/assets/resources/audio/sfx/*` (`npm run build:audio`) |
 
-Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`), сирена WARNING (двухтональная квадратная волна, `build-audio.mjs`).
+Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`; своя палитра на сектор), сирена WARNING (двухтональная квадратная волна, `build-audio.mjs`), мина с шипами (`core/rock.ts: buildMine`), лёд и ледяная луна (те же процедурные камни в ледяном материале), облака газа (плоскости свечения).
 
 Свои процедурные модели (пользователю понравились, остаются): астероиды — low-poly камень (`core/rock.ts`); кредиты — золотые кубики.
 
@@ -162,3 +163,9 @@
 - **Музыка** — пользователь: «фанат Battletoads & Double Dragon (NES), если получится похожее — буду рад, если нет — вариант №1 (Oblidivm)». Claude нашёл SketchyLogic «NES Shooter Music»: CC0, Famitracker (те же каналы 2A03, что у NES), написана для NES-шмапа. Источники — `art-source/sketchylogic-nes-shooter-music/` (WAV и .ftm).
 - **SFX** — Kenney (выбор пользователя). Исходники — `art-source/kenney-{sci-fi,impact,interface}-sounds/` с `License.txt`. Какие файлы куда — таблица `SFX` в `tools/assets/build-audio.mjs`.
 - Экран **Credits** в игре (Settings → CREDITS) — `data/credits.ts`.
+
+**Выбор этапа 7** (пользователь делегировал: «на твой выбор, может где-то проще подобрать текстуры и прочее» — про выбор двух секторов из четырёх):
+- **Секторы 2 и 3** — у них проще всего с ассетами: роли их врагов (Omen, Pancake, Zenith) подтверждены ещё на этапе 0 и лежат в уже выбранном паке Quaternius; лёд — свои процедурные камни в другом материале; туманность — другая палитра запекания. Секторам 4–5 нужны были бы обломки кораблей, инопланетная мегаструктура и ИИ аса-дуэлянта.
+- **Докачано из официальной папки пака** (Google Drive, `gdown`): glTF Omen, Pancake, Zenith, Insurgent и текстуры Purple/Red (у Imperial — Purple и Red). Исходники — `art-source/quaternius-ultimate-spaceships/<Ship>/`.
+- **Боссы и мини-боссы** — те же модели крупнее и в другой расцветке (Cyclone, Shatterer, Hive Mother, Arbiter, Broodship, голова Leviathan); сегменты Leviathan — модули Kenney в палитре турелей. Никаких новых паков.
+- **Музыка** — новых треков нет: миссии секторов 2–3 играют Mercury, Venus, Mars. Новая музыка для секторов — по выбору пользователя, если захочется.

@@ -203,3 +203,58 @@ describe('sampleCurve', () => {
     }
   });
 });
+
+describe('stepMotion — shard and serpent (stage 7)', () => {
+  const shard: MoveSpec = { kind: 'shard', speed: 6, turn: 120, homeTime: 1 };
+
+  it('a flung shard settles to its speed and turns towards the ship while homing', () => {
+    const ctx = context(4, 7);
+    const s = fresh(shard, 0, -5, 0, false, ctx);
+    // Flung out to the left, like a splitting parent does.
+    s.vx = -5;
+    s.vz = 2;
+    for (let i = 0; i < 60; i++) stepMotion(shard, s, ctx, DT);
+    expect(Math.hypot(s.vx, s.vz)).toBeCloseTo(6, 0);
+    // After a second of homing it heads towards the ship (down and to the right).
+    expect(s.vz).toBeGreaterThan(0);
+    expect(s.vx).toBeGreaterThan(0);
+  });
+
+  it('flies straight once homing is over', () => {
+    const ctx = context(-4, 7);
+    const s = fresh(shard, 0, -5, 0, false, ctx);
+    for (let i = 0; i < 90; i++) stepMotion(shard, s, ctx, DT);
+    const vx = s.vx;
+    const vz = s.vz;
+    ctx.targetX = 4;
+    for (let i = 0; i < 30; i++) stepMotion(shard, s, ctx, DT);
+    expect(s.vx).toBeCloseTo(vx, 5);
+    expect(s.vz).toBeCloseTo(vz, 5);
+  });
+
+  const serpent: MoveSpec = { kind: 'serpent', enterSpeed: 4, depth: 0.25, width: 0.5, height: 0.1, period: 8, spacing: 1.5 };
+
+  it('a serpent enters to its depth, then swims a figure eight around its line', () => {
+    const ctx = context();
+    const s = fresh(serpent, 0, -14, 0, false, ctx);
+    let steps = 0;
+    while (s.phase === 'enter' && steps++ < 900) stepMotion(serpent, s, ctx, DT);
+    expect(s.phase).toBe('hold');
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (let i = 0; i < 8 * 60; i++) {
+      stepMotion(serpent, s, ctx, DT);
+      minX = Math.min(minX, s.x);
+      maxX = Math.max(maxX, s.x);
+      minZ = Math.min(minZ, s.z);
+      maxZ = Math.max(maxZ, s.z);
+    }
+    // width 0.5 of a half-width of 5, height 0.1 of a 20-unit field, around z = -5.
+    expect(maxX).toBeCloseTo(2.5, 1);
+    expect(minX).toBeCloseTo(-2.5, 1);
+    expect(maxZ).toBeCloseTo(-3, 1);
+    expect(minZ).toBeCloseTo(-7, 1);
+  });
+});

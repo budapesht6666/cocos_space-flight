@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { allMissionIncome, hangarCosts, situationDps, SITUATIONS, timeToKill, weaponRows, type Situation } from '../../game/assets/scripts/core/balance';
 import { peakDps, STOCK_GUN } from '../../game/assets/scripts/core/arsenal';
+import { missionPay } from '../../game/assets/scripts/core/progress';
 import type { PrimaryId, SecondaryId, WeaponId } from '../../game/assets/scripts/data/types';
 import { PRIMARIES, SECONDARIES } from '../../game/assets/scripts/data/weapons';
 
@@ -81,10 +82,12 @@ describe('balance: economy', () => {
     for (let i = 0; i < rows.length; i += 2) expect(rows[i + 1].drops, rows[i].mission).toBeGreaterThan(rows[i].drops);
     const normal = rows.filter((r) => r.difficulty === 'normal');
     for (let i = 1; i < normal.length; i++) expect(normal[i].drops).toBeGreaterThan(normal[i - 1].drops);
-    // GDD §14: a Normal run of a Sector 1 mission brings ~1,200–1,700 when ~80% is collected.
+    // GDD §14: a Normal run of a Sector 1 mission brings ~1,200–1,700 when ~80% is collected;
+    // later sectors pay more (SectorDef.pay).
     for (const r of normal) {
-      expect(r.drops * 0.8 + r.clear, r.mission).toBeGreaterThan(1000);
-      expect(r.drops * 0.8 + r.clear, r.mission).toBeLessThan(2000);
+      const pay = missionPay(r.mission);
+      expect(r.drops * 0.8 + r.clear, r.mission).toBeGreaterThan(1000 * pay);
+      expect(r.drops * 0.8 + r.clear, r.mission).toBeLessThan(2000 * pay);
     }
   });
 

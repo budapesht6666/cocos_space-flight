@@ -16,6 +16,8 @@ export interface MissionNeeds {
   props: Set<PropId>;
   /** Escape pods the mission offers (Rescuer medal). */
   pods: number;
+  /** Some enemy fires lasers (game/LaserSystem.ts makes its strips only then). */
+  lasers: boolean;
 }
 
 /**
@@ -53,7 +55,8 @@ export function missionNeeds(mission: MissionDef): MissionNeeds {
     for (const t of SET_PIECES[id].turrets) raise(t.enemy, (enemies.get(t.enemy) ?? 0) + 1);
   }
 
-  // Splitting enemies need their fragments, bosses their parts (one level deep is enough).
+  // Splitting enemies need their fragments, bosses their parts, launchers their minions — as many
+  // as each may have alive at once (one level deep is enough).
   for (const [id, count] of Array.from(enemies)) {
     const def = ENEMIES[id];
     if (def.split) raise(def.split.enemy, count * def.split.count);
@@ -62,7 +65,14 @@ export function missionNeeds(mission: MissionDef): MissionNeeds {
       for (const part of def.parts) perParent.set(part.enemy, (perParent.get(part.enemy) ?? 0) + 1);
       for (const [part, n] of perParent) raise(part, (enemies.get(part) ?? 0) + n * count);
     }
+    if (def.broods) {
+      let alive = 0;
+      for (const b of def.broods) alive = Math.max(alive, b.alive);
+      for (const b of def.broods) raise(b.enemy, (enemies.get(b.enemy) ?? 0) + alive * count);
+    }
   }
+  let lasers = false;
+  for (const [id] of enemies) if (ENEMIES[id].lasers) lasers = true;
 
   const props = new Set<PropId>();
   for (const [id] of enemies) {
@@ -75,7 +85,7 @@ export function missionNeeds(mission: MissionDef): MissionNeeds {
     const prop = PICKUPS[kind].prop;
     if (prop) props.add(prop);
   }
-  return { enemies, setPieces, props, pods: countPods(mission) };
+  return { enemies, setPieces, props, pods: countPods(mission), lasers };
 }
 
 /** resources path of an enemy's prefab; null for looks built from props or procedural meshes. */

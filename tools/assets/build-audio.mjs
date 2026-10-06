@@ -85,6 +85,11 @@ const SFX = {
   phase: { format: 'mp3', variants: [v(SCIFI, 'forceField_002.ogg', { pitch: 0.8 })] },
   warp: { format: 'mp3', variants: [v(NES, 'Warp Jingle.wav')] },
   warning: { format: 'mp3', variants: [{ synth: 'siren' }] },
+  // Sectors 2–3: enemy lasers (the warning hum, the beam), a mine arming, a hive launching its swarm.
+  laserCharge: { format: 'mp3', variants: [v(SCIFI, 'forceField_003.ogg', { dur: 0.9, pitch: 1.4, fadeIn: 0.25, fadeOut: 0.2 })] },
+  laserFire: { format: 'mp3', variants: [v(SCIFI, 'laserLarge_004.ogg', { dur: 0.8, pitch: 0.6, fadeOut: 0.35, mix: v(SCIFI, 'lowFrequency_explosion_001.ogg', { dur: 0.8, gain: 0.35 }) })] },
+  mineArmed: { format: 'wav', variants: [v(UI, 'question_003.ogg', { pitch: 1.5, fadeOut: 0.05 })] },
+  broodLaunch: { format: 'mp3', variants: [v(SCIFI, 'slime_000.ogg', { dur: 0.7, pitch: 0.8, fadeOut: 0.3, mix: v(SCIFI, 'doorOpen_002.ogg', { dur: 0.7, gain: 0.5 }) })] },
   // Menu.
   uiTap: { format: 'wav', variants: [v(UI, 'select_002.ogg')] },
   uiBack: { format: 'wav', variants: [v(UI, 'back_002.ogg')] },

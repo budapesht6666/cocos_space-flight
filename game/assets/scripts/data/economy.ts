@@ -3,8 +3,7 @@
 // that. docs/BALANCE.md (npm run balance) adds it all up.
 //
 // Arsenal items are upgrade tracks too: level 0 = not owned, the first price is the licence.
-// While only Sector 1 is built, the whole arsenal unlocks there (missions, then medals); stage 7
-// spreads it over the sectors (GDD §14).
+// Sector 1 opens the basics mission by mission; the rest comes with Sectors 2 and 3 (GDD §14).
 
 import type { ArsenalSlot, UnlockReq, UpgradeDef, UpgradeId } from './types';
 
@@ -121,19 +120,19 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
   scatter: gun('scatter', 'primary', 'SCATTER GUN', 'Wide spread, best up close', 800, { mission: 's1m1' }),
   seeker: gun('seeker', 'primary', 'SEEKER MISSILES', 'Homing missiles, safe play', 1500, { mission: 's1m2' }),
   ion: gun('ion', 'primary', 'ION LASER', 'Piercing beam, cuts armour', 2400, { mission: 's1m3' }),
-  plasma: gun('plasma', 'primary', 'PLASMA ORBS', 'Slow orbs, splash damage', 3200, { medals: 8 }),
-  tesla: gun('tesla', 'primary', 'TESLA ARC', 'Chain lightning, short range', 4000, { medals: 12 }),
+  plasma: gun('plasma', 'primary', 'PLASMA ORBS', 'Slow orbs, splash damage', 3200, { mission: 's2m1' }),
+  tesla: gun('tesla', 'primary', 'TESLA ARC', 'Chain lightning, short range', 4000, { mission: 's2m3' }),
 
   // Secondary weapons.
   swarm: gun('swarm', 'secondary', 'SWARM ROCKETS', 'Homing salvo every 3 s', 900, { mission: 's1m1' }),
   wing: gun('wing', 'secondary', 'WING CANNONS', 'Diagonal bursts guard the flanks', 1400, { mission: 's1m2' }),
   rail: gun('rail', 'secondary', 'RAIL LANCE', 'Huge piercing shot every 3 s', 2400, { mission: 's1m3' }),
-  rear: gun('rear', 'secondary', 'REAR GUNS', 'Fire back and to the sides', 2600, { medals: 8 }),
+  rear: gun('rear', 'secondary', 'REAR GUNS', 'Fire back and to the sides', 2600, { mission: 's2m2' }),
 
   // Drones (the Drone Bay sets how many fly).
   gunDrone: drone('gunDrone', 'GUN DRONE', 'Adds a share of your Primary', 1200, { mission: 's1m2' }),
   guardian: drone('guardian', 'GUARDIAN DRONE', 'Circles you, blocks a bullet', 2000, { mission: 's1m3' }),
-  collector: drone('collector', 'COLLECTOR DRONE', 'Fetches credits and pickups', 2400, { medals: 8 }),
+  collector: drone('collector', 'COLLECTOR DRONE', 'Fetches credits and pickups', 2400, { mission: 's2m2' }),
 
   // Specials. Nova Bomb is owned from the start.
   nova: {
@@ -148,7 +147,7 @@ export const UPGRADES: Record<UpgradeId, UpgradeDef> = {
   },
   overdrive: special('overdrive', 'OVERDRIVE', '6 s of Power IV and faster fire', 1600, { mission: 's1m2' }),
   phase: special('phase', 'PHASE SHIELD', '4 s untouchable, ramming hurts', 2200, { mission: 's1m3' }),
-  warp: special('warp', 'TIME WARP', '5 s of enemies at half speed', 3600, { medals: 12 }),
+  warp: special('warp', 'TIME WARP', '5 s of enemies at half speed', 3600, { mission: 's3m1' }),
 };
 
 /** Hangar order (systems, then each arsenal slot). */

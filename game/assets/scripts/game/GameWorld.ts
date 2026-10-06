@@ -11,8 +11,9 @@ import { FixedStep } from '../core/FixedStep';
 import { smoothstep } from '../core/math';
 import { hasOverride, overrideLoadout } from '../core/loadout';
 import { enemyPrefabPath, missionNeeds } from '../core/missionNeeds';
-import { isCleared, missionUnlocked } from '../core/progress';
+import { isCleared, missionPay, missionUnlocked, sectorOf } from '../core/progress';
 import { Rng } from '../core/Rng';
+import { SECTORS } from '../data/campaign';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_MISSION, MISSIONS, nextMission } from '../data/missions';
 import { SHIPS, shipModel } from '../data/player';
@@ -44,6 +45,7 @@ import { CollisionSystem } from './CollisionSystem';
 import { DroneSystem } from './DroneSystem';
 import { EnemySystem } from './EnemySystem';
 import { GameAudio } from './GameAudio';
+import { LaserSystem } from './LaserSystem';
 import type { GameContext, GameEvents } from './GameContext';
 import { MissionDirector } from './MissionDirector';
 import { Onboarding } from './Onboarding';
@@ -70,6 +72,7 @@ interface Systems {
   playerBullets: BulletSystem;
   enemyBullets: BulletSystem;
   enemies: EnemySystem;
+  lasers: LaserSystem;
   setPieces: SetPieceSystem;
   pickups: PickupSystem;
   collisions: CollisionSystem;
@@ -178,6 +181,7 @@ export class GameWorld extends Component {
     s.playerBullets.render();
     s.enemyBullets.render();
     s.enemies.render();
+    s.lasers.render();
     s.pickups.render();
     s.fx.render();
     s.cameraRig.render();
@@ -258,6 +262,7 @@ export class GameWorld extends Component {
     s.weapons.tick(h);
     s.playerBullets.tick(h);
     s.enemies.tick(w, p.x, p.z, p.alive);
+    s.lasers.tick(w);
     s.enemyBullets.tick(w);
     s.drones.tick(h);
     s.pickups.tick(h, p.x, p.z, p.magnetRadius, p.pickupRadius, p.canCollect);
@@ -364,6 +369,7 @@ export class GameWorld extends Component {
     s.weapons.clear();
     s.drones.clear();
     s.enemies.clear();
+    s.lasers.clear();
     s.pickups.clear();
     s.setPieces.clear();
     s.decor.clear();
@@ -456,9 +462,9 @@ export class GameWorld extends Component {
       shake: (amount) => cameraRig.addTrauma(amount),
     };
 
-    const nebula = new Nebula(ctx);
+    const nebula = new Nebula(ctx, sectorOf(missionId) ?? SECTORS[0]);
     const stars = new Starfield(ctx, mission.scrollSpeed);
-    const decor = new Decor(ctx, mission.scrollSpeed);
+    const decor = new Decor(ctx, mission.scrollSpeed, mission);
     // Player projectile looks: only the bolts this loadout fires, one instanced draw call each.
     const bolts: BoltId[] = [];
     for (const item of [loadout.primary, loadout.secondary]) {
@@ -480,14 +486,15 @@ export class GameWorld extends Component {
     const bulletLookIndex = {} as Record<EnemyBulletId, number>;
     ENEMY_BULLET_IDS.forEach((id, i) => (bulletLookIndex[id] = i));
     const player = new PlayerSystem(ctx, ship, loadout, this.input, shipPrefab);
-    const enemies = new EnemySystem(ctx, needs.enemies, prefabs, props, enemyBullets, bulletLookIndex, mission.groundSpeed);
+    const lasers = new LaserSystem(ctx, player, needs.lasers);
+    const enemies = new EnemySystem(ctx, needs.enemies, prefabs, props, enemyBullets, bulletLookIndex, mission.groundSpeed, lasers);
     enemies.forceElite = debug.elite;
     const weapons = new WeaponSystem(ctx, loadout, player, playerBullets, enemies, boltLooks);
     const pickups = new PickupSystem(ctx, props);
     const drones = new DroneSystem(ctx, loadout, player, playerBullets, enemyBullets, pickups, boltLooks.get('drone') ?? -1, props);
     const setPieces = new SetPieceSystem(ctx, enemies, pickups, needs.setPieces, props, mission.groundSpeed);
     const collisions = new CollisionSystem(ctx, player, playerBullets, enemyBullets, enemies);
-    const score = new ScoreSystem(ctx);
+    const score = new ScoreSystem(ctx, missionPay(missionId));
     const missionDirector = new MissionDirector(ctx, mission, enemies, setPieces, pickups, player, score);
     const fx = new FxSystem(ctx);
     const settings = SettingsService.current;
@@ -501,7 +508,7 @@ export class GameWorld extends Component {
     const overlay = debug.overlay
       ? new DebugOverlay(
           hud.debugLabel(),
-          () => ({ enemies: enemies.count, bullets: playerBullets.count, enemyBullets: enemyBullets.count, pickups: pickups.count, fx: fx.count + decor.count }),
+          () => ({ enemies: enemies.count, bullets: playerBullets.count, enemyBullets: enemyBullets.count + lasers.count, pickups: pickups.count, fx: fx.count + decor.count }),
           () => {
             const t = missionDirector.timeline;
             const kit = `${loadout.primary.id}${loadout.secondary ? `+${loadout.secondary.id}` : ''}`;
@@ -511,17 +518,17 @@ export class GameWorld extends Component {
       : null;
 
     const s: Systems = {
-      ctx, playfield, stars, nebula, decor, player, weapons, drones, playerBullets, enemyBullets, enemies, setPieces, pickups,
+      ctx, playfield, stars, nebula, decor, player, weapons, drones, playerBullets, enemyBullets, enemies, lasers, setPieces, pickups,
       collisions, score, mission: missionDirector, fx, cameraRig, hud, audio, onboarding, overlay,
     };
     bus.on('banner', (e) => hud.showBanner(e.text, e.sub, e.style, e.time));
     const nova = SPECIALS.nova;
     bus.on('novaBomb', () => {
+      // Damage first: whatever bursts on death (mines, Volatile elites) is erased with the rest.
+      if (nova.kind === 'nova') enemies.damageVisible(nova.damage);
       const erased = this.eraseEnemyBullets(s);
-      if (nova.kind === 'nova') {
-        bus.emit('scoreBonus', { amount: erased * nova.bulletScore });
-        enemies.damageVisible(nova.damage);
-      }
+      lasers.clear();
+      if (nova.kind === 'nova') bus.emit('scoreBonus', { amount: erased * nova.bulletScore });
     });
     bus.on('enemyKilled', (e) => {
       if (!e.boss) return;

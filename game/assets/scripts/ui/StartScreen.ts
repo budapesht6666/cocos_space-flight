@@ -7,8 +7,9 @@
 import { _decorator, Camera, Color, Component, EffectAsset, EventKeyboard, Graphics, Input, KeyCode, Label, Node, Prefab, TTFFont, UIOpacity, director, input, instantiate, profiler, resources, screen } from 'cc';
 import { damp, smoothstep } from '../core/math';
 import { missionNeeds, missionPrefabPaths } from '../core/missionNeeds';
-import type { MissionPick } from '../core/progress';
+import { continueTarget, sectorOf, type MissionPick } from '../core/progress';
 import { Rng } from '../core/Rng';
+import { SECTORS } from '../data/campaign';
 import { MISSION_ORDER, MISSIONS } from '../data/missions';
 import { SHIPS, shipModel } from '../data/player';
 import type { MissionId, PaintId, ShipId } from '../data/types';
@@ -73,16 +74,22 @@ class TitlePage implements MenuPage {
   readonly pose = { row: 0.36, scale: 1 };
   readonly logo = true;
   readonly tap: Label;
+  private readonly sector: Label;
 
   constructor(parent: Node, host: MenuHost) {
     this.root = uiNode(parent, 'TitlePage', 0, 0, { top: 0, bottom: 0, left: 0, right: 0 });
     this.root.active = false;
-    uiLabel(this.root, 'Sector', 26, UI.accent, { top: 250, centerX: true }, host.font).string = 'SECTOR 1  ·  OUTER RING';
+    this.sector = uiLabel(this.root, 'Sector', 26, UI.accent, { top: 250, centerX: true }, host.font);
     this.tap = uiLabel(this.root, 'Tap', 34, UI.white, { bottom: 260, centerX: true }, host.font);
     this.tap.string = 'TAP TO START';
   }
 
-  enter(): void {}
+  enter(): void {
+    // Where the player is in the campaign: the sector CONTINUE goes to.
+    const save = SaveService.data;
+    const sector = sectorOf(continueTarget(save.records, save.last).mission) ?? SECTORS[0];
+    this.sector.string = `SECTOR ${sector.id}  ·  ${sector.name}`;
+  }
 
   key(): boolean {
     return false;
@@ -284,7 +291,9 @@ export class StartScreen extends Component implements MenuHost {
     this.playfield = playfield;
     this.kit = kit;
     this.cameraRig = new CameraRig(this.camera, playfield);
-    this.nebula = new Nebula(ctx);
+    // The backdrop of the sector the player is in (what CONTINUE launches).
+    const save = SaveService.data;
+    this.nebula = new Nebula(ctx, sectorOf(continueTarget(save.records, save.last).mission) ?? SECTORS[0]);
     this.stars = new Starfield(ctx, MENU_SCROLL);
     const turntable = new Node('Turntable');
     turntable.layer = this.node.layer;

@@ -24,10 +24,13 @@ const OUT = path.join(ROOT, 'game/assets/resources/models/ships');
 const TEXTURE_SIZE = 512;
 
 /**
- * Recolours for variants we don't have: per pixel in HSV. Imperial ships only in Blue, Green and
- * Orange here; `red` turns the orange paint enemy red and darkens it like the pack's Red variants.
+ * Recolours per pixel in HSV. `red`: Imperial was first downloaded only in Blue, Green and Orange;
+ * it turns the orange paint enemy red and darkens it like the pack's Red variants. `darken`: big
+ * light-grey hulls.
  */
 const RECOLORS = {
+  /** Light grey hulls (Imperial, Insurgent) blow out to white under the HDR sun: greys darker, paint kept. */
+  darken: (h, s, v) => (s > 0.25 ? [h, s, v * 0.9] : [h, s, v * 0.6]),
   red: (h, s, v) => {
     const orange = s > 0.25 && h >= 12 && h <= 55;
     if (orange) return [356, Math.min(1, s * 1.15), v * 0.68];
@@ -53,6 +56,17 @@ const SHIPS = [
   { ship: 'Challenger', color: 'Purple', out: 'challenger_purple' },
   { ship: 'Challenger', color: 'Red', out: 'challenger_red' },
   { ship: 'Imperial', color: 'Orange', recolor: 'red', out: 'imperial_red' },
+  // Sector 2 (Ice Moons): Spinner, Splitter and its shards, the swarm of the Hive Mother.
+  { ship: 'Pancake', color: 'Purple', out: 'pancake_purple' },
+  { ship: 'Pancake', color: 'Red', out: 'pancake_red' },
+  { ship: 'Omen', color: 'Purple', out: 'omen_purple' },
+  { ship: 'Omen', color: 'Red', out: 'omen_red' },
+  { ship: 'Dispatcher', color: 'Purple', out: 'dispatcher_purple' },
+  { ship: 'Insurgent', color: 'Purple', recolor: 'darken', out: 'insurgent_purple' },
+  // Sector 3 (Nebula Drift): Lancer, Carrier, the Leviathan's head.
+  { ship: 'Zenith', color: 'Red', out: 'zenith_red' },
+  { ship: 'Zenith', color: 'Purple', out: 'zenith_purple' },
+  { ship: 'Imperial', color: 'Purple', recolor: 'darken', out: 'imperial_purple' },
 ];
 
 async function buildShip({ ship, color, recolor, out }) {

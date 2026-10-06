@@ -50,7 +50,7 @@ function weaponTable(ids, level) {
   return lines.join('\n');
 }
 
-const TTK_ENEMIES = ['scout', 'gunship', 'turretHeavy', 'marauder', 'dreadnought', 'warden'];
+const TTK_ENEMIES = ['scout', 'gunship', 'turretHeavy', 'marauder', 'dreadnought', 'warden', 'spinner', 'carrier', 'cyclone', 'hiveMother', 'arbiter', 'leviathan'];
 
 function ttkTable(ids, power, level) {
   const scale = { level, damage: 1, cooldown: 1 };
@@ -65,7 +65,7 @@ function ttkTable(ids, power, level) {
 }
 
 function incomeTable() {
-  const rows = balance.allMissionIncome(['normal', 'hard']);
+  const rows = balance.allMissionIncome(['normal', 'hard', 'insane']);
   const lines = ['| Миссия | Сложность | Все кредиты | Прохождение | 4 первые медали | Итого максимум |', '|---|---|---|---|---|---|'];
   for (const r of rows) lines.push(`| ${r.mission} | ${r.difficulty} | ${r.drops} | ${r.clear} | ${r.medals} | ${r.drops + r.clear + r.medals} |`);
   return { text: lines.join('\n'), rows };
@@ -85,9 +85,11 @@ const primaries = Object.keys(PRIMARIES);
 const secondaries = Object.keys(SECONDARIES);
 const income = incomeTable();
 const costs = costTable();
-const normalRuns = income.rows.filter((r) => r.difficulty === 'normal');
-const hardRuns = income.rows.filter((r) => r.difficulty === 'hard');
 const avg = (rows, k = 0.8) => rows.reduce((a, r) => a + r.drops * k + r.clear, 0) / rows.length;
+/** One playthrough of every mission on a difficulty: 80% of the credits, the clear and the first medals. */
+const campaign = (difficulty) => income.rows.filter((r) => r.difficulty === difficulty).reduce((a, r) => a + r.drops * 0.8 + r.clear + r.medals, 0);
+const sectorRuns = (prefix, difficulty) => income.rows.filter((r) => r.difficulty === difficulty && r.mission.startsWith(prefix));
+const runLine = (difficulty) => ['s1', 's2', 's3'].map((p, i) => `Сектор ${i + 1} ≈ ${Math.round(avg(sectorRuns(p, difficulty)))}`).join(', ');
 
 const doc = `# Баланс арсенала
 
@@ -121,13 +123,13 @@ ${weaponTable(secondaries, 1)}
 
 ## Время убийства, секунды (Primary, Power IV, уровень 1, Normal, цель в 5 впереди)
 
-HP: Scout 3, Gunship 22, Heavy Turret 16, Marauder 520, Dreadnought 640 (корпус), Warden 950 (ядро под бронёй 25%, пока живы модули; здесь вся жизнь под бронёй — верхняя оценка).
+HP: Scout 3, Gunship 22, Heavy Turret 16, Marauder 520, Dreadnought 640 (корпус), Warden 950 (ядро под бронёй 25%, пока живы модули; здесь вся жизнь под бронёй — верхняя оценка); Сектор 2 — Spinner 30, Cyclone 620, Hive Mother 1250 (панцирь 20% закрыт ~40% времени — здесь без него, нижняя оценка); Сектор 3 — Carrier 150, Arbiter 720, Leviathan 1300 (голова под бронёй 25%, пока живы 6 сегментов по 120 — верхняя оценка).
 
 ${ttkTable(primaries, 4, 1)}
 
 ## Доход за миссию
 
-«Все кредиты» — если уничтожить всё и всё собрать; реальный прогон собирает ~70–90%. Бонус за прохождение — каждый раз, за медали — один раз.
+«Все кредиты» — если уничтожить всё и всё собрать; реальный прогон собирает ~70–90%. Бонус за прохождение — каждый раз, за медали — один раз. Секторы платят больше (\`SectorDef.pay\`: ×1, ×1.35, ×1.7 — дороже каждая монета и бонусы, монет столько же); Insane и Nightmare — ×3 монет, как Hard ×2. Миньоны Carrier и Hive Mother в модели не считаются (их приносит сверху сколько успеешь сбить).
 
 ${income.text}
 
@@ -135,7 +137,7 @@ ${income.text}
 
 ${costs.text}
 
-Средний прогон (80% кредитов + прохождение): Normal ≈ ${Math.round(avg(normalRuns))}, Hard ≈ ${Math.round(avg(hardRuns))}. Купить всё — ≈ ${Math.round(costs.total / avg(normalRuns))} прогонов Normal или ≈ ${Math.round(costs.total / avg(hardRuns))} прогонов Hard в Секторе 1 (без медалей). На этапе 7 секторы 2–5 платят больше, цель GDD §14 — полный апгрейд ≈ все секторы на Hard и часть на Insane.
+Средний прогон (80% кредитов + прохождение): Normal — ${runLine('normal')}; Hard — ${runLine('hard')}. Кампания целиком (80% кредитов, прохождения и первые медали): Normal ≈ ${Math.round(campaign('normal'))}, Hard ≈ ${Math.round(campaign('hard'))}, Insane ≈ ${Math.round(campaign('insane'))}. Цель GDD §14 — полный апгрейд (${costs.total.toLocaleString('ru-RU')}) ≈ все секторы на Normal и Hard и часть на Insane: Normal + Hard ≈ ${Math.round(campaign('normal') + campaign('hard'))}, с Insane ≈ ${Math.round(campaign('normal') + campaign('hard') + campaign('insane'))}.
 `;
 
 if (process.argv.includes('--print')) console.log(doc);

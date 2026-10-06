@@ -1,10 +1,16 @@
 // Enemy roster (GDD §9). Movement, attacks and drops are data; behaviour code is shared.
+// Sector 1 (Outer Ring), Sector 2 (Ice Moons: ice rocks, Spinner, Splitter, Mine, the Hive Mother
+// and her swarm), Sector 3 (Nebula Drift: Lancer, Carrier, the Leviathan and its segments).
 
 import type { EnemyDef, EnemyId, Rgb } from './types';
 
 const AMBER: Rgb = [1.0, 0.55, 0.15];
 const TEAL: Rgb = [0.2, 0.9, 1.0];
 const RED: Rgb = [1.0, 0.18, 0.12];
+const VIOLET: Rgb = [0.75, 0.3, 1.0];
+const PINK: Rgb = [1.0, 0.3, 0.6];
+/** Ice: blue-grey and glossy; dark enough not to blow out under the HDR sun. */
+const ICE: Rgb = [0.27, 0.37, 0.5];
 
 export const ENEMIES: Record<EnemyId, EnemyDef> = {
   scout: {
@@ -212,4 +218,335 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     drops: { credits: 4, bigCredits: 3 },
     explosion: 'medium',
   },
+
+  // ---- Sector 2: Ice Moons -------------------------------------------------------------------
+
+  /** Ice floe: tougher than rock, breaks into chips. */
+  iceRock: {
+    id: 'iceRock',
+    name: 'Ice Rock',
+    look: { kind: 'rock', size: 1.6, color: ICE, metallic: 0.15, roughness: 0.35 },
+    hp: 14,
+    radius: 0.75,
+    score: 140,
+    move: { kind: 'drift', speed: 3.0, spreadX: 0.8, spin: 60 },
+    attacks: [],
+    drops: { credits: 1, bigCredits: 0, extra: { kind: 'bigCredit', chance: 0.35 } },
+    explosion: 'medium',
+    obstacle: true,
+    split: { enemy: 'iceChip', count: 3, speed: 2.4 },
+  },
+  iceChip: {
+    id: 'iceChip',
+    name: 'Ice Chip',
+    look: { kind: 'rock', size: 0.7, color: ICE, metallic: 0.15, roughness: 0.35 },
+    hp: 4,
+    radius: 0.35,
+    score: 50,
+    move: { kind: 'drift', speed: 3.0, spreadX: 0.6, spin: 140 },
+    attacks: [],
+    drops: { credits: 0, bigCredits: 0, extra: { kind: 'credit', chance: 0.45 } },
+    explosion: 'small',
+    obstacle: true,
+  },
+  /** Saucer that hovers and spins out spirals (GDD: Spinner). */
+  spinner: {
+    id: 'spinner',
+    name: 'Spinner',
+    look: { kind: 'model', path: 'models/ships/pancake_purple/pancake_purple', size: 1.7 },
+    hp: 30,
+    radius: 0.8,
+    score: 500,
+    move: { kind: 'hover', enterSpeed: 5, depth: 0.2, time: 6, sway: 0.6, swayFrequency: 0.22, exitSpeed: -4 },
+    spin: 110,
+    bank: 0.3,
+    attacks: [{ pattern: 'spinnerSpiral' }, { pattern: 'spinnerRing', minDifficulty: 'hard' }],
+    drops: { credits: 2, bigCredits: 1, extra: { kind: 'shield', chance: 0.12 } },
+    explosion: 'medium',
+  },
+  /** Comes straight down; when it dies, three shards fly out and home in (GDD: Splitter). */
+  splitter: {
+    id: 'splitter',
+    name: 'Splitter',
+    look: { kind: 'model', path: 'models/ships/omen_purple/omen_purple', size: 1.5 },
+    hp: 14,
+    radius: 0.65,
+    score: 300,
+    move: { kind: 'straight', speed: 2.8 },
+    attacks: [{ pattern: 'splitterShot' }],
+    drops: { credits: 1, bigCredits: 0 },
+    explosion: 'medium',
+    split: { enemy: 'shard', count: 3, speed: 5 },
+  },
+  shard: {
+    id: 'shard',
+    name: 'Shard',
+    look: { kind: 'model', path: 'models/ships/omen_purple/omen_purple', size: 0.75 },
+    hp: 3,
+    radius: 0.35,
+    score: 80,
+    move: { kind: 'shard', speed: 6.5, turn: 110, homeTime: 1.1 },
+    attacks: [],
+    drops: { credits: 0, bigCredits: 0, extra: { kind: 'credit', chance: 0.5 } },
+    explosion: 'small',
+  },
+  /** Drifting mine: arms near the ship and blows into a ring of bullets — shoot it first (GDD: Mine). */
+  mine: {
+    id: 'mine',
+    name: 'Mine',
+    look: { kind: 'mine', size: 1.1 },
+    hp: 6,
+    radius: 0.5,
+    score: 150,
+    move: { kind: 'drift', speed: 2.3, spreadX: 0.25, spin: 40 },
+    attacks: [],
+    drops: { credits: 1, bigCredits: 0 },
+    explosion: 'medium',
+    obstacle: true,
+    deathPattern: 'mineBurst',
+    proximity: { radius: 2.6, fuse: 0.75 },
+  },
+  /** The Hive Mother's swarm: out of a hatch, a beat to aim, then a dive at the ship. */
+  swarmer: {
+    id: 'swarmer',
+    name: 'Swarmer',
+    look: { kind: 'model', path: 'models/ships/dispatcher_purple/dispatcher_purple', size: 1.0 },
+    hp: 3,
+    radius: 0.4,
+    score: 60,
+    move: { kind: 'dive', enterSpeed: 6, holdTime: 0.5, holdDepth: 0.44, diveSpeed: 13 },
+    attacks: [],
+    drops: { credits: 0, bigCredits: 0, extra: { kind: 'credit', chance: 0.35 } },
+    explosion: 'small',
+  },
+  /** s2m1 mini-boss: a big spinning saucer, spirals within spirals. */
+  cyclone: {
+    id: 'cyclone',
+    name: 'CYCLONE',
+    look: { kind: 'model', path: 'models/ships/pancake_red/pancake_red', size: 3.8 },
+    hp: 620,
+    radius: 1.7,
+    score: 7000,
+    move: { kind: 'hover', enterSpeed: 4, depth: 0.27, time: Infinity, sway: 2.0, swayFrequency: 0.1, exitSpeed: 0 },
+    spin: 45,
+    bank: 0.3,
+    attacks: [
+      { pattern: 'cycloneSpiral' },
+      { pattern: 'cycloneRing', hpBelow: 0.66, hpAbove: 0.33 },
+      { pattern: 'cycloneStorm', hpBelow: 0.33 },
+    ],
+    drops: { credits: 7, bigCredits: 9, extra: { kind: 'repair', chance: 1 } },
+    explosion: 'large',
+  },
+  /** s2m2 mini-boss: a giant Splitter that bursts into homing shards when it dies. */
+  shatterer: {
+    id: 'shatterer',
+    name: 'SHATTERER',
+    look: { kind: 'model', path: 'models/ships/omen_red/omen_red', size: 4.0 },
+    hp: 700,
+    radius: 1.9,
+    score: 8000,
+    move: { kind: 'hover', enterSpeed: 3.5, depth: 0.27, time: Infinity, sway: 1.6, swayFrequency: 0.09, exitSpeed: 0 },
+    bank: 0.5,
+    attacks: [
+      { pattern: 'shattererFan', hpAbove: 0.33 },
+      { pattern: 'shattererRain', hpBelow: 0.66 },
+      { pattern: 'shattererRings', hpBelow: 0.33 },
+    ],
+    split: { enemy: 'shard', count: 6, speed: 6 },
+    drops: { credits: 7, bigCredits: 9, extra: { kind: 'shield', chance: 1 } },
+    explosion: 'large',
+  },
+  /**
+   * Sector 2 boss: a brood carrier. Its armoured shell opens as it launches the swarm — that is
+   * when it can be hurt.
+   */
+  hiveMother: {
+    id: 'hiveMother',
+    name: 'HIVE MOTHER',
+    look: { kind: 'model', path: 'models/ships/insurgent_purple/insurgent_purple', size: 6.6 },
+    hp: 1250,
+    radius: 3.9,
+    // The broad brood deck at the back (top), the narrow prow towards the ship.
+    hull: [
+      { x: 0, z: -2.3, r: 1.55 },
+      { x: 0, z: -0.6, r: 0.95 },
+      { x: 0, z: 1.0, r: 0.8 },
+      { x: 0, z: 2.5, r: 0.75 },
+    ],
+    score: 16000,
+    // Lower than other bosses: the brood deck at its back must be on screen.
+    move: { kind: 'hover', enterSpeed: 3, depth: 0.34, time: Infinity, sway: 1.2, swayFrequency: 0.06, exitSpeed: 0 },
+    bank: 0.25,
+    attacks: [
+      { pattern: 'hiveFan', hpAbove: 0.33 },
+      { pattern: 'hiveRing', hpBelow: 0.66 },
+      { pattern: 'hiveSpiral', hpBelow: 0.33 },
+    ],
+    broods: [
+      { enemy: 'swarmer', hatches: [[-1.2, -2.0], [1.2, -2.0]], interval: 4.2, delay: 2.5, alive: 10, hpAbove: 0.5 },
+      { enemy: 'swarmer', hatches: [[-1.2, -2.0], [1.2, -2.0], [-0.7, 0.2], [0.7, 0.2]], interval: 3.6, delay: 1.0, alive: 10, hpBelow: 0.5 },
+    ],
+    shell: { armor: 0.2, open: 2.4 },
+    vents: [
+      { x: -1.2, z: -2.0, y: 1.0, size: 1.9, color: VIOLET },
+      { x: 1.2, z: -2.0, y: 1.0, size: 1.9, color: VIOLET },
+      { x: -0.7, z: 0.2, y: 0.9, size: 1.0, color: PINK },
+      { x: 0.7, z: 0.2, y: 0.9, size: 1.0, color: PINK },
+    ],
+    drops: { credits: 12, bigCredits: 14, extra: { kind: 'repair', chance: 1 } },
+    explosion: 'large',
+  },
+
+  // ---- Sector 3: Nebula Drift ----------------------------------------------------------------
+
+  /** Sniper: takes a spot near the top, shows a red line for a second, then fires a beam (GDD: Lancer). */
+  lancer: {
+    id: 'lancer',
+    name: 'Lancer',
+    look: { kind: 'model', path: 'models/ships/zenith_red/zenith_red', size: 1.8 },
+    hp: 26,
+    radius: 0.75,
+    score: 600,
+    move: { kind: 'hover', enterSpeed: 6, depth: 0.24, time: 6.5, sway: 0.25, swayFrequency: 0.2, exitSpeed: -5 },
+    bank: 0.6,
+    attacks: [{ pattern: 'lancerShot', minDifficulty: 'hard' }],
+    lasers: [{ laser: 'lancerBeam' }],
+    drops: { credits: 2, bigCredits: 1, extra: { kind: 'energy', chance: 0.1 } },
+    explosion: 'medium',
+  },
+  /** Slow carrier crossing the screen, launching Scouts while it lives (GDD: Carrier). */
+  carrier: {
+    id: 'carrier',
+    name: 'Carrier',
+    look: { kind: 'model', path: 'models/ships/imperial_purple/imperial_purple', size: 4.2 },
+    hp: 150,
+    radius: 2.2,
+    hull: [
+      { x: 0, z: -1.4, r: 0.8 },
+      { x: 0, z: 0, r: 0.9 },
+      { x: 0, z: 1.4, r: 0.8 },
+    ],
+    score: 2000,
+    move: { kind: 'straight', speed: 1.4 },
+    bank: 0,
+    attacks: [{ pattern: 'carrierGuns' }],
+    broods: [{ enemy: 'scout', hatches: [[-1.0, 0.3], [1.0, 0.3]], interval: 2.6, delay: 1.2, alive: 6 }],
+    drops: { credits: 4, bigCredits: 3, extra: { kind: 'power', chance: 0.25 } },
+    explosion: 'large',
+  },
+  /** s3m1 mini-boss: a heavy Lancer — one beam, then two, then a sweeping one. */
+  arbiter: {
+    id: 'arbiter',
+    name: 'ARBITER',
+    look: { kind: 'model', path: 'models/ships/zenith_purple/zenith_purple', size: 4.2 },
+    hp: 720,
+    radius: 2.3,
+    hull: [
+      { x: 0, z: 1.3, r: 1.0 },
+      { x: 0, z: 0, r: 0.65 },
+      { x: 0, z: -1.4, r: 0.6 },
+    ],
+    score: 9000,
+    move: { kind: 'hover', enterSpeed: 3.6, depth: 0.25, time: Infinity, sway: 2.2, swayFrequency: 0.11, exitSpeed: 0 },
+    bank: 0.6,
+    attacks: [
+      { pattern: 'arbiterFan', hpAbove: 0.33 },
+      { pattern: 'arbiterRing', hpBelow: 0.33 },
+    ],
+    lasers: [
+      { laser: 'arbiterBeam', hpAbove: 0.66 },
+      { laser: 'arbiterTwin', hpBelow: 0.66, hpAbove: 0.33 },
+      { laser: 'arbiterSweep', hpBelow: 0.33 },
+    ],
+    drops: { credits: 7, bigCredits: 9, extra: { kind: 'repair', chance: 1 } },
+    explosion: 'large',
+  },
+  /** s3m2 mini-boss: the Carriers' mothership — Scouts out of its bays, Darts later, two side guns. */
+  broodship: {
+    id: 'broodship',
+    name: 'BROODSHIP',
+    look: { kind: 'model', path: 'models/ships/imperial_purple/imperial_purple', size: 6.4 },
+    hp: 800,
+    radius: 3.2,
+    hull: [
+      { x: 0, z: -2.2, r: 0.95 },
+      { x: 0, z: -0.8, r: 1.2 },
+      { x: 0, z: 0.7, r: 1.15 },
+      { x: 0, z: 2.2, r: 0.75 },
+    ],
+    score: 10000,
+    move: { kind: 'hover', enterSpeed: 3.2, depth: 0.27, time: Infinity, sway: 1.3, swayFrequency: 0.07, exitSpeed: 0 },
+    bank: 0.35,
+    attacks: [
+      { pattern: 'broodBroadside', hpAbove: 0.33 },
+      { pattern: 'broodLance', hpBelow: 0.66 },
+      { pattern: 'broodBarrage', hpBelow: 0.33 },
+    ],
+    broods: [
+      { enemy: 'scout', hatches: [[-1.3, -0.6], [1.3, -0.6]], interval: 3.2, delay: 2.0, alive: 8 },
+      { enemy: 'dart', hatches: [[0, 2.2]], interval: 4.5, delay: 1.0, alive: 2, hpBelow: 0.66 },
+    ],
+    parts: [
+      { enemy: 'dreadnoughtGun', x: -1.3, z: 0.35, y: 0.5 },
+      { enemy: 'dreadnoughtGun', x: 1.3, z: 0.35, y: 0.5 },
+    ],
+    drops: { credits: 8, bigCredits: 10, extra: { kind: 'shield', chance: 1 } },
+    explosion: 'large',
+  },
+  /**
+   * Sector 3 boss: a serpent. Its six segments trail behind the head and shoot; the head is
+   * armoured until they are gone, and charges a beam at the ship.
+   */
+  leviathan: {
+    id: 'leviathan',
+    name: 'LEVIATHAN',
+    look: { kind: 'model', path: 'models/ships/zenith_red/zenith_red', size: 3.6 },
+    hp: 1300,
+    radius: 1.7,
+    score: 20000,
+    move: { kind: 'serpent', enterSpeed: 4, depth: 0.3, width: 0.55, height: 0.09, period: 11, spacing: 1.45 },
+    bank: 0.4,
+    attacks: [
+      { pattern: 'leviathanFan', hpAbove: 0.33 },
+      { pattern: 'leviathanRings', hpBelow: 0.66 },
+      { pattern: 'leviathanSpiral', hpBelow: 0.33 },
+    ],
+    lasers: [
+      { laser: 'leviathanBeam', hpAbove: 0.33 },
+      { laser: 'leviathanSweep', hpBelow: 0.33 },
+    ],
+    parts: [
+      { enemy: 'leviathanSegment', x: 0, z: -1.45, y: 0.1 },
+      { enemy: 'leviathanSegment', x: 0, z: -2.9, y: 0.1 },
+      { enemy: 'leviathanSegment', x: 0, z: -4.35, y: 0.1 },
+      { enemy: 'leviathanSegment', x: 0, z: -5.8, y: 0.1 },
+      { enemy: 'leviathanSegment', x: 0, z: -7.25, y: 0.1 },
+      { enemy: 'leviathanSegment', x: 0, z: -8.7, y: 0.1 },
+    ],
+    armor: 0.25,
+    drops: { credits: 12, bigCredits: 14, extra: { kind: 'repair', chance: 1 } },
+    explosion: 'large',
+  },
+  leviathanSegment: {
+    id: 'leviathanSegment',
+    name: 'Segment',
+    look: {
+      kind: 'assembly',
+      size: 1,
+      modules: [
+        { prop: 'hull_tank', x: 0, z: 0, scale: 2.0, height: 0.75 },
+        { prop: 'hull_pipe', x: 0, z: 0.75, scale: 1.1, height: 0.5 },
+      ],
+      lights: [{ x: 0, z: 0, y: 1.0, size: 0.95, color: PINK }],
+    },
+    hp: 120,
+    radius: 0.95,
+    score: 1500,
+    move: { kind: 'attached' },
+    attacks: [{ pattern: 'segmentShot' }, { pattern: 'segmentRing', minDifficulty: 'hard' }],
+    drops: { credits: 3, bigCredits: 2 },
+    explosion: 'medium',
+  },
 };
+

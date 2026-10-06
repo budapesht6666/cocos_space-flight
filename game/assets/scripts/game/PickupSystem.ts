@@ -60,7 +60,9 @@ export class PickupSystem {
       pool.prewarm(def.pool);
       this.pools.set(kind, pool);
     }
-    ctx.bus.on('enemyKilled', (e) => this.drop(e.def.drops, e.x, e.z));
+    ctx.bus.on('enemyKilled', (e) => {
+      if (!e.self) this.drop(e.def.drops, e.x, e.z);
+    });
   }
 
   spawn(kind: PickupKind, x: number, z: number): void {

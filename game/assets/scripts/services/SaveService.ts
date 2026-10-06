@@ -6,12 +6,12 @@ import { sys } from 'cc';
 import { applyCheat, findCheat } from '../core/cheats';
 import { buyUpgrade, grantCredits, runRewards, setWallet, type BuyResult, type RunRewards } from '../core/economy';
 import { autoEquip, buildLoadout, equipItem, type EquipResult } from '../core/loadout';
-import { openHangarItems, shipUnlocked } from '../core/progress';
+import { missionPay, openHangarItems, shipUnlocked } from '../core/progress';
 import { applyRun, getRecord, type MissionRecord, type RecordMap, type RecordUpdate, type RunOutcome } from '../core/records';
 import { loadSave, newSave, serializeSave, type SaveData } from '../core/save';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_PAINT, DEFAULT_SHIP, SHIPS } from '../data/player';
-import type { ArsenalId, CheatDef, Difficulty, Loadout, PaintId, ShipId, UpgradeId } from '../data/types';
+import type { ArsenalId, CheatDef, Difficulty, Loadout, MissionId, PaintId, ShipId, UpgradeId } from '../data/types';
 
 const KEY = 'spaceflight.save';
 /** Stage 3 kept only records, here; migrated into the save once and removed. */
@@ -144,7 +144,7 @@ export const SaveService = {
     const save = load();
     const before = openHangarItems(save.records);
     const update = applyRun(save.records, mission, difficulty, run);
-    const rewards = runRewards(run.complete, collected, update.newMedals, DIFFICULTIES[difficulty].credits);
+    const rewards = runRewards(run.complete, collected, update.newMedals, DIFFICULTIES[difficulty].credits * missionPay(mission as MissionId));
     grantCredits(save, rewards.total);
     persist();
     const unlocked = openHangarItems(save.records).filter((name) => before.indexOf(name) < 0);

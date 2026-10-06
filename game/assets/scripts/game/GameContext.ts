@@ -20,6 +20,10 @@ export interface EnemyKilledEvent {
   /** A destructible part of a bigger enemy. */
   part: boolean;
   elite: EliteDef | null;
+  /** It blew itself up (a mine's fuse ran out): no score, loot or Energy. */
+  self: boolean;
+  /** Counts towards the kill rate (not an obstacle, not a launched minion). */
+  counted: boolean;
 }
 
 export type BannerStyle = 'title' | 'warning' | 'success';
@@ -58,6 +62,12 @@ export interface GameEvents {
   podsLaunched: { count: number; x: number; z: number };
   /** A pod fell off the screen. */
   podLost: { x: number; z: number };
+  /** Minions launched from hatches; `shell`: the launcher's armour opened. */
+  broodLaunched: { x: number; z: number; shell: boolean };
+  /** A mine sensed the ship and started its fuse. */
+  mineArmed: { x: number; z: number };
+  /** An enemy laser started its warning line, or its beam. */
+  laser: { x: number; z: number; firing: boolean };
 }
 
 /** What background systems (nebula, stars) need; the start screen builds one without a game. */

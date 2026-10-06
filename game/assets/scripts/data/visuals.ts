@@ -27,6 +27,9 @@ export const COLORS = {
   /** Specials: Overdrive, Time Warp (the Phase Shield uses the shield colour). */
   overdrive: [1.0, 0.75, 0.3] as Rgb,
   warp: [0.55, 0.45, 1.0] as Rgb,
+  /** Enemy lasers: the beam and its warning line (enemy colours: red into pink). */
+  laser: [1.0, 0.25, 0.4] as Rgb,
+  laserWarn: [1.0, 0.2, 0.25] as Rgb,
 };
 
 export const STARFIELD = {
@@ -38,7 +41,7 @@ export const STARFIELD = {
   ],
 };
 
-/** Sector 1 "Outer Ring" palette: deep blue with violet and teal clouds. */
+/** The nebula plane far below the field; each sector bakes its own colours (SectorDef.nebula). */
 export const NEBULA = {
   depth: -70,
   /** Baked texture size; the nebula is soft, so a small texture stretched over the plane is enough. */
@@ -47,14 +50,8 @@ export const NEBULA = {
   /** Noise lattice cells across / along one texture (first octave). */
   cellsX: 2,
   cellsY: 4,
-  seed: 11,
-  base: [0.006, 0.008, 0.03] as Rgb,
-  colorA: [0.05, 0.12, 0.42] as Rgb,
-  colorB: [0.36, 0.08, 0.5] as Rgb,
-  colorC: [0.02, 0.45, 0.55] as Rgb,
   /** Texture lengths per second. */
   scrollSpeed: 0.005,
-  intensity: 0.24,
 };
 
 export const EXPLOSIONS = {

@@ -19,6 +19,7 @@ import type { Difficulty, DropSpec, EnemyId, MissionId, WeaponDef, WeaponId } fr
 import { WEAPONS } from '../data/weapons';
 import { armorScale, CHAIN_BEHIND, falloffScale, fireInterval, peakDps, pickChain, rayDistance, shotDamage, type GunScale } from './arsenal';
 import { formationSize } from './formations';
+import { missionPay } from './progress';
 
 const DEG = Math.PI / 180;
 
@@ -229,6 +230,7 @@ export interface MissionIncome {
 
 export function missionIncome(mission: MissionId, difficulty: Difficulty): MissionIncome {
   const scale = DIFFICULTIES[difficulty].credits;
+  const pay = missionPay(mission);
   let drops = 0;
   for (const e of MISSIONS[mission].events) {
     if (e.type === 'spawn') {
@@ -242,9 +244,9 @@ export function missionIncome(mission: MissionId, difficulty: Difficulty): Missi
   return {
     mission,
     difficulty,
-    drops: Math.round(drops),
-    clear: Math.round(REWARDS.clear * scale),
-    medals: Math.round(MEDALS.length * REWARDS.firstMedal * scale),
+    drops: Math.round(drops * pay),
+    clear: Math.round(REWARDS.clear * scale * pay),
+    medals: Math.round(MEDALS.length * REWARDS.firstMedal * scale * pay),
   };
 }
 

@@ -1,9 +1,10 @@
-// Big plane far below the playfield showing a nebula baked once per page load (core/nebula.ts,
-// cached in the shared RenderKit, so scene switches don't bake it again). Scrolling is a UV
-// offset, so the per-pixel cost is a single texture fetch — cheap on phones.
+// Big plane far below the playfield showing a nebula baked once per page load per sector palette
+// (core/nebula.ts, cached in the shared RenderKit, so scene switches don't bake it again).
+// Scrolling is a UV offset, so the per-pixel cost is a single texture fetch — cheap on phones.
 
 import { Material, MeshRenderer, Node, Vec4 } from 'cc';
 import { bakeNebula } from '../core/nebula';
+import type { SectorDef } from '../data/types';
 import { NEBULA } from '../data/visuals';
 import type { BackdropContext } from '../game/GameContext';
 
@@ -13,21 +14,26 @@ export class Nebula {
   private readonly tiling = new Vec4(1, 1, 0, 0);
   private offset = 0;
 
-  constructor(private readonly ctx: BackdropContext) {
-    const baked = ctx.kit.bake('nebula', () => bakeNebula({
+  constructor(
+    private readonly ctx: BackdropContext,
+    sector: SectorDef,
+  ) {
+    const palette = sector.nebula;
+    const key = `nebula${sector.id}`;
+    const baked = ctx.kit.bake(key, () => bakeNebula({
       width: NEBULA.textureWidth,
       height: NEBULA.textureHeight,
       cellsX: NEBULA.cellsX,
       cellsY: NEBULA.cellsY,
-      base: NEBULA.base,
-      colorA: NEBULA.colorA,
-      colorB: NEBULA.colorB,
-      colorC: NEBULA.colorC,
-      intensity: NEBULA.intensity,
-      seed: NEBULA.seed,
+      base: palette.base,
+      colorA: palette.colorA,
+      colorB: palette.colorB,
+      colorC: palette.colorC,
+      intensity: palette.intensity,
+      seed: palette.seed,
     }));
-    const texture = ctx.kit.bake('nebulaTexture', () => ctx.kit.textureFromRgba(baked.data, baked.width, baked.height, true));
-    this.material = ctx.kit.backdrop('nebula', texture, baked.scale);
+    const texture = ctx.kit.bake(`${key}Texture`, () => ctx.kit.textureFromRgba(baked.data, baked.width, baked.height, true));
+    this.material = ctx.kit.backdrop(key, texture, baked.scale);
     this.node = new Node('Nebula');
     this.node.layer = ctx.worldRoot.layer;
     ctx.worldRoot.addChild(this.node);

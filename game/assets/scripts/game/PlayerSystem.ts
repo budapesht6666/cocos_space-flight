@@ -107,8 +107,8 @@ export class PlayerSystem {
     this.bubble.setPosition(0, 0.2, 0);
     this.bubble.setScale(def.size * 1.45, 1, def.size * 1.45);
 
-    ctx.bus.on('enemyKilled', () => {
-      if (this.alive) this.vitals.addEnergy(ENERGY.perKill);
+    ctx.bus.on('enemyKilled', (e) => {
+      if (this.alive && !e.self) this.vitals.addEnergy(ENERGY.perKill);
     });
     ctx.bus.on('graze', () => {
       if (this.alive) this.vitals.addEnergy(ENERGY.perGraze);

@@ -8,6 +8,8 @@ import type { SetPieceDef, SetPieceId } from './types';
 
 const AMBER = [1.0, 0.55, 0.15] as const;
 const TEAL = [0.2, 0.9, 1.0] as const;
+const FROST = [0.7, 0.9, 1.0] as const;
+const VIOLET = [0.75, 0.35, 1.0] as const;
 
 export const SET_PIECES: Record<SetPieceId, SetPieceDef> = {
   /** Square deck with a hangar at the back and three guns facing the incoming ship. */
@@ -165,5 +167,65 @@ export const SET_PIECES: Record<SetPieceId, SetPieceDef> = {
       { enemy: 'turret', x: 3.4, z: 3.0 },
     ],
     pods: { count: 2, x: 0, z: 0.4 },
+  },
+  /** Ice Moons: a research dome on the ice, crystal cores mined beside it, three guns in front. */
+  cryoLab: {
+    id: 'cryoLab',
+    length: 10,
+    modules: [
+      { prop: 'station_platform', x: -1.6, z: -3.0 },
+      { prop: 'station_platform', x: 1.6, z: -3.0 },
+      { prop: 'station_platform', x: -1.6, z: 0.2 },
+      { prop: 'station_platform', x: 1.6, z: 0.2 },
+      { prop: 'station_dome', x: 0, z: 2.6 },
+      { prop: 'station_ore', x: 3.2, z: -0.4 },
+      { prop: 'station_ore', x: 3.6, z: 1.0, rot: 120 },
+      { prop: 'station_tank', x: -3.3, z: -0.6 },
+      { prop: 'station_tank', x: -3.3, z: 0.8 },
+      { prop: 'station_dish', x: -2.8, z: 3.4, rot: 160 },
+    ],
+    lights: [
+      { x: 0, z: 2.6, size: 1.5, color: FROST },
+      { x: -3.1, z: -4.5, size: 0.7, color: AMBER },
+      { x: 3.1, z: -4.5, size: 0.7, color: AMBER },
+      { x: 3.4, z: 0.3, size: 0.7, color: TEAL },
+    ],
+    turrets: [
+      { enemy: 'turret', x: -1.7, z: -3.2 },
+      { enemy: 'turret', x: 1.7, z: -3.2 },
+      { enemy: 'turretHeavy', x: 0, z: -0.2 },
+    ],
+    pods: { count: 2, x: 0, z: 2.6 },
+  },
+  /** Nebula Drift: a navigation beacon — dishes on a lattice spine, heavy guns at both ends. */
+  beacon: {
+    id: 'beacon',
+    length: 13,
+    modules: [
+      { prop: 'station_platform', x: 0, z: -5.0 },
+      { prop: 'station_lattice', x: 0, z: -3.3 },
+      { prop: 'station_lattice', x: 0, z: -2.0 },
+      { prop: 'station_generator', x: 0, z: -0.4 },
+      { prop: 'station_lattice', x: 0, z: 1.2 },
+      { prop: 'station_lattice', x: 0, z: 2.5 },
+      { prop: 'station_platform', x: 0, z: 4.6 },
+      { prop: 'station_dish', x: -1.7, z: 0.2, rot: 90 },
+      { prop: 'station_dish', x: 1.7, z: -0.8, rot: -90 },
+      { prop: 'station_platform', x: -2.56, z: -3.8 },
+      { prop: 'station_platform', x: 2.56, z: 3.2 },
+    ],
+    lights: [
+      { x: 0, z: -0.4, size: 1.4, color: VIOLET },
+      { x: -3.7, z: -3.8, size: 0.6, color: AMBER },
+      { x: 3.7, z: 3.2, size: 0.6, color: AMBER },
+      { x: 0, z: 5.9, size: 0.9, color: VIOLET },
+    ],
+    turrets: [
+      { enemy: 'turretHeavy', x: 0, z: -5.0 },
+      { enemy: 'turret', x: -2.56, z: -3.8 },
+      { enemy: 'turret', x: 2.56, z: 3.2 },
+      { enemy: 'turretHeavy', x: 0, z: 4.6 },
+    ],
+    pods: { count: 2, x: 0, z: -0.4 },
   },
 };

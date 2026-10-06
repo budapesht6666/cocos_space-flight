@@ -95,3 +95,46 @@ function cross(a: number[], b: number[]): number[] {
 function dot(a: number[], b: number[]): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
+
+/**
+ * Space mine: a low-poly core with a spike out of every icosahedron vertex, flat-shaded, unit
+ * radius at the spike tips.
+ */
+export function buildMine(): RockGeometry {
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const core = 0.6;
+  const verts = ICO_VERTS.map((v) => normalize(v));
+  const tri = (a: number[], b: number[], c: number[]): void => {
+    let n = normalize(cross(sub(b, a), sub(c, a)));
+    const centroid = [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3];
+    if (dot(n, centroid) < 0) {
+      [b, c] = [c, b];
+      n = [-n[0], -n[1], -n[2]];
+    }
+    for (const p of [a, b, c]) {
+      positions.push(p[0], p[1], p[2]);
+      normals.push(n[0], n[1], n[2]);
+    }
+  };
+  const scaled = (v: number[], k: number): number[] => [v[0] * k, v[1] * k, v[2] * k];
+  for (const [a, b, c] of ICO_FACES) tri(scaled(verts[a], core), scaled(verts[b], core), scaled(verts[c], core));
+  // Spikes: a three-sided cone from just inside the core out to the tip.
+  for (const d of verts) {
+    const up = Math.abs(d[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+    const u = normalize(cross(d, up));
+    const w = cross(d, u);
+    const base: number[][] = [];
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2;
+      const r = 0.13;
+      base.push([
+        d[0] * 0.5 + (u[0] * Math.cos(a) + w[0] * Math.sin(a)) * r,
+        d[1] * 0.5 + (u[1] * Math.cos(a) + w[1] * Math.sin(a)) * r,
+        d[2] * 0.5 + (u[2] * Math.cos(a) + w[2] * Math.sin(a)) * r,
+      ]);
+    }
+    for (let k = 0; k < 3; k++) tri(base[k], base[(k + 1) % 3], d);
+  }
+  return { positions, normals };
+}

@@ -62,6 +62,9 @@ export class GameAudio {
     bus.on('bulletBlocked', () => AudioService.play('blocked'));
     bus.on('podsLaunched', () => AudioService.play('podsLaunched'));
     bus.on('podLost', () => AudioService.play('podLost'));
+    bus.on('laser', (e) => AudioService.play(e.firing ? 'laserFire' : 'laserCharge'));
+    bus.on('mineArmed', () => AudioService.play('mineArmed'));
+    bus.on('broodLaunched', () => AudioService.play('broodLaunch'));
     bus.on('banner', (e) => {
       if (e.style === 'warning') {
         AudioService.play('warning');

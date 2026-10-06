@@ -25,6 +25,8 @@ export interface DifficultyDef {
   /** Chance that a wave enemy spawns as an elite (GDD §9), and optional weight overrides. */
   eliteChance: number;
   eliteWeights?: Partial<Record<EliteId, number>>;
+  /** What sets it apart, shown on the mission page until it is cleared there. */
+  note: string;
 }
 
 export interface WorldDef {
@@ -318,7 +320,65 @@ export type PatternId =
   | 'wardenAimed'
   | 'wardenRings'
   | 'wardenFlower'
-  | 'wardenSpiral';
+  | 'wardenSpiral'
+  // Sector 2: Ice Moons.
+  | 'spinnerSpiral'
+  | 'spinnerRing'
+  | 'splitterShot'
+  | 'mineBurst'
+  | 'cycloneSpiral'
+  | 'cycloneRing'
+  | 'cycloneStorm'
+  | 'shattererFan'
+  | 'shattererRain'
+  | 'shattererRings'
+  | 'hiveFan'
+  | 'hiveRing'
+  | 'hiveSpiral'
+  // Sector 3: Nebula Drift.
+  | 'carrierGuns'
+  | 'lancerShot'
+  | 'arbiterFan'
+  | 'arbiterRing'
+  | 'broodBroadside'
+  | 'broodLance'
+  | 'broodBarrage'
+  | 'segmentShot'
+  | 'segmentRing'
+  | 'leviathanFan'
+  | 'leviathanRings'
+  | 'leviathanSpiral';
+
+export type LaserId = 'lancerBeam' | 'arbiterBeam' | 'arbiterTwin' | 'arbiterSweep' | 'leviathanBeam' | 'leviathanSweep';
+
+/**
+ * An enemy laser: a thin warning line for `warn` seconds (aimed at the player when it starts),
+ * then a beam `width` wide for `fire` seconds that hits the ship anywhere along it; `count` beams
+ * fan `gapDeg` apart. `sweepDeg` turns the beam while it fires (degrees per second, alternating
+ * direction each shot). Cooldowns scale with the difficulty's fire rate, warnings never do.
+ */
+export interface LaserSpec {
+  warn: number;
+  fire: number;
+  width: number;
+  length: number;
+  count: number;
+  gapDeg: number;
+  /** Aim at the player when the warning starts; otherwise straight down rotated by `angleDeg`. */
+  aim: boolean;
+  angleDeg: number;
+  sweepDeg: number;
+  /** Seconds between the end of one shot and the next warning, and before the first. */
+  cooldown: number;
+  delay: number;
+}
+
+export interface LaserRef {
+  laser: LaserId;
+  minDifficulty?: Difficulty;
+  hpBelow?: number;
+  hpAbove?: number;
+}
 
 /**
  * A bullet emitter (BulletML-lite). A volley is `count` bullets fanned `gapDeg` apart around a base
@@ -371,7 +431,18 @@ export type MoveSpec =
   /** Moves with the level's ground (turrets on set pieces). */
   | { kind: 'ground' }
   /** A destructible part riding on its parent (EnemyDef.parts); placed by the enemy system. */
-  | { kind: 'attached' };
+  | { kind: 'attached' }
+  /**
+   * Splitter shards: fly out with the velocity they were flung at, then home in on the ship for
+   * `homeTime` seconds (turning at most `turn` degrees per second) at `speed`, then fly straight.
+   */
+  | { kind: 'shard'; speed: number; turn: number; homeTime: number }
+  /**
+   * A serpent (the Leviathan): enters to `depth`, then swims a figure eight `width` half-widths
+   * wide and `height` (depth fraction) tall every `period` seconds. Its parts trail behind it,
+   * `spacing` units apart, along the path it swam.
+   */
+  | { kind: 'serpent'; enterSpeed: number; depth: number; width: number; height: number; period: number; spacing: number };
 
 /** Props built by tools/assets/build-props.mjs: one vertex-coloured mesh each (models/props/<id>). */
 export type PropId =
@@ -390,6 +461,8 @@ export type PropId =
   | 'station_lattice'
   | 'station_ore'
   | 'station_hauler'
+  | 'hull_tank'
+  | 'hull_pipe'
   | 'turret_single'
   | 'turret_double'
   | 'pickup_power'
@@ -405,8 +478,10 @@ export type EnemyLook =
   | { kind: 'model'; path: string; size: number }
   /** A prop (shared vertex-colour material); `aim` names the child node that turns towards the player. */
   | { kind: 'prop'; prop: PropId; size: number; aim?: string }
-  /** Procedural low-poly rock. */
-  | { kind: 'rock'; size: number }
+  /** Procedural low-poly rock (ice in the Ice Moons: its own `color`). */
+  | { kind: 'rock'; size: number; color?: Rgb; metallic?: number; roughness?: number }
+  /** Procedural spiked mine with a blinking beacon. */
+  | { kind: 'mine'; size: number }
   /** Station modules put together (boss hulls); `size` scales the whole assembly. */
   | { kind: 'assembly'; size: number; modules: readonly AssemblyModule[]; lights: readonly GlowSpot[] };
 
@@ -443,7 +518,25 @@ export type EnemyId =
   | 'dreadnought'
   | 'dreadnoughtGun'
   | 'warden'
-  | 'wardenPod';
+  | 'wardenPod'
+  // Sector 2.
+  | 'iceRock'
+  | 'iceChip'
+  | 'spinner'
+  | 'splitter'
+  | 'shard'
+  | 'mine'
+  | 'swarmer'
+  | 'cyclone'
+  | 'shatterer'
+  | 'hiveMother'
+  // Sector 3.
+  | 'lancer'
+  | 'carrier'
+  | 'arbiter'
+  | 'broodship'
+  | 'leviathan'
+  | 'leviathanSegment';
 
 export interface HitCircle {
   x: number;
@@ -467,6 +560,23 @@ export interface AttackRef {
   /** Only from this difficulty up (e.g. Scouts shoot from Hard). */
   minDifficulty?: Difficulty;
   /** Simple boss phases: active only while the HP fraction is ≤ hpBelow and > hpAbove. */
+  hpBelow?: number;
+  hpAbove?: number;
+}
+
+/**
+ * Minions launched while the enemy is in the firing zone (Carrier, Hive Mother): one per hatch
+ * every `interval` seconds, with no more than `alive` of its own at once. Minions don't count
+ * towards the kill rate (they keep coming) and fly their own movement.
+ */
+export interface BroodRef {
+  enemy: EnemyId;
+  /** Launch points, world units relative to the centre (x right, z down the screen). */
+  hatches: readonly (readonly [number, number])[];
+  interval: number;
+  delay: number;
+  alive: number;
+  minDifficulty?: Difficulty;
   hpBelow?: number;
   hpAbove?: number;
 }
@@ -504,6 +614,23 @@ export interface EnemyDef {
   armor?: number;
   /** How much it rolls into sideways movement (1 = default, 0 = stays level, e.g. platforms). */
   bank?: number;
+  /** Turns around itself, degrees per second (Spinner saucers). */
+  spin?: number;
+  /** Lasers (data/patterns.ts LASERS), gated like attacks. */
+  lasers?: readonly LaserRef[];
+  /** Minions it launches (Carrier, Hive Mother). */
+  broods?: readonly BroodRef[];
+  /**
+   * An armoured shell that opens for `open` seconds every time it launches minions (the Hive
+   * Mother's weak points): damage is multiplied by `armor` while it is shut.
+   */
+  shell?: { armor: number; open: number };
+  /** Glows shown while the shell is open, relative to the centre (x right, z down the screen). */
+  vents?: readonly GlowSpot[];
+  /** Fired once when it dies or detonates. */
+  deathPattern?: PatternId;
+  /** Arms when the ship comes within `radius` and blows up `fuse` seconds later (mines). */
+  proximity?: { radius: number; fuse: number };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -550,9 +677,9 @@ export interface PickupDef {
 // ---------------------------------------------------------------------------------------------
 // Levels
 
-export type MissionId = 's1m1' | 's1m2' | 's1m3';
-export type SetPieceId = 'outpost' | 'relay' | 'refinery' | 'depot' | 'bastion';
-export type DecorFieldId = 'asteroidField' | 'denseField' | 'debris';
+export type MissionId = 's1m1' | 's1m2' | 's1m3' | 's2m1' | 's2m2' | 's2m3' | 's3m1' | 's3m2' | 's3m3';
+export type SetPieceId = 'outpost' | 'relay' | 'refinery' | 'depot' | 'bastion' | 'cryoLab' | 'beacon';
+export type DecorFieldId = 'asteroidField' | 'denseField' | 'debris' | 'iceField' | 'iceDebris' | 'iceMoon' | 'nebulaClouds' | 'denseClouds';
 
 export interface SpawnEvent {
   t: number;
@@ -639,9 +766,18 @@ export interface SetPieceDef {
   pods?: { count: number; x: number; z: number };
 }
 
-/** Background scenery: rocks drifting below the flight plane. */
+/** What decor is made of: lit rocks, rocks of ice, or soft glowing gas clouds. */
+export type DecorLook = 'rock' | 'ice' | 'cloud';
+
+/** Background scenery: rocks, ice or gas clouds drifting below the flight plane. */
 export interface DecorFieldDef {
   id: DecorFieldId;
+  look: DecorLook;
+  /** One piece right when the field starts, then nothing more (a moon passing by). */
+  once?: boolean;
+  /** Cloud glow colour and strength. */
+  color?: Rgb;
+  intensity?: number;
   /** Rocks per second. */
   rate: number;
   /** Depth range (y, negative = below the flight plane). */
@@ -677,6 +813,23 @@ export interface SectorDef {
   color: Rgb;
   /** Medals earned in this sector (any difficulty) needed, with the boss beaten, to open the next one. */
   medalsToAdvance: number;
+  /** Backdrop: the nebula baked for its missions. */
+  nebula: NebulaPalette;
+  /**
+   * Credits are worth this much more here (each coin and the clear and medal bonuses): later
+   * sectors pay more without more coins on screen.
+   */
+  pay: number;
+}
+
+/** A sector's nebula colours (core/nebula.ts bakes them). */
+export interface NebulaPalette {
+  seed: number;
+  base: Rgb;
+  colorA: Rgb;
+  colorB: Rgb;
+  colorC: Rgb;
+  intensity: number;
 }
 
 export type SystemId = 'hull' | 'shield' | 'generator' | 'magnet' | 'charges' | 'energy' | 'power' | 'droneBay';
@@ -770,6 +923,7 @@ export type SfxId =
   | 'credit' | 'power' | 'repair' | 'shieldUp' | 'energy' | 'podRescued' | 'podsLaunched' | 'podLost'
   | 'enemyShieldBroken' | 'armorBroken'
   | 'nova' | 'overdrive' | 'phase' | 'warp' | 'warning'
+  | 'laserCharge' | 'laserFire' | 'mineArmed' | 'broodLaunch'
   | 'uiTap' | 'uiBack' | 'uiTab' | 'uiEquip' | 'uiBuy' | 'uiDenied' | 'launch' | 'cheat';
 
 export interface SfxDef {

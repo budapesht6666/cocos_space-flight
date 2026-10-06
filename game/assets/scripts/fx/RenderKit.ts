@@ -8,7 +8,7 @@
 // the scene is gone (releaseScene), since the engine doesn't free them with their renderers.
 
 import { Color, Director, EffectAsset, ImageAsset, Material, Mesh, MeshRenderer, Node, Texture2D, Vec3, director, primitives, utils } from 'cc';
-import { buildRock } from '../core/rock';
+import { buildMine, buildRock } from '../core/rock';
 import type { Rgb } from '../data/types';
 
 /** Rock shapes: a few seeds and stretches so asteroids don't all look alike. */
@@ -41,6 +41,8 @@ export class RenderKit {
   readonly cylinder: Mesh;
   /** Unit-radius low-poly rocks. */
   readonly rocks: readonly Mesh[];
+  /** Unit-radius spiked mine. */
+  readonly mine: Mesh;
   private readonly cache = new Map<string, Material>();
   private readonly bakes = new Map<string, unknown>();
   /** Per-node material instances of the current scene. */
@@ -62,6 +64,7 @@ export class RenderKit {
     this.cube = utils.createMesh(primitives.box({ width: 1, height: 1, length: 1 }));
     this.cylinder = utils.createMesh(primitives.cylinder(0.5, 0.5, 1, { radialSegments: 12 }));
     this.rocks = ROCK_VARIANTS.map((spec) => utils.createMesh(buildRock(spec)));
+    this.mine = utils.createMesh(buildMine());
   }
 
   /** Additive glow sprite material (shared, instanced). `intensity` > 1 pushes it into the bloom. */

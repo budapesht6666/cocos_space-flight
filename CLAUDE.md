@@ -1,6 +1,6 @@
 # CLAUDE.md — Space Flight
 
-Вертикальный 2.5D shoot 'em up (low-poly 3D, камера сверху) на **Cocos Creator 3.8 LTS** + TypeScript.
+Вертикальный 2.5D shoot 'em up (low-poly 3D, камера сверху) на **Cocos Creator 3.8 LTS** + TypeScript. Кампания — 3 сектора по 3 миссии (этап 7 урезал план с пяти до трёх).
 Разработка web-first: игра собирается как `web-mobile`, тестируется в браузере и на iPhone через Safari.
 
 **Бюджет — $0** (пет-проект). Никаких платных сервисов, подписок, ассетов и аккаунтов.
@@ -119,7 +119,7 @@
 
 ## Отладка (URL-параметры превью и debug-сборок)
 
-`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1` (s1m1–s1m3; из Menu — сразу в игру), `?difficulty=hard` (normal, hard, insane, nightmare), `?elite=1` / `?elite=volatile` (каждый враг волны — элита), `?unlock=1` (открыты все секторы, миссии, сложности и корабли), `?credits=50000` (кошелёк = 50 000, раз за загрузку страницы), `?reset=1` (стереть прогресс, раз за загрузку страницы; с `credits` — сначала стирает), `?quality=high` (фиксированный уровень качества: ultra, high, medium, low, lowest), `?scale=0.5` (фиксированное разрешение 3D), `?msaa=0`, `?bloom=0`, `?fxaa=1` (A/B на телефоне; по умолчанию bloom вкл., FXAA выкл., MSAA — по уровню), `?primary=ion&secondary=rail&drones=gunDrone,guardian&special=warp&level=5` (любое снаряжение без покупки; `secondary=none`; ids — ARCHITECTURE §12).
+`?debug=1` (оверлей), `?god=1`, `?power=4`, `?t=90` (перемотка часов миссии, без интро), `?seed=7`, `?slowmo=0.25` (0.05…4), `?mission=s1m1` (s1m1–s3m3; из Menu — сразу в игру), `?difficulty=hard` (normal, hard, insane, nightmare), `?elite=1` / `?elite=volatile` (каждый враг волны — элита), `?unlock=1` (открыты все секторы, миссии, сложности и корабли), `?credits=50000` (кошелёк = 50 000, раз за загрузку страницы), `?reset=1` (стереть прогресс, раз за загрузку страницы; с `credits` — сначала стирает), `?quality=high` (фиксированный уровень качества: ultra, high, medium, low, lowest), `?scale=0.5` (фиксированное разрешение 3D), `?msaa=0`, `?bloom=0`, `?fxaa=1` (A/B на телефоне; по умолчанию bloom вкл., FXAA выкл., MSAA — по уровню), `?primary=ion&secondary=rail&drones=gunDrone,guardian&special=warp&level=5` (любое снаряжение без покупки; `secondary=none`; ids — ARCHITECTURE §12).
 Прогоны с `god`, `t`, `power`, `elite`, `slowmo`, `unlock` и флагами снаряжения — practice: рекорды, медали и кредиты не пишутся. Сохранение — localStorage `spaceflight.save` (сброс: `localStorage.clear()`), настройки — `spaceflight.settings`.
 Чит-коды (меню → CHEATS, пишутся в сохранение, не practice): `p1gog.weapon` — весь арсенал открыт и куплен на LV1, `p1gog.credits` — +50 000.
 Клавиши в превью: стрелки/WASD, Space — Special (Nova Bomb и др.), Esc/P — пауза, Enter — тап и RETRY на результатах. Меню: Enter — старт с титула и CONTINUE, Esc/Backspace — назад, 1–3 — страница миссии Сектора 1; в кампании ←/→ — сектор, на странице миссии ←/→ — сложность и Enter — LAUNCH; в ангаре Tab — вкладка, ←/→ — корабль (SHIP) или слот (WEAPONS), Enter — LAUNCH; в настройках ↑/↓ — строка, ←/→ — значение; в читах Enter — APPLY. Держать список актуальным здесь и в ARCHITECTURE §12.
