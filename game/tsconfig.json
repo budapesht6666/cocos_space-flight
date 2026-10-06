@@ -7,6 +7,10 @@
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     /* Engine declarations (cc.d.ts) reference WebGPU and editor-only modules that aren't installed. */
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    /* The editor's base config says "node" (node10), which TypeScript 6 deprecates and 7 drops.
+       Our imports are relative and 'cc' comes from declarations, so the bundler resolver fits, and
+       TypeScript 5.9 (npm run typecheck) understands it too — unlike ignoreDeprecations "6.0". */
+    "moduleResolution": "bundler"
   }
 }

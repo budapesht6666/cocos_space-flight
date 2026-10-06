@@ -4,7 +4,7 @@
 // Arc strikes the nearest enemy and jumps on. Hits go through EnemySystem.hitAt.
 
 import { angleTo, CHAIN_BEHIND, fireInterval, pickChain, shotDamage, turnTowards, type GunScale } from '../core/arsenal';
-import type { BeamWeaponDef, BoltId, BoltWeaponDef, ChainWeaponDef, Equipped, Loadout, WeaponDef, WeaponId } from '../data/types';
+import type { BeamWeaponDef, BoltId, BoltWeaponDef, ChainWeaponDef, DroneId, Equipped, Loadout, WeaponDef, WeaponId } from '../data/types';
 import { WEAPONS } from '../data/weapons';
 import { WeaponFx } from '../fx/WeaponFx';
 import type { Bullet, BulletSystem } from './BulletSystem';
@@ -36,7 +36,10 @@ interface Gun {
 export class WeaponSystem {
   readonly primary: Gun;
   readonly secondary: Gun | null;
+  /** The Ion Laser is firing this step (its sound loops while it does). */
+  beamOn = false;
   private readonly fx: WeaponFx;
+  private readonly shot: { source: WeaponId | DroneId } = { source: 'pulse' };
   private beamSparks = 0;
   private readonly chain: number[] = [];
   private readonly chainValid = (i: number): boolean => this.isChainTarget(this.enemies.active[i]);
@@ -92,6 +95,7 @@ export class WeaponSystem {
     this.steerHoming(dt);
     this.fx.tick(dt);
     const p = this.player;
+    this.beamOn = false;
     if (p.mode !== 'control') {
       this.fx.hideBeams();
       return;
@@ -110,12 +114,14 @@ export class WeaponSystem {
     const def = g.def;
     if (def.kind === 'beam') {
       this.beam(g, def, dt, power);
+      this.beamOn = true;
       return;
     }
     if (g.burstLeft > 0) {
       g.burstTimer -= dt;
       while (g.burstLeft > 0 && g.burstTimer <= 0) {
         this.bolts(g, def as BoltWeaponDef, power);
+        this.fired(def.id);
         g.burstLeft--;
         g.burstTimer += (def as BoltWeaponDef).burst?.gap ?? 0;
       }
@@ -130,8 +136,14 @@ export class WeaponSystem {
           g.burstTimer = def.burst.gap;
         }
       }
+      this.fired(def.id);
       g.cooldown += g.interval / rate;
     }
+  }
+
+  private fired(id: WeaponId): void {
+    this.shot.source = id;
+    this.ctx.bus.emit('shot', this.shot);
   }
 
   /** One shot of a bolt weapon: every stream of the Power form. */

@@ -83,8 +83,10 @@
 
 | Статус | Пак | Что внутри | Лицензия |
 |---|---|---|---|
-| 🟡 рекомендую | [Kenney — Sci-fi Sounds](https://kenney.nl/assets/sci-fi-sounds) | 70 звуков: лазеры, двигатели, космос | CC0 |
-| 🟡 рекомендую | [Kenney — Impact Sounds](https://kenney.nl/assets/impact-sounds) | 130 звуков ударов (попадания, обломки) | CC0 |
+| ✅ выбран (этап 6) | [Kenney — Sci-fi Sounds](https://kenney.nl/assets/sci-fi-sounds) | 70 звуков: лазеры, двигатели, космос | CC0 |
+| ✅ выбран (этап 6) | [Kenney — Impact Sounds](https://kenney.nl/assets/impact-sounds) | 130 звуков ударов (попадания, обломки) | CC0 |
+| ✅ выбран (этап 6) | [Kenney — Interface Sounds](https://kenney.nl/assets/interface-sounds) | 100 звуков интерфейса | CC0 |
+| 🟡 | [rubberduck — 50 CC0 retro/synth SFX](https://opengameart.org/content/50-cc0-retro-synth-sfx) | Ретро-синт: выстрелы, взрывы, пикапы | CC0 |
 | 🟡 | [63 Digital SFX (OpenGameArt)](https://opengameart.org/content/63-digital-sound-effects-lasers-phasers-space-etc) | Лазеры, фазеры, космос | CC0 |
 | 🟡 | [Juhani Junkala — 512 SFX](https://archive.org/details/TheEssentialRetroVideoGameSoundEffectsCollection512Sounds) | Ретро-звуки (подойдут для UI) | CC0 |
 | 🟡 | [Mixkit — Space Shooter SFX](https://mixkit.co/free-sound-effects/space-shooter/) | Звуки для шутеров | Mixkit Free License |
@@ -93,7 +95,11 @@
 
 | Статус | Источник | Комментарий | Лицензия |
 |---|---|---|---|
-| 🟡 рекомендую | [Pixabay Music](https://pixabay.com/music/search/space/) | Большой выбор (synthwave, ambient, epic); атрибуция не обязательна | [Pixabay Content License](https://pixabay.com/service/license-summary/) |
+| ✅ выбран (этап 6) | [SketchyLogic — NES Shooter Music](https://opengameart.org/content/nes-shooter-music-5-tracks-3-jingles) | Famitracker-чиптюн для NES-шмапа: 5 треков (босс с интро), 3 джингла; пользователь — фанат музыки Battletoads & Double Dragon | CC0 |
+| 🟡 | [Oblidivm — Space Shooter Music](https://opengameart.org/content/space-shooter-music) | 11 петель для космошутера (хаус 90-х + синты 80-х): титул, меню, босс, победа, поражение, 6 боевых — запасной вариант | CC-BY 3.0 |
+| 🟡 | [SubspaceAudio — 5 Chiptunes (Action)](https://opengameart.org/content/5-chiptunes-action) | Чиптюн в духе Amiga/Turrican | CC0 |
+| 🟡 | [wyver9 — Arcade Boss tracks](https://opengameart.org/content/arcade-boss-tracks-8-bitchiptune) | Босс-треки «в стиле Battletoads» (LSDj, Game Boy) | CC-BY-SA 3.0 |
+| 🟡 | [Pixabay Music](https://pixabay.com/music/search/space/) | Большой выбор (synthwave, ambient, epic); атрибуция не обязательна | [Pixabay Content License](https://pixabay.com/service/license-summary/) |
 | 🟡 | [OpenGameArt — музыка](https://opengameart.org/art-search-advanced?field_art_type_tid%5B%5D=12) | Фильтровать по CC0 / CC-BY | По треку |
 | 🟡 | [Soundimage (Eric Matyas)](https://soundimage.org/sci-fi/) | Много sci-fi треков | Бесплатно **с атрибуцией** |
 
@@ -117,7 +123,7 @@
    - Бюджет треугольников — в [ARCHITECTURE.md §13](ARCHITECTURE.md#13-бюджеты-производительности-iphone-safari-60-fps).
    - Материалы из пака заменяем своими (палитра и emissive).
 3. **Текстуры:** ≤ 1024², UI собираем в атлас. Текстуры кораблей — 512² JPEG (корабль занимает ~150 px на экране телефона), это делает `npm run build:ships`.
-4. **Аудио:** `.mp3` (надёжно для Safari и iOS). SFX моно, короткие; музыка 128–160 kbps.
+4. **Аудио:** `npm run build:audio` (`tools/assets/build-audio.mjs`, ffmpeg) из паков в `art-source/` → `game/assets/resources/audio/{sfx,music}`. Всё моно. Частые короткие эффекты (выстрелы, попадания, тики, UI) и петля луча — WAV 32 кГц: mp3 начинается с ~25 мс задержки кодера, она размазывает скорострельность и щёлкает на шве петли; остальное — mp3 80 kbps, музыка — mp3 96 kbps. У эффекта 1–4 варианта (вырезка, сдвиг высоты, наложение, фейды, пик −1 dBFS); громкость — в `data/audio.ts`.
 5. **Размещение:** `game/assets/models/<source>/…`, `game/assets/audio/<sfx|music>/…`, `game/assets/textures/<source>/…`. Импорт выполняет редактор (появляется `.meta`), `.meta` коммитим вместе с файлом.
 6. **Credits:** строка в таблице ниже. Для CC-BY — ещё и в экран Credits в игре.
 7. **Статус** кандидата в этом документе меняем на ✅.
@@ -130,8 +136,10 @@
 | Space Kit: platform_large, hangar_smallA, corridor_detailed, machine_generatorLarge, satelliteDish_large, structure_detailed, turret_single, turret_double; этап 3: hangar_roundGlass, hangar_roundA, hangar_largeA, platform_high, machine_barrelLarge, pipe_ring, supports_high, rock_crystalsLargeA, craft_cargoA | Kenney | [kenney.nl](https://kenney.nl/assets/space-kit) | CC0 | `game/assets/resources/models/props/station_*.glb`, `turret_*.glb` (обработаны `tools/assets/build-props.mjs`) |
 | Orbitron (Bold 700, Black 900; латиница) | The Orbitron Project Authors (Matt McInerney) | [Google Fonts](https://fonts.google.com/specimen/Orbitron), файлы с [Fontsource](https://fontsource.org/fonts/orbitron) | SIL OFL 1.1 | `game/assets/fonts/Orbitron-*.ttf`, лицензия рядом — `Orbitron-OFL.txt` |
 | Ultimate Space Kit: Bullets Pickup, Pickup Health, Pickup Sphere, Pickup Thunder | Quaternius | [poly.pizza](https://poly.pizza/bundle/Ultimate-Space-Kit-YWh743lqGX) | CC0 | `game/assets/resources/models/props/pickup_*.glb` (обработаны `tools/assets/build-props.mjs`) |
+| NES Shooter Music: Map (меню), Mercury, Venus, Mars (миссии 1-1…1-3), BossIntro + BossMain (босс), Intro Jingle (старт миссии), Win Jingle (победа), Warp Jingle (Time Warp) | SketchyLogic | [OpenGameArt](https://opengameart.org/content/nes-shooter-music-5-tracks-3-jingles) | CC0 | `game/assets/resources/audio/music/*.mp3`, `audio/sfx/warp_0.mp3` (`npm run build:audio`) |
+| Sci-fi Sounds, Impact Sounds, Interface Sounds: выстрелы, попадания, взрывы, щит, пикапы, Special, UI | Kenney | [kenney.nl](https://kenney.nl/assets/sci-fi-sounds), [Impact](https://kenney.nl/assets/impact-sounds), [Interface](https://kenney.nl/assets/interface-sounds) | CC0 | `game/assets/resources/audio/sfx/*` (`npm run build:audio`) |
 
-Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`).
+Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`), сирена WARNING (двухтональная квадратная волна, `build-audio.mjs`).
 
 Свои процедурные модели (пользователю понравились, остаются): астероиды — low-poly камень (`core/rock.ts`); кредиты — золотые кубики.
 
@@ -149,3 +157,8 @@
 - **Дроны (этап 5)** — Kenney Space Kit, выбрал Claude по поручению пользователя («подбери релевантные»): Gun Drone — истребитель `craft_speederA` (280 треугольников), Guardian — тарелка-излучатель `satelliteDish_detailed` (390), Collector — шахтёрский `craft_miner` с захватами (384). В `build-props` (`drone_gun`, `drone_guardian`, `drone_collector`): тёмная палитра станций, акцент — цвет дрона (синий, циан, золото), не красный; модель нормализована к 1, размер в игре — `DRONES[].size`. Под моделью — ореол цвета дрона, чтобы тёмный корпус читался на фоне космоса.
 - **Иконки PWA** — свой рендер Spitfire из игры (`game/build-templates/web-mobile/icons/`).
 - Escape Pod — процедурная капсула из примитивов `RenderKit`, декор астероидных полей — те же процедурные камни, что у астероидов.
+
+**Выбор этапа 6** (пользователь выбрал из вариантов):
+- **Музыка** — пользователь: «фанат Battletoads & Double Dragon (NES), если получится похожее — буду рад, если нет — вариант №1 (Oblidivm)». Claude нашёл SketchyLogic «NES Shooter Music»: CC0, Famitracker (те же каналы 2A03, что у NES), написана для NES-шмапа. Источники — `art-source/sketchylogic-nes-shooter-music/` (WAV и .ftm).
+- **SFX** — Kenney (выбор пользователя). Исходники — `art-source/kenney-{sci-fi,impact,interface}-sounds/` с `License.txt`. Какие файлы куда — таблица `SFX` в `tools/assets/build-audio.mjs`.
+- Экран **Credits** в игре (Settings → CREDITS) — `data/credits.ts`.

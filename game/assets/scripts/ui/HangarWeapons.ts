@@ -39,7 +39,7 @@ export class WeaponsPanel {
       const label = uiLabel(node, 'Label', 18, UI.white, {}, font);
       label.string = s.label;
       placeLabel(label, 0, 0);
-      onTap(node, () => this.show(s.id));
+      onTap(node, () => this.show(s.id), 'uiTab');
       this.tabs.push({ id: s.id, gfx, label });
     });
     const list = (name: string): Node => uiNode(parent, name, 0, 0, { top: 0, bottom: 0, left: 0, right: 0 });

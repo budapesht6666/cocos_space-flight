@@ -3,14 +3,15 @@
 // the one copy of the save every scene shares.
 
 import { sys } from 'cc';
+import { applyCheat, findCheat } from '../core/cheats';
 import { buyUpgrade, grantCredits, runRewards, setWallet, type BuyResult, type RunRewards } from '../core/economy';
 import { autoEquip, buildLoadout, equipItem, type EquipResult } from '../core/loadout';
-import { shipUnlocked } from '../core/progress';
+import { openHangarItems, shipUnlocked } from '../core/progress';
 import { applyRun, getRecord, type MissionRecord, type RecordMap, type RecordUpdate, type RunOutcome } from '../core/records';
 import { loadSave, newSave, serializeSave, type SaveData } from '../core/save';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_PAINT, DEFAULT_SHIP, SHIPS } from '../data/player';
-import type { ArsenalId, Difficulty, Loadout, PaintId, ShipId, UpgradeId } from '../data/types';
+import type { ArsenalId, CheatDef, Difficulty, Loadout, PaintId, ShipId, UpgradeId } from '../data/types';
 
 const KEY = 'spaceflight.save';
 /** Stage 3 kept only records, here; migrated into the save once and removed. */
@@ -23,6 +24,8 @@ export interface RunReport {
   rewards: RunRewards;
   /** Wallet after the rewards. */
   balance: number;
+  /** Ships and arsenal items this run opened (names). */
+  unlocked: string[];
 }
 
 let data: SaveData | null = null;
@@ -139,11 +142,13 @@ export const SaveService = {
   /** Folds a finished run in: records, credits kept from the run, clear and first-medal bonuses. */
   submitRun(mission: string, difficulty: Difficulty, run: RunOutcome, collected: number): RunReport {
     const save = load();
+    const before = openHangarItems(save.records);
     const update = applyRun(save.records, mission, difficulty, run);
     const rewards = runRewards(run.complete, collected, update.newMedals, DIFFICULTIES[difficulty].credits);
     grantCredits(save, rewards.total);
     persist();
-    return { update, rewards, balance: save.credits };
+    const unlocked = openHangarItems(save.records).filter((name) => before.indexOf(name) < 0);
+    return { update, rewards, balance: save.credits, unlocked };
   },
 
   /** Buys the next level; a new arsenal item goes straight into its slot. `unlockAll`: debug `?unlock=1`. */
@@ -188,5 +193,14 @@ export const SaveService = {
 
   loadout(ship: ShipId): Loadout {
     return buildLoadout(load(), SHIPS[ship]);
+  },
+
+  /** A code typed on the CHEATS page: applied and saved, or null when no cheat has that code. */
+  enterCheat(code: string): CheatDef | null {
+    const def = findCheat(code);
+    if (!def) return null;
+    applyCheat(load(), def);
+    persist();
+    return def;
   },
 };

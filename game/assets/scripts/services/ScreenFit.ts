@@ -6,6 +6,7 @@
 // <body>). A frame at least as tall as 9:16 (a phone-sized window, a device in the editor preview)
 // fills as on a phone. Measured on the game's frame, not the window: the editor preview puts the
 // game in a frame of the chosen device's size.
+// It also keeps the keyboard on the game: the engine hears keys only on its canvas.
 
 import { ResolutionPolicy, screen, sys, view } from 'cc';
 
@@ -36,6 +37,40 @@ function fit(): void {
   document.body.classList.toggle('column', next);
 }
 
+/**
+ * Cocos 3.8 listens for keys on #GameCanvas only, so the arrows did nothing while the page had the
+ * focus: a link that starts a mission at once (`?mission=`, no tap before it) or a click on the
+ * column's margins. Focus the canvas, and hand it keys that land elsewhere on the page (key-ups
+ * too, or a key held while the focus left would stay pressed) — but not keys typed into a text
+ * field (the CHEATS page's EditBox puts an <input> over the canvas while editing).
+ */
+function keepKeyboard(): void {
+  const canvas = document.getElementById('GameCanvas');
+  if (!canvas) return;
+  canvas.focus({ preventScroll: true });
+  const forward = (event: KeyboardEvent): void => {
+    const active = document.activeElement;
+    if (active === canvas) return;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+    canvas.focus({ preventScroll: true });
+    canvas.dispatchEvent(new KeyboardEvent(event.type, { key: event.key, code: event.code, repeat: event.repeat }));
+  };
+  window.addEventListener('keydown', forward);
+  window.addEventListener('keyup', forward);
+}
+
+/**
+ * An EditBox puts its <input> in the game's container and places it from the container's corner,
+ * but absolutely positioned elements follow the nearest positioned ancestor — the full-width frame
+ * (#GameDiv). In the column the container sits in the middle, so the text being typed showed up
+ * by the window's left edge. Positioning the container makes its corner the origin; with no
+ * offsets it stays where it was.
+ */
+function anchorTextFields(): void {
+  const container = document.getElementById('Cocos3dGameContainer');
+  if (container) container.style.position = 'relative';
+}
+
 export const ScreenFit = {
   /** Each scene's entry component calls this before laying out; the first call sets up the page. */
   init(): void {
@@ -44,5 +79,7 @@ export const ScreenFit = {
     if (listening) return;
     listening = true;
     screen.on('window-resize', fit);
+    keepKeyboard();
+    anchorTextFields();
   },
 };

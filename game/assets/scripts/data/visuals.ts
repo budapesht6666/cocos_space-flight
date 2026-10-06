@@ -1,6 +1,6 @@
 // Colours and effect tuning. Linear-ish RGB in 0..1; values above ~0.8 feed the bloom.
 
-import type { DeviceKind, DeviceQuality, QualityTier, Rgb } from './types';
+import type { DeviceKind, QualityId, QualityTier, Rgb } from './types';
 
 export const COLORS = {
   background: [0.012, 0.016, 0.045] as Rgb,
@@ -113,10 +113,12 @@ export const POST_FX = {
 };
 
 /**
- * Graphics quality (fx/RenderScaler.ts). Tiers best first. The engine caps the canvas at 2 pixels
- * per CSS pixel, so `scale` 1 renders at that. Each kind of device starts at its tier and moves
- * along the tiers by measured frame times; the tier it held through a mission is remembered for
- * its next start.
+ * Graphics quality (fx/RenderScaler.ts), picked on the Settings page (GRAPHICS). Tiers best first.
+ * The engine caps the canvas at 2 pixels per CSS pixel, so `scale` 1 renders at that. The tier
+ * never changes by itself: switching it rebuilds the render targets, and on iPhone that seemed to
+ * flash a zoomed piece of the scene; measuring frame rates and stepping tiers was dropped in
+ * stage 6 (an iPhone ran ~51 FPS at medium and at lowest alike — the engine's CPU work, not fill
+ * rate — so stepping only cost quality).
  */
 export const QUALITY = {
   tiers: [
@@ -126,25 +128,18 @@ export const QUALITY = {
     { id: 'low', scale: 0.6, msaa: false },
     { id: 'lowest', scale: 0.5, msaa: false },
   ] as readonly QualityTier[],
+  /** The tier a device starts with until the player picks one. */
   devices: {
-    /** A desktop or laptop GPU has room for everything; a weak integrated one steps down. */
-    desktop: { start: 'ultra', best: 'ultra' },
+    /** A desktop or laptop GPU has room for everything (60 FPS on AMD integrated graphics). */
+    desktop: 'ultra',
     /**
-     * Phones and tablets: fill rate is the limit, and a phone heats up over a session. 70% is what
-     * iPhone 15 Plus was tuned and checked at (60 FPS, no heating), so it is also the ceiling:
-     * trying a tier above costs a dip each time it fails. Raise `best` to 'high' once a phone
-     * holds `?quality=high&debug=1` through a mission; then faster phones climb by themselves.
+     * Phones and tablets: fill rate and heat. 70% is what iPhone 15 Plus was tuned at; a first
+     * look at blurry graphics turns players away, a warm phone sends them to the settings.
      */
-    mobile: { start: 'medium', best: 'medium' },
+    mobile: 'medium',
     /** No GPU (Chrome on SwiftShader, llvmpipe): as light as it gets. */
-    software: { start: 'lowest', best: 'medium' },
-  } as Record<DeviceKind, DeviceQuality>,
-  /** Frame times are averaged over this many seconds. */
-  window: 2,
-  /** An average frame slower than this (ms; 18.5 ≈ 54 FPS) steps the tier down. */
-  slowFrameMs: 18.5,
-  /** Seconds at a lower tier before trying the one above again; doubles after each failed try. */
-  retryAfter: 12,
+    software: 'lowest',
+  } as Record<DeviceKind, QualityId>,
 };
 
 export const BOSS_FX = {
@@ -160,4 +155,16 @@ export const BOSS_FX = {
   /** Slow motion after a boss dies: time scale and how long it lasts (real seconds, eased back). */
   slowmoScale: 0.35,
   slowmoTime: 1.4,
+};
+
+/** Menu motion: pages slide in and fade up; the logo's glow breathes. */
+export const MENU_FX = {
+  /** Seconds a page takes to come in. */
+  pageTime: 0.24,
+  /** How far it slides in from (UI units): from the right going forward, from the left going back. */
+  pageSlide: 56,
+  /** Logo glow: opacity swings between these, once per `glowPeriod` seconds. */
+  glowMin: 0.55,
+  glowMax: 1,
+  glowPeriod: 3.2,
 };

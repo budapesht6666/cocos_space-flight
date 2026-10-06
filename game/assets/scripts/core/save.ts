@@ -6,16 +6,18 @@
 //   2 — stage 4: credits, hangar upgrades, ship and paints next to the records (`spaceflight.save`).
 //   3 — stage 5: the arsenal. Weapons, drones and Specials are upgrade tracks like the systems
 //       (Pulse Cannon's level was one already), plus what is equipped in the four slots.
+//   4 — stage 6: cheat codes with a lasting effect (the arsenal opened for good).
 // A new version adds a step to MIGRATIONS that turns the previous document into the next one.
 
 import { UPGRADE_ORDER, UPGRADES } from '../data/economy';
+import { CHEATS } from '../data/cheats';
 import { DEFAULT_SHIP, PAINTS, SHIPS } from '../data/player';
-import type { DroneId, PaintId, PrimaryId, SecondaryId, ShipId, SpecialId } from '../data/types';
+import type { CheatId, DroneId, PaintId, PrimaryId, SecondaryId, ShipId, SpecialId } from '../data/types';
 import { DRONES, PRIMARIES, SECONDARIES, SPECIALS } from '../data/weapons';
 import { clamp } from './math';
 import { int, sanitizeRecords, type RecordMap } from './records';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /** What is in the four slots (ownership is checked when the loadout is built). */
 export interface EquipState {
@@ -39,6 +41,8 @@ export interface SaveData {
   paints: { [ship: string]: PaintId };
   equip: EquipState;
   records: RecordMap;
+  /** Cheat codes with a lasting effect that were entered (core/cheats.ts). */
+  cheats: CheatId[];
   /** Last mission and difficulty launched. */
   last: { mission: string; difficulty: string } | null;
 }
@@ -62,6 +66,7 @@ const MIGRATIONS: { [from: number]: (raw: Raw) => Raw } = {
   1: (raw) => ({ version: 2, credits: 0, earned: 0, upgrades: {}, ship: DEFAULT_SHIP, paints: {}, records: raw.records, last: raw.last }),
   // Upgrade levels keep their meaning (Pulse Cannon included); the slots start with the stock kit.
   2: (raw) => Object.assign({}, raw, { version: 3, equip: defaultEquip() }),
+  3: (raw) => Object.assign({}, raw, { version: 4, cheats: [] }),
 };
 
 export function defaultEquip(): EquipState {
@@ -69,7 +74,7 @@ export function defaultEquip(): EquipState {
 }
 
 export function newSave(): SaveData {
-  return { version: SAVE_VERSION, credits: 0, earned: 0, upgrades: {}, ship: DEFAULT_SHIP, paints: {}, equip: defaultEquip(), records: {}, last: null };
+  return { version: SAVE_VERSION, credits: 0, earned: 0, upgrades: {}, ship: DEFAULT_SHIP, paints: {}, equip: defaultEquip(), records: {}, cheats: [], last: null };
 }
 
 /**
@@ -122,6 +127,11 @@ function sanitize(raw: Raw): SaveData {
   }
   save.equip = sanitizeEquip(raw.equip);
   save.records = sanitizeRecords(raw.records);
+  if (Array.isArray(raw.cheats)) {
+    for (const id of raw.cheats) {
+      if (typeof id === 'string' && Object.prototype.hasOwnProperty.call(CHEATS, id) && save.cheats.indexOf(id as CheatId) < 0) save.cheats.push(id as CheatId);
+    }
+  }
   const last = raw.last as Raw | null | undefined;
   if (last && typeof last.mission === 'string' && typeof last.difficulty === 'string') save.last = { mission: last.mission, difficulty: last.difficulty };
   return save;

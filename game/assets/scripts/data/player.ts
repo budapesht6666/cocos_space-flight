@@ -6,7 +6,6 @@ export const SHIPS: Record<ShipId, PlayerShipDef> = {
     id: 'spitfire',
     name: 'SPITFIRE',
     role: 'BALANCED FIGHTER',
-    perks: ['Longer recovery after a hull hit'],
     model: 'models/ships/spitfire',
     size: 1.5,
     hitboxRadius: 0.25,
@@ -37,7 +36,6 @@ export const SHIPS: Record<ShipId, PlayerShipDef> = {
     id: 'executioner',
     name: 'EXECUTIONER',
     role: 'HEAVY GUNSHIP',
-    perks: ['+2 hull, +1 shield, slower (×0.85)', 'Primary damage +15%', 'Secondary reloads 20% faster'],
     model: 'models/ships/executioner',
     size: 1.65,
     hitboxRadius: 0.25,
@@ -64,13 +62,13 @@ export const SHIPS: Record<ShipId, PlayerShipDef> = {
     energyGain: 1,
     primaryDamage: 1.15,
     secondaryCooldown: 0.8,
-    unlock: { sector: 2 },
+    // GDD: the boss of Sector 2. While only Sector 1 is built, its boss (Warden, mission 1-3).
+    unlock: { mission: 's1m3' },
   },
   striker: {
     id: 'striker',
     name: 'STRIKER',
     role: 'INTERCEPTOR',
-    perks: ['Faster (×1.2), −1 hull', 'Graze ring +30%, Energy +30%', '+1 Nova charge'],
     model: 'models/ships/striker',
     size: 1.55,
     hitboxRadius: 0.25,
@@ -95,8 +93,21 @@ export const SHIPS: Record<ShipId, PlayerShipDef> = {
     energyGain: 1.3,
     primaryDamage: 1,
     secondaryCooldown: 1,
-    unlock: { sector: 3 },
+    // GDD: the boss of Sector 3. While only Sector 1 is built, medals there.
+    unlock: { medals: 12 },
   },
+};
+
+/**
+ * Stock values the hangar's ship traits are measured against (GDD §6): a ship shows a trait cell
+ * where it beats them (core/shipCard.ts).
+ */
+export const STOCK_SHIP = {
+  invulnerableTime: 1.2,
+  grazeRadius: 1.0,
+  energyGain: 1,
+  secondaryCooldown: 1,
+  chargeBonus: 0,
 };
 
 export const SHIP_ORDER: readonly ShipId[] = ['spitfire', 'executioner', 'striker'];

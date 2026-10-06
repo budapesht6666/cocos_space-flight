@@ -3,7 +3,7 @@
 import type { Node } from 'cc';
 import type { EventBus } from '../core/EventBus';
 import type { Rng } from '../core/Rng';
-import type { DecorFieldId, Difficulty, DifficultyDef, EliteDef, EnemyDef, PickupKind, SpecialDef } from '../data/types';
+import type { DecorFieldId, Difficulty, DifficultyDef, DroneId, EliteDef, EnemyDef, PickupKind, SpecialDef, WeaponId } from '../data/types';
 import type { DebugFlags } from '../debug/DebugFlags';
 import type { RenderKit } from '../fx/RenderKit';
 import type { Playfield } from './Playfield';
@@ -25,6 +25,8 @@ export interface EnemyKilledEvent {
 export type BannerStyle = 'title' | 'warning' | 'success';
 
 export interface GameEvents {
+  /** A gun or a gun drone fired a shot (one per volley; the Ion Laser's beam has no shots). */
+  shot: { source: WeaponId | DroneId };
   enemyKilled: EnemyKilledEvent;
   /** Left the field alive (flew off screen). */
   enemyEscaped: { group: number; site: number };

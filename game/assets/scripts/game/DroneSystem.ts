@@ -7,7 +7,7 @@
 import { MeshRenderer, Node, Prefab, instantiate } from 'cc';
 import { damp, dampAngle } from '../core/math';
 import { peakDps, type GunScale } from '../core/arsenal';
-import type { DroneDef, Loadout, PropId } from '../data/types';
+import type { DroneDef, DroneId, Loadout, PropId, WeaponId } from '../data/types';
 import { DRONE_FLIGHT, DRONES, WEAPONS } from '../data/weapons';
 import type { BulletSystem } from './BulletSystem';
 import type { GameContext } from './GameContext';
@@ -46,6 +46,7 @@ export class DroneSystem {
   /** Gun drone bolt damage per second, per Power (index 0..3), before its share. */
   private readonly primaryDps: number[] = [];
   private readonly blockEvent = { x: 0, z: 0 };
+  private readonly shot: { source: WeaponId | DroneId } = { source: 'gunDrone' };
   private readonly target = { x: 0, z: 0 };
   private shown = false;
 
@@ -161,6 +162,8 @@ export class DroneSystem {
         while (d.cooldown <= 0) {
           const damage = this.primaryDps[p.firePower - 1] * def.levels[d.level].share * def.interval;
           this.playerBullets.spawn(this.boltLook, d.x, d.z - 0.3, 0, def.speed, damage, def.radius);
+          this.shot.source = def.id;
+          this.ctx.bus.emit('shot', this.shot);
           d.cooldown += interval;
         }
       }

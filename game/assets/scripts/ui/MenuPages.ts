@@ -1,4 +1,4 @@
-// Menu pages around the campaign: Main (CONTINUE, CAMPAIGN, HANGAR), Campaign (a sector pager with
+// Menu pages around the campaign: Main (CONTINUE, CAMPAIGN, HANGAR, SETTINGS · CHEATS), Campaign (a sector pager with
 // its missions) and Mission (difficulties with medals and records, LAUNCH). The hangar has its own
 // file. Layout is in design units (720 wide, at least 1280 tall), anchored to the screen edges.
 
@@ -32,7 +32,7 @@ export function pickLabel(mission: MissionId, difficulty: Difficulty): string {
 
 export class MainPage implements MenuPage {
   readonly root: Node;
-  readonly pose = { row: 0.43, scale: 1.05 };
+  readonly pose = { row: 0.39, scale: 1.05 };
   readonly logo = true;
   private readonly playTitle: Label;
   private readonly playSub: Label;
@@ -40,15 +40,17 @@ export class MainPage implements MenuPage {
   constructor(parent: Node, private readonly host: MenuHost) {
     const font = host.font;
     this.root = pageRoot(parent, 'MainPage');
-    const play = uiNode(this.root, 'Continue', 560, 128, { bottom: 336, centerX: true });
+    const play = uiNode(this.root, 'Continue', 560, 128, { bottom: 412, centerX: true });
     drawButton(play.addComponent(Graphics), 560, 128, true);
     this.playTitle = uiLabel(play, 'Title', 38, UI.white, {}, font);
     placeLabel(this.playTitle, 0, 18);
     this.playSub = uiLabel(play, 'Sub', 22, UI.accent, {}, font);
     placeLabel(this.playSub, 0, -28);
-    onTap(play, () => host.launch());
-    this.button('CAMPAIGN', 216, () => host.open('campaign'));
-    this.button('HANGAR', 100, () => host.open('hangar'));
+    onTap(play, () => host.launch(), null);
+    this.button('CAMPAIGN', 296, 560, 0, () => host.open('campaign'));
+    this.button('HANGAR', 184, 560, 0, () => host.open('hangar'));
+    this.button('SETTINGS', 72, 272, -144, () => host.open('settings'));
+    this.button('CHEATS', 72, 272, 144, () => host.open('cheats'));
   }
 
   enter(): void {
@@ -74,9 +76,9 @@ export class MainPage implements MenuPage {
     return false;
   }
 
-  private button(text: string, bottom: number, fn: () => void): void {
-    const node = uiNode(this.root, text, 560, 96, { bottom, centerX: true });
-    drawButton(node.addComponent(Graphics), 560, 96, false);
+  private button(text: string, bottom: number, width: number, dx: number, fn: () => void): void {
+    const node = uiNode(this.root, text, width, 96, { bottom, centerX: true, dx });
+    drawButton(node.addComponent(Graphics), width, 96, false);
     const label = uiLabel(node, 'Label', 32, UI.white, {}, this.host.font);
     label.string = text;
     placeLabel(label, 0, 0);
@@ -367,7 +369,7 @@ export class MissionPage implements MenuPage {
     this.launchLabel = uiLabel(launch, 'Label', 34, UI.white, {}, font);
     this.launchLabel.string = 'LAUNCH';
     placeLabel(this.launchLabel, 0, 0);
-    onTap(launch, () => host.launch());
+    onTap(launch, () => host.launch(), null);
   }
 
   enter(): void {

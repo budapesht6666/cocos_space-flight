@@ -64,8 +64,6 @@ export interface PlayerShipDef {
   name: string;
   /** Short role line for the hangar. */
   role: string;
-  /** What sets the ship apart, one hangar line each. */
-  perks: readonly string[];
   /** resources path of the ship prefabs without the paint: `${model}_${paint}`. */
   model: string;
   /** Visual size: the model is normalised to 1 unit, this scales it. */
@@ -102,8 +100,8 @@ export interface PlayerShipDef {
   energyGain: number;
   primaryDamage: number;
   secondaryCooldown: number;
-  /** Beat this sector's boss to fly the ship; null = available from the start. */
-  unlock: { sector: number } | null;
+  /** What opens the ship (like the arsenal: a mission cleared or medals earned); null = from the start. */
+  unlock: UnlockReq | null;
 }
 
 /** An item in a slot and its hangar level (1..5 for guns, 1..3 for drones). */
@@ -610,6 +608,10 @@ export interface MissionDef {
   id: MissionId;
   title: string;
   subtitle: string;
+  /** The track that plays through the mission (the boss brings its own). */
+  music: MusicId;
+  /** First mission: hints teach the controls until it is cleared once (GDD §19). */
+  onboarding?: boolean;
   /** Background (stars, nebula) scroll speed, world units per second. */
   scrollSpeed: number;
   /** Set pieces and ground targets scroll slower, so turrets get time to fight. */
@@ -718,9 +720,70 @@ export interface QualityTier {
 /** What a device is, as far as its GPU goes. */
 export type DeviceKind = 'desktop' | 'mobile' | 'software';
 
-export interface DeviceQuality {
-  /** The tier a device of this kind starts at. */
-  start: QualityId;
-  /** The best tier it may climb to while frames keep up. */
-  best: QualityId;
+// ---------------------------------------------------------------------------------------------
+// Cheat codes and settings
+
+export type CheatId = 'arsenal' | 'credits';
+
+export type CheatEffect =
+  /** Every weapon, drone and Special open and licensed (level 1), the Drone Bay with one slot. */
+  | { kind: 'arsenal' }
+  | { kind: 'credits'; amount: number };
+
+export interface CheatDef {
+  id: CheatId;
+  /** What to type; compared without case and surrounding spaces. */
+  code: string;
+  effect: CheatEffect;
+  /** Shown when the code works. */
+  message: string;
+}
+
+export type Handedness = 'right' | 'left';
+
+/** The player's settings (device-local, apart from the save). */
+export interface Settings {
+  /** Volumes, 0..SETTINGS.volumeSteps. */
+  music: number;
+  sfx: number;
+  /** The ship's own guns (shots, the Ion beam, gun drones): off by default — they drown the fight. */
+  gunSounds: boolean;
+  /** Finger travel multiplier on top of the ship's own. */
+  sensitivity: number;
+  /** Which side the Special button sits on: under the free thumb. */
+  handedness: Handedness;
+  /** Graphics tier (data/visuals.ts QUALITY); it never changes by itself. */
+  quality: QualityId;
+  showFps: boolean;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Audio (data/audio.ts, services/AudioService.ts)
+
+export type MusicId = 'menu' | 'mercury' | 'venus' | 'mars' | 'bossIntro' | 'boss' | 'jingleStart' | 'jingleWin';
+
+export type SfxId =
+  | 'pulse' | 'scatter' | 'seeker' | 'ion' | 'plasma' | 'tesla'
+  | 'swarm' | 'wing' | 'rail' | 'rear' | 'drone'
+  | 'hit' | 'hitArmored' | 'explodeSmall' | 'explodeMedium' | 'explodeLarge' | 'blast' | 'playerDied'
+  | 'playerHit' | 'shieldHit' | 'shieldDown' | 'graze' | 'blocked'
+  | 'credit' | 'power' | 'repair' | 'shieldUp' | 'energy' | 'podRescued' | 'podsLaunched' | 'podLost'
+  | 'enemyShieldBroken' | 'armorBroken'
+  | 'nova' | 'overdrive' | 'phase' | 'warp' | 'warning'
+  | 'uiTap' | 'uiBack' | 'uiTab' | 'uiEquip' | 'uiBuy' | 'uiDenied' | 'launch' | 'cheat';
+
+export interface SfxDef {
+  /** Files `audio/sfx/<id>_<i>`; one is picked at random each time. */
+  variants: number;
+  /** 0..1 before the SFX setting. */
+  volume: number;
+  /** Seconds before it may play again: rapid fire and hit storms stay one sound, not a roar. */
+  gap: number;
+}
+
+export interface MusicDef {
+  volume: number;
+  loop: boolean;
+  /** Plays when a non-looping track ends (the boss intro leads into the boss loop). */
+  next?: MusicId;
 }

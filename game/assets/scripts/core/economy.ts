@@ -26,9 +26,14 @@ export function nextCost(save: SaveData, id: UpgradeId): number | null {
 
 export type BuyResult = 'bought' | 'max' | 'poor' | 'locked';
 
-/** Open for purchase: its unlock condition is met (or everything is open, debug `?unlock=1`). */
+/**
+ * Open for purchase: its unlock condition is met, or everything is open (debug `?unlock=1`), or the
+ * arsenal is (the cheat code).
+ */
 export function upgradeUnlocked(save: SaveData, id: UpgradeId, unlockAll = false): boolean {
-  return unlockAll || unlockMet(save.records, UPGRADES[id].unlock);
+  const def = UPGRADES[id];
+  if (def.group !== 'systems' && save.cheats.indexOf('arsenal') >= 0) return true;
+  return unlockAll || unlockMet(save.records, def.unlock);
 }
 
 /** Buys the next level if there is one, it is unlocked and the wallet allows it (mutates the save). */

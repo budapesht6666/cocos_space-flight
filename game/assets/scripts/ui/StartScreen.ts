@@ -1,18 +1,18 @@
 // Entry point of the Menu scene: the backdrop (nebula, stars), the player's ship on a turntable,
 // and the menu pages, all panels of this one scene: Title ("Tap to start" — the first touch is
-// the gesture iOS needs before audio may play), Main, Campaign, Mission (ui/MenuPages.ts) and
-// Hangar (ui/HangarPage.ts). The title shows once per page load; coming back from a mission
+// the gesture iOS needs before audio may play), Main, Campaign, Mission (ui/MenuPages.ts),
+// Hangar (ui/HangarPage.ts), Settings, Cheats and Credits. Pages slide in; the menu theme plays. The title shows once per page load; coming back from a mission
 // opens the main page or the hangar directly (services/SceneRouter).
 
-import { _decorator, Camera, Color, Component, EffectAsset, EventKeyboard, Graphics, Input, KeyCode, Label, Node, Prefab, TTFFont, director, input, instantiate, profiler, resources, screen } from 'cc';
-import { damp } from '../core/math';
+import { _decorator, Camera, Color, Component, EffectAsset, EventKeyboard, Graphics, Input, KeyCode, Label, Node, Prefab, TTFFont, UIOpacity, director, input, instantiate, profiler, resources, screen } from 'cc';
+import { damp, smoothstep } from '../core/math';
 import { missionNeeds, missionPrefabPaths } from '../core/missionNeeds';
 import type { MissionPick } from '../core/progress';
 import { Rng } from '../core/Rng';
 import { MISSION_ORDER, MISSIONS } from '../data/missions';
 import { SHIPS, shipModel } from '../data/player';
 import type { MissionId, PaintId, ShipId } from '../data/types';
-import { COLORS, POST_FX } from '../data/visuals';
+import { COLORS, MENU_FX, POST_FX } from '../data/visuals';
 import { WORLD } from '../data/world';
 import { readDebugFlags } from '../debug/DebugFlags';
 import { CameraRig } from '../fx/CameraRig';
@@ -23,13 +23,17 @@ import { pipelineSettings, RenderScaler } from '../fx/RenderScaler';
 import { Starfield } from '../fx/Starfield';
 import type { BackdropContext } from '../game/GameContext';
 import { Playfield } from '../game/Playfield';
+import { AudioService } from '../services/AudioService';
 import { SaveService } from '../services/SaveService';
 import { SCENES, SceneRouter } from '../services/SceneRouter';
 import { ScreenFit } from '../services/ScreenFit';
+import { CheatsPage } from './CheatsPage';
+import { CreditsPage } from './CreditsPage';
 import { HangarPage } from './HangarPage';
 import type { MenuHost, MenuPage, PageId } from './MenuPage';
 import { CampaignPage, MainPage, MissionPage } from './MenuPages';
 import { ScreenFade } from './ScreenFade';
+import { SettingsPage } from './SettingsPage';
 import { drawCoin, placeLabel, UI, uiLabel, uiNode } from './UiKit';
 
 const { ccclass, property } = _decorator;
@@ -42,7 +46,7 @@ const SHIP_SIZE = 3.4;
 const SHIP_HEIGHT = 0.4;
 const LOGO_GLOW = new Color(60, 200, 255, 255);
 const LOGO_GLOW_EDGE = new Color(40, 160, 255, 150);
-const BUILD_LABEL = 'STAGE 4 PREVIEW';
+const BUILD_LABEL = 'STAGE 6 PREVIEW';
 const WALLET_WIDTH = 240;
 
 /** One ship on the turntable: its paints (loaded on demand) and engine glows. */
@@ -125,6 +129,10 @@ export class StartScreen extends Component implements MenuHost {
   private readonly pages = new Map<PageId, MenuPage>();
   private readonly stack: PageId[] = [];
   private logo: Node[] = [];
+  private logoGlow: Label | null = null;
+  private scaler: RenderScaler | null = null;
+  /** The page coming in: its opacity, progress 0..1 and slide direction. */
+  private arrival: { root: Node; opacity: UIOpacity; t: number; dir: number } | null = null;
   private title: TitlePage | null = null;
   private wallet: Node | null = null;
   private walletLabel: Label | null = null;
@@ -143,6 +151,7 @@ export class StartScreen extends Component implements MenuHost {
 
   start(): void {
     ScreenFit.init();
+    AudioService.init();
     const debug = readDebugFlags();
     SaveService.applyDevFlags(debug.reset, debug.credits);
     // `?mission=` (and friends) jump straight into the game once per page load: handy on builds.
@@ -152,6 +161,7 @@ export class StartScreen extends Component implements MenuHost {
       return;
     }
     SceneRouter.claimAutoStart();
+    AudioService.music('menu');
     this.unlockAll = debug.unlock;
     if (debug.overlay) profiler.showStats();
     else profiler.hideStats();
@@ -188,6 +198,12 @@ export class StartScreen extends Component implements MenuHost {
     this.nebula?.render();
     this.cameraRig?.render();
     this.spinShip(playfield, dt);
+    this.animatePage(dt);
+    if (this.logoGlow && this.logoGlow.node.activeInHierarchy) {
+      const k = 0.5 + 0.5 * Math.sin((this.time * Math.PI * 2) / MENU_FX.glowPeriod);
+      this.logoGlow.color.set(LOGO_GLOW.r, LOGO_GLOW.g, LOGO_GLOW.b, Math.round(255 * (MENU_FX.glowMin + (MENU_FX.glowMax - MENU_FX.glowMin) * k)));
+      this.logoGlow.color = this.logoGlow.color;
+    }
     const title = this.title;
     if (title && this.current === 'title') title.tap.node.active = Math.floor(this.time * 2) % 3 !== 0;
     if (this.walletFlash > 0 && this.walletLabel) {
@@ -201,19 +217,21 @@ export class StartScreen extends Component implements MenuHost {
   open(page: PageId): void {
     if (this.leaving) return;
     if (page === 'main') this.stack.length = 0;
+    const fromTitle = this.current === 'title';
     this.stack.push(page);
-    this.showPage();
+    this.showPage(fromTitle ? 0 : 1);
   }
 
   back(): void {
     if (this.leaving || this.stack.length <= 1) return;
     this.stack.pop();
-    this.showPage();
+    this.showPage(-1);
   }
 
   launch(): void {
     if (this.leaving) return;
     this.leaving = true;
+    AudioService.play('launch');
     const pick = this.pick;
     if (this.fade) this.fade.leave(() => SceneRouter.play(pick.mission, pick.difficulty));
     else SceneRouter.play(pick.mission, pick.difficulty);
@@ -238,6 +256,10 @@ export class StartScreen extends Component implements MenuHost {
     this.walletFlash = 0.5;
   }
 
+  graphicsChanged(): void {
+    this.scaler?.refresh();
+  }
+
   // ---------------------------------------------------------------------------------------------
 
   private get current(): PageId | null {
@@ -248,13 +270,13 @@ export class StartScreen extends Component implements MenuHost {
     if (!this.camera || !this.uiRoot || !this.unlitEffect || !this.standardEffect) {
       throw new Error('StartScreen: camera, uiRoot and effects must be assigned in the scene');
     }
-    // The menu is light: it takes the quality tier the game has settled on, without adapting.
+    // The graphics tier from the settings; the GRAPHICS row changes it on the spot (graphicsChanged).
     const debug = readDebugFlags();
     const pipe = pipelineSettings(this.camera);
     if (pipe) {
       pipe.bloomEnable = debug.bloom ?? POST_FX.bloom;
       pipe.fxaaEnable = debug.fxaa ?? POST_FX.fxaa;
-      new RenderScaler(pipe, debug);
+      this.scaler = new RenderScaler(pipe, debug);
     }
     const playfield = new Playfield(WORLD, screenAspect());
     const kit = RenderKit.shared(this.unlitEffect, this.standardEffect);
@@ -279,7 +301,7 @@ export class StartScreen extends Component implements MenuHost {
     const entry = SceneRouter.takeMenuEntry();
     if (entry === null) {
       this.stack.push('title');
-      this.showPage();
+      this.showPage(0);
     } else {
       this.open('main');
       if (entry === 'hangar') this.open('hangar');
@@ -297,6 +319,7 @@ export class StartScreen extends Component implements MenuHost {
     const logo = uiLabel(root, 'Logo', 78, UI.white, { top: 150, centerX: true }, logoFont);
     logo.enableOutline = false;
     logo.string = 'SPACE FLIGHT';
+    this.logoGlow = glow;
     const build = uiLabel(root, 'Build', 18, UI.dim, { bottom: 16, centerX: true }, font);
     build.string = BUILD_LABEL;
     this.logo = [glow.node, logo.node, build.node];
@@ -308,6 +331,9 @@ export class StartScreen extends Component implements MenuHost {
     this.pages.set('campaign', new CampaignPage(root, host));
     this.pages.set('mission', new MissionPage(root, host));
     this.pages.set('hangar', new HangarPage(root, host));
+    this.pages.set('settings', new SettingsPage(root, host));
+    this.pages.set('cheats', new CheatsPage(root, host));
+    this.pages.set('credits', new CreditsPage(root, host));
 
     // Wallet: credits and a coin, top right on every page but the title.
     this.wallet = uiNode(root, 'Wallet', WALLET_WIDTH, 50, { top: 50, right: 24 });
@@ -320,11 +346,16 @@ export class StartScreen extends Component implements MenuHost {
     this.fade = new ScreenFade(root, font);
   }
 
-  private showPage(): void {
+  /** Shows the page on top of the stack; it slides in from the right (dir 1), the left (−1) or just fades up (0). */
+  private showPage(dir: number): void {
     const id = this.current;
     for (const [pid, page] of this.pages) page.root.active = pid === id;
     const page = id ? this.pages.get(id) : undefined;
     if (!page) return;
+    const root = page.root;
+    const opacity = root.getComponent(UIOpacity) ?? root.addComponent(UIOpacity);
+    opacity.opacity = 0;
+    this.arrival = { root, opacity, t: 0, dir };
     for (const n of this.logo) n.active = page.logo;
     if (this.wallet) this.wallet.active = id !== 'title';
     if (id === 'main') {
@@ -335,6 +366,17 @@ export class StartScreen extends Component implements MenuHost {
     page.enter();
     this.walletChanged();
     this.preloadMission(this.pick.mission);
+  }
+
+  /** Slides and fades the arriving page in (the Widget put it in place; this offsets it for a moment). */
+  private animatePage(dt: number): void {
+    const a = this.arrival;
+    if (!a) return;
+    a.t = Math.min(1, a.t + dt / MENU_FX.pageTime);
+    const k = smoothstep(a.t);
+    a.opacity.opacity = Math.round(255 * k);
+    a.root.setPosition(a.dir * MENU_FX.pageSlide * (1 - k), a.root.position.y);
+    if (a.t >= 1) this.arrival = null;
   }
 
   /** Fetches the picked mission's models while the player is still in the menu, so LAUNCH is quick. */

@@ -34,8 +34,8 @@ export interface DebugFlags {
   /** Wipe the save once per page load (`?reset=1`), before `credits`. */
   reset: boolean;
   /**
-   * Graphics quality tier fixed for the page (`?quality=high`) instead of the adaptive one, or null.
-   * `?scale=0.5` (0.3..1) and `?msaa=1` override that knob of the tier; any of the three fixes it.
+   * Graphics quality tier for the page (`?quality=high`) instead of the one in the settings, or null.
+   * `?scale=0.5` (0.3..1) and `?msaa=1` override that knob of the tier.
    */
   quality: QualityId | null;
   scale: number | null;

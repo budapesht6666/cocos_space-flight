@@ -2,7 +2,8 @@
 // buttons, icons and medal badges drawn with Graphics. Colours are shared so screens match.
 
 import { Color, Graphics, Label, Layers, Node, TTFFont, UITransform, Vec2, Widget } from 'cc';
-import type { MedalId } from '../data/types';
+import type { MedalId, SfxId } from '../data/types';
+import { AudioService } from '../services/AudioService';
 
 export const UI = {
   white: new Color(235, 245, 255, 255),
@@ -105,12 +106,16 @@ export function drawButton(g: Graphics, width: number, height: number, hot: bool
   g.stroke();
 }
 
-/** Calls `fn` when a touch that started on the node ends on it; the node dips while held. */
-export function onTap(node: Node, fn: () => void): void {
+/**
+ * Calls `fn` when a touch that started on the node ends on it; the node dips while held and the
+ * tap clicks (`sound`, null for silence: the handler plays its own).
+ */
+export function onTap(node: Node, fn: () => void, sound: SfxId | null = 'uiTap'): void {
   node.on(Node.EventType.TOUCH_START, () => node.setScale(0.97, 0.97, 1));
   node.on(Node.EventType.TOUCH_CANCEL, () => node.setScale(1, 1, 1));
   node.on(Node.EventType.TOUCH_END, () => {
     node.setScale(1, 1, 1);
+    if (sound) AudioService.play(sound);
     fn();
   });
 }

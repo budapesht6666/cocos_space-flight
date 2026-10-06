@@ -1,16 +1,23 @@
 // Uniform grid on the XZ gameplay plane for broad-phase circle queries. Engine-free.
 // Rebuilt every step: `clear()`, then `insert()` each collider, then `query()`.
-// Storage is reused between steps, so steady-state use doesn't allocate.
+// Storage is reused between steps, so steady-state use doesn't allocate: a bucket keeps its array
+// and a fill count (setting an array's length to 0 frees its storage, and the next push allocates).
+
+interface Bucket {
+  ids: number[];
+  count: number;
+}
 
 export class SpatialGrid {
-  private readonly cells = new Map<number, number[]>();
-  private readonly usedCells: number[][] = [];
+  private readonly cells = new Map<number, Bucket>();
+  private readonly usedCells: Bucket[] = [];
+  private used = 0;
 
   constructor(private readonly cellSize: number) {}
 
   clear(): void {
-    for (let i = 0; i < this.usedCells.length; i++) this.usedCells[i].length = 0;
-    this.usedCells.length = 0;
+    for (let i = 0; i < this.used; i++) this.usedCells[i].count = 0;
+    this.used = 0;
   }
 
   /** Registers item `id` with a circle at (x, z) and radius r. */
@@ -24,11 +31,17 @@ export class SpatialGrid {
         const key = this.key(cx, cz);
         let bucket = this.cells.get(key);
         if (!bucket) {
-          bucket = [];
+          bucket = { ids: [], count: 0 };
           this.cells.set(key, bucket);
         }
-        if (bucket.length === 0) this.usedCells.push(bucket);
-        bucket.push(id);
+        if (bucket.count === 0) {
+          if (this.used < this.usedCells.length) this.usedCells[this.used] = bucket;
+          else this.usedCells.push(bucket);
+          this.used++;
+        }
+        if (bucket.count < bucket.ids.length) bucket.ids[bucket.count] = id;
+        else bucket.ids.push(id);
+        bucket.count++;
       }
     }
   }
@@ -46,7 +59,7 @@ export class SpatialGrid {
       for (let cz = minZ; cz <= maxZ; cz++) {
         const bucket = this.cells.get(this.key(cx, cz));
         if (!bucket) continue;
-        for (let i = 0; i < bucket.length; i++) visit(bucket[i]);
+        for (let i = 0; i < bucket.count; i++) visit(bucket.ids[i]);
       }
     }
   }

@@ -4,14 +4,16 @@
 // mission page.
 
 import { Graphics, KeyCode, Label, Node, view } from 'cc';
-import { shipUnlocked } from '../core/progress';
-import { SECTORS } from '../data/campaign';
+import { shipUnlocked, unlockHint } from '../core/progress';
+import { shipStats } from '../core/shipCard';
 import { UPGRADE_ORDER, UPGRADES } from '../data/economy';
 import { PAINT_ORDER, PAINTS, SHIP_ORDER, SHIPS } from '../data/player';
 import type { ArsenalId, PaintId, ShipId, UpgradeId } from '../data/types';
 import { toColor } from '../fx/RenderKit';
+import { AudioService } from '../services/AudioService';
 import { SaveService } from '../services/SaveService';
 import { ROW_GAP, ROW_HEIGHT, UpgradeRow } from './HangarRows';
+import { SHIP_CARD_HEIGHT, ShipCard } from './ShipCard';
 import { WeaponsPanel } from './HangarWeapons';
 import { pickLabel } from './MenuPages';
 import { HEADER_TOP, pageHeader, pageRoot, type MenuHost, type MenuPage, type ShipPose } from './MenuPage';
@@ -30,8 +32,10 @@ const TABS_TOP = HEADER_TOP + 92;
 const CONTENT_TOP = TABS_TOP + TAB_HEIGHT + 24;
 const SWATCH_R = 30;
 const SWATCH_GAP = 104;
-/** Top of the ship name block, from the bottom of the screen: the turntable sits above it. */
-const SHIP_INFO_TOP = 568;
+const SWATCH_BOTTOM = 160;
+const SHIP_CARD_BOTTOM = SWATCH_BOTTOM + SWATCH_R * 2 + 32;
+/** Top of the ship card, from the bottom of the screen: the turntable sits above it. */
+const SHIP_INFO_TOP = SHIP_CARD_BOTTOM + SHIP_CARD_HEIGHT + 14;
 
 interface Swatch {
   paint: PaintId;
@@ -49,10 +53,9 @@ export class HangarPage implements MenuPage {
   private readonly tabs: { id: Tab; gfx: Graphics; label: Label }[] = [];
   private readonly panels: Record<Tab, Node>;
   private readonly rows: UpgradeRow[] = [];
-  private readonly shipName: Label;
-  private readonly shipRole: Label;
-  private readonly shipPerks: Label;
-  private readonly shipStatus: Label;
+  private readonly shipCard: ShipCard;
+  /** Under the card of a locked ship, where its paints would be: how to unlock it. */
+  private readonly shipLocked: Label;
   private readonly swatches: Swatch[] = [];
   private readonly weapons: WeaponsPanel;
   private readonly launchLabel: Label;
@@ -68,13 +71,13 @@ export class HangarPage implements MenuPage {
       const label = uiLabel(node, 'Label', 24, UI.white, {}, font);
       label.string = t.label;
       placeLabel(label, 0, 0);
-      onTap(node, () => this.showTab(t.id));
+      onTap(node, () => this.showTab(t.id), 'uiTab');
       this.tabs.push({ id: t.id, gfx, label });
     });
     const panel = (name: string): Node => uiNode(this.root, name, 0, 0, { top: 0, bottom: 0, left: 0, right: 0 });
     this.panels = { ship: panel('ShipTab'), systems: panel('SystemsTab'), weapons: panel('WeaponsTab') };
 
-    // SHIP: arrows either side of the turntable, then name, role, perks, status and paints.
+    // SHIP: arrows either side of the turntable, the ship card, then the paints.
     const ship = this.panels.ship;
     for (const dir of [-1, 1]) {
       // Level with the turntable, which sits halfway between the tabs and the ship's name.
@@ -85,13 +88,10 @@ export class HangarPage implements MenuPage {
       drawChevron(g, 0, 0, 40, dir, UI.white);
       onTap(arrow, () => this.browse(dir));
     }
-    this.shipName = uiLabel(ship, 'Name', 40, UI.white, { bottom: SHIP_INFO_TOP - 48, centerX: true }, font);
-    this.shipRole = uiLabel(ship, 'Role', 22, UI.accent, { bottom: 484, centerX: true }, font);
-    this.shipPerks = uiLabel(ship, 'Perks', 21, UI.white, { bottom: 330, centerX: true }, font);
-    this.shipPerks.lineHeight = 34;
-    this.shipStatus = uiLabel(ship, 'Status', 22, UI.success, { bottom: 286, centerX: true }, font);
+    this.shipCard = new ShipCard(ship, SHIP_CARD_BOTTOM, font);
+    this.shipLocked = uiLabel(ship, 'Unlock', 22, UI.danger, { bottom: SWATCH_BOTTOM + SWATCH_R - 4, centerX: true }, font);
     PAINT_ORDER.forEach((paint, i) => {
-      const node = uiNode(ship, `Paint-${paint}`, SWATCH_R * 2 + 16, SWATCH_R * 2 + 16, { bottom: 168, centerX: true, dx: (i - (PAINT_ORDER.length - 1) / 2) * SWATCH_GAP });
+      const node = uiNode(ship, `Paint-${paint}`, SWATCH_R * 2 + 16, SWATCH_R * 2 + 16, { bottom: SWATCH_BOTTOM, centerX: true, dx: (i - (PAINT_ORDER.length - 1) / 2) * SWATCH_GAP });
       const gfx = node.addComponent(Graphics);
       onTap(node, () => this.paint(paint));
       this.swatches.push({ paint, node, gfx });
@@ -113,7 +113,7 @@ export class HangarPage implements MenuPage {
     drawButton(launch.addComponent(Graphics), 600, 100, true);
     this.launchLabel = uiLabel(launch, 'Label', 28, UI.white, {}, font);
     placeLabel(this.launchLabel, 0, 0);
-    onTap(launch, () => host.launch());
+    onTap(launch, () => host.launch(), null);
   }
 
   get pose(): ShipPose | null {
@@ -175,18 +175,14 @@ export class HangarPage implements MenuPage {
   private refreshShip(): void {
     const def = SHIPS[this.browsed];
     const open = this.isOpen(this.browsed);
-    this.shipName.string = def.name;
-    this.shipRole.string = def.role;
-    const l = SaveService.loadout(this.browsed);
-    this.shipPerks.string = `${def.perks.join('\n')}\nHULL ${l.hull}  ·  SHIELD ${l.shield}`;
-    if (open) {
-      this.shipStatus.string = 'READY TO FLY';
-      this.shipStatus.color = UI.success;
-    } else {
-      const sector = def.unlock ? SECTORS[def.unlock.sector - 1] : null;
-      this.shipStatus.string = sector ? `LOCKED  ·  DEFEAT ${sector.boss}` : 'LOCKED';
-      this.shipStatus.color = UI.danger;
-    }
+    // Compared with the ship being flown; a locked one being looked at shows what it would change.
+    const flownId = SaveService.shipToFly(this.host.unlockAll);
+    const flown = flownId === this.browsed ? null : shipStats(SHIPS[flownId], SaveService.loadout(flownId));
+    // What opens it, with the progress: "TO UNLOCK: CLEAR MISSION 1-3", "… EARN 12 MEDALS  ·  5 / 12".
+    const locked = open ? null : def.unlock ? `TO UNLOCK: ${unlockHint(SaveService.records, def.unlock)}` : 'LOCKED';
+    this.shipCard.show(def, SaveService.loadout(this.browsed), flown, locked);
+    this.shipLocked.node.active = locked !== null;
+    this.shipLocked.string = locked ?? '';
     const current = SaveService.paintOf(this.browsed);
     for (const s of this.swatches) {
       const g = s.gfx;
@@ -222,6 +218,7 @@ export class HangarPage implements MenuPage {
 
   private buy(id: UpgradeId): void {
     const result = SaveService.buy(id, this.host.unlockAll);
+    AudioService.play(result === 'bought' ? 'uiBuy' : 'uiDenied');
     if (result === 'poor') this.host.walletDenied();
     if (result !== 'bought') return;
     this.host.walletChanged();
@@ -230,6 +227,9 @@ export class HangarPage implements MenuPage {
 
   private equip(id: ArsenalId): void {
     const result = SaveService.equip(id);
-    if (result === 'equipped' || result === 'unequipped') this.weapons.refresh();
+    if (result === 'equipped' || result === 'unequipped') {
+      AudioService.play('uiEquip');
+      this.weapons.refresh();
+    }
   }
 }

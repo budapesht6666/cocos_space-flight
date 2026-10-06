@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p game/tsconfig.json",
     "build:ships": "node tools/assets/build-ships.mjs",
     "build:props": "node tools/assets/build-props.mjs",
+    "build:audio": "node tools/assets/build-audio.mjs",
     "balance": "node tools/balance.mjs",
     "deploy:web": "node tools/deploy-web.mjs",
     "build:web": "node tools/build-web.mjs",

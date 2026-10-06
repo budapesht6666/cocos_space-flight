@@ -5,13 +5,13 @@
 // The mission comes from the menu (services/SceneRouter), or from URL flags when the scene is
 // opened directly; the ship and its loadout come from the hangar (services/SaveService).
 
-import { _decorator, Camera, Component, EffectAsset, Game, Node, Prefab, TTFFont, Vec2, game, profiler, resources, screen } from 'cc';
+import { _decorator, Camera, Component, EffectAsset, Game, Node, Prefab, TTFFont, Vec2, game, profiler, resources, screen, sys } from 'cc';
 import { EventBus } from '../core/EventBus';
 import { FixedStep } from '../core/FixedStep';
 import { smoothstep } from '../core/math';
 import { hasOverride, overrideLoadout } from '../core/loadout';
 import { enemyPrefabPath, missionNeeds } from '../core/missionNeeds';
-import { missionUnlocked } from '../core/progress';
+import { isCleared, missionUnlocked } from '../core/progress';
 import { Rng } from '../core/Rng';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_MISSION, MISSIONS, nextMission } from '../data/missions';
@@ -33,7 +33,9 @@ import { pipelineSettings, RenderScaler } from '../fx/RenderScaler';
 import { Starfield } from '../fx/Starfield';
 import { InputService } from '../services/InputService';
 import { ScreenFade } from '../ui/ScreenFade';
+import { AudioService } from '../services/AudioService';
 import { SaveService } from '../services/SaveService';
+import { SettingsService } from '../services/SettingsService';
 import { SceneRouter, type MenuEntry } from '../services/SceneRouter';
 import { ScreenFit } from '../services/ScreenFit';
 import { Hud } from '../ui/Hud';
@@ -41,8 +43,10 @@ import { BulletSystem, type BulletLook } from './BulletSystem';
 import { CollisionSystem } from './CollisionSystem';
 import { DroneSystem } from './DroneSystem';
 import { EnemySystem } from './EnemySystem';
+import { GameAudio } from './GameAudio';
 import type { GameContext, GameEvents } from './GameContext';
 import { MissionDirector } from './MissionDirector';
+import { Onboarding } from './Onboarding';
 import { PickupSystem } from './PickupSystem';
 import { Playfield } from './Playfield';
 import { PlayerSystem } from './PlayerSystem';
@@ -74,6 +78,8 @@ interface Systems {
   fx: FxSystem;
   cameraRig: CameraRig;
   hud: Hud;
+  audio: GameAudio;
+  onboarding: Onboarding | null;
   overlay: DebugOverlay | null;
 }
 
@@ -113,7 +119,7 @@ export class GameWorld extends Component {
   private difficulty: Difficulty = 'normal';
   private loadout: Loadout | null = null;
   private fade: ScreenFade | null = null;
-  /** Adaptive 3D resolution; null with a fixed `?scale=`. */
+  /** The graphics tier on the camera (Settings → GRAPHICS, or URL flags). */
   private scaler: RenderScaler | null = null;
   /** Real seconds of boss-kill slow motion left. */
   private slowmo = 0;
@@ -128,6 +134,7 @@ export class GameWorld extends Component {
 
   start(): void {
     ScreenFit.init();
+    AudioService.init();
     game.on(Game.EVENT_HIDE, this.onHide, this);
     // Covered from the first frame until everything is loaded and built.
     if (this.hudRoot) this.fade = new ScreenFade(this.hudRoot, this.titleFont);
@@ -142,6 +149,7 @@ export class GameWorld extends Component {
   onDestroy(): void {
     game.off(Game.EVENT_HIDE, this.onHide, this);
     this.input.detach();
+    this.s?.audio.stop();
     this.s?.ctx.kit.releaseScene();
   }
 
@@ -158,10 +166,8 @@ export class GameWorld extends Component {
     }
 
     if (this.paused) this.updatePaused(s);
-    else {
-      this.updateRunning(s, dt);
-      if (s.mission.phase !== 'results') this.scaler?.tick(dt);
-    }
+    else this.updateRunning(s, dt);
+    s.audio.tick(this.paused, s.mission.phase === 'results');
 
     s.stars.render();
     s.nebula.render();
@@ -273,9 +279,9 @@ export class GameWorld extends Component {
     const boss = s.enemies.boss;
     hud.setBoss(boss ? boss.def.name : null, boss ? boss.hp / boss.maxHp : 0, boss !== null && s.enemies.isArmored(boss));
     hud.tick(dt);
+    if (!this.paused && s.onboarding) s.onboarding.tick(dt);
     if (s.mission.phase === 'results' && !this.resultsShown) {
       this.resultsShown = true;
-      this.scaler?.remember();
       this.showResults(s);
     }
     s.overlay?.tick(dt);
@@ -291,6 +297,7 @@ export class GameWorld extends Component {
     const run = { complete: r.complete, score: r.score, medals: r.medals, killRate: r.killRate };
     const report = practice ? null : SaveService.submitRun(this.missionId, this.difficulty, run, r.credits);
     const next = nextMission(this.missionId);
+    s.audio.results(r.complete);
     s.hud.setPlaying(false);
     s.hud.showResults(r, {
       mission: MISSIONS[this.missionId].title,
@@ -301,6 +308,7 @@ export class GameWorld extends Component {
       rewards: report ? report.rewards : null,
       balance: report ? report.balance : SaveService.credits,
       hasNext: next !== null && (d.unlock || missionUnlocked(SaveService.records, next)),
+      unlocked: report ? report.unlocked : [],
     });
     // Presses queued during the fight (Enter = retry) must not skip the results screen.
     this.input.flush();
@@ -365,6 +373,8 @@ export class GameWorld extends Component {
     s.weapons.reset();
     s.drones.reset();
     s.mission.start(debug.t);
+    s.audio.start(debug.t);
+    s.onboarding?.reset();
     s.hud.showResults(null, null);
     s.hud.setPlaying(true);
     this.resultsShown = false;
@@ -480,7 +490,13 @@ export class GameWorld extends Component {
     const score = new ScoreSystem(ctx);
     const missionDirector = new MissionDirector(ctx, mission, enemies, setPieces, pickups, player, score);
     const fx = new FxSystem(ctx);
-    const hud = new Hud(this.hudRoot, { title: this.titleFont });
+    const settings = SettingsService.current;
+    player.sensitivity = settings.sensitivity;
+    const hud = new Hud(this.hudRoot, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps });
+    const audio = new GameAudio(ctx, mission, weapons);
+    // Mission 1-1 teaches the controls until it has been cleared once.
+    const teach = mission.onboarding === true && debug.t === 0 && !isCleared(SaveService.records, missionId);
+    const onboarding = teach ? new Onboarding(ctx, player, pickups, enemyBullets, hud, !sys.isMobile) : null;
     if (!debug.overlay) profiler.hideStats();
     const overlay = debug.overlay
       ? new DebugOverlay(
@@ -496,7 +512,7 @@ export class GameWorld extends Component {
 
     const s: Systems = {
       ctx, playfield, stars, nebula, decor, player, weapons, drones, playerBullets, enemyBullets, enemies, setPieces, pickups,
-      collisions, score, mission: missionDirector, fx, cameraRig, hud, overlay,
+      collisions, score, mission: missionDirector, fx, cameraRig, hud, audio, onboarding, overlay,
     };
     bus.on('banner', (e) => hud.showBanner(e.text, e.sub, e.style, e.time));
     const nova = SPECIALS.nova;

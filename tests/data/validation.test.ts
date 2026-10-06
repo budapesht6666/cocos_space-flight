@@ -219,8 +219,8 @@ describe('pickups and player', () => {
       expect(ship.grazeRadius, key).toBeGreaterThan(ship.bodyRadius);
       expect(ship.startHeight, key).toBeGreaterThan(WORLD.playerTopLimit);
       expect(ship.engines.length, key).toBeGreaterThan(0);
-      expect(ship.perks.length, key).toBeGreaterThan(0);
-      if (ship.unlock) expect(SECTORS[ship.unlock.sector - 1], `${key} unlock sector`).toBeDefined();
+      if (ship.unlock && 'mission' in ship.unlock) expect(MISSIONS[ship.unlock.mission], `${key} unlock mission`).toBeDefined();
+      if (ship.unlock && 'medals' in ship.unlock) expect(ship.unlock.medals, `${key} unlock medals`).toBeLessThanOrEqual(SECTORS[0].missions.length * 4 * CAMPAIGN_DIFFICULTIES.length);
       for (const paint of PAINT_ORDER) {
         const file = path.resolve(__dirname, '../../game/assets/resources', `${shipModelFile(ship.id, paint)}.glb`);
         expect(fs.existsSync(file), file).toBe(true);

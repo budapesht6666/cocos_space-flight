@@ -5,12 +5,15 @@
 //   are earned. Sectors without missions are not built yet ("soon").
 // - A mission opens when the previous mission of its sector is cleared on any difficulty.
 // - A difficulty opens when all four medals are earned on the previous one.
-// - A ship opens when its sector's boss is beaten.
+// - A ship, like an arsenal item, opens once its mission is cleared or enough medals are earned
+//   (GDD: the bosses of sectors 2 and 3; while only Sector 1 is built, progress there).
 // - An arsenal item can be bought once its mission is cleared or enough medals are earned.
 // Anything already played (stage 3 had everything open) stays open.
 
 import { CAMPAIGN_DIFFICULTIES, SECTORS } from '../data/campaign';
 import { DIFFICULTY_ORDER } from '../data/difficulty';
+import { UPGRADE_ORDER, UPGRADES } from '../data/economy';
+import { SHIP_ORDER, SHIPS } from '../data/player';
 import { MISSION_ORDER, nextMission } from '../data/missions';
 import type { Difficulty, MissionId, PlayerShipDef, SectorDef, UnlockReq } from '../data/types';
 import { medalCount } from './medals';
@@ -82,9 +85,7 @@ export function difficultyUnlocked(records: RecordMap, mission: MissionId, diffi
 }
 
 export function shipUnlocked(records: RecordMap, ship: PlayerShipDef): boolean {
-  if (!ship.unlock) return true;
-  const sector = SECTORS[ship.unlock.sector - 1];
-  return sector !== undefined && bossBeaten(records, sector);
+  return unlockMet(records, ship.unlock);
 }
 
 /** Medals earned over the whole campaign (campaign difficulties). */
@@ -99,6 +100,26 @@ export function unlockMet(records: RecordMap, req: UnlockReq | null): boolean {
   if (!req) return true;
   if ('mission' in req) return isCleared(records, req.mission);
   return campaignMedals(records) >= req.medals;
+}
+
+/**
+ * What a locked item asks for, with the progress towards it when there is a count:
+ * "CLEAR MISSION 1-3", "EARN 12 MEDALS  ·  5 / 12".
+ */
+export function unlockHint(records: RecordMap, req: UnlockReq): string {
+  const text = unlockText(req);
+  return 'medals' in req ? `${text}  ·  ${Math.min(campaignMedals(records), req.medals)} / ${req.medals}` : text;
+}
+
+/**
+ * Names of the ships and arsenal items whose condition is met, in hangar order. Compared before and
+ * after a run, it tells what the run opened (the results screen lists it).
+ */
+export function openHangarItems(records: RecordMap): string[] {
+  const names: string[] = [];
+  for (const id of SHIP_ORDER) if (SHIPS[id].unlock && shipUnlocked(records, SHIPS[id])) names.push(SHIPS[id].name);
+  for (const id of UPGRADE_ORDER) if (UPGRADES[id].unlock && unlockMet(records, UPGRADES[id].unlock)) names.push(UPGRADES[id].name);
+  return names;
 }
 
 /** How the hangar words a condition: "CLEAR MISSION 1-2", "EARN 8 MEDALS". */

@@ -348,6 +348,7 @@ describe('progress', () => {
     expect(sectorState(r, SECTORS[1])).toBe('soon');
     expect(shipUnlocked(r, SHIPS.spitfire)).toBe(true);
     expect(shipUnlocked(r, SHIPS.executioner)).toBe(false);
+    expect(shipUnlocked(r, SHIPS.striker)).toBe(false);
     expect(continueTarget(r, null)).toEqual({ mission: 's1m1', difficulty: 'normal' });
   });
 

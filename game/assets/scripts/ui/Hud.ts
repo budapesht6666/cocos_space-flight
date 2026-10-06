@@ -50,10 +50,24 @@ const MEDAL_RADIUS = 46;
 const RESULT_BUTTON_Y = -440;
 const RESULT_BUTTON_WIDTH = 160;
 const RESULT_BUTTON_GAP = 14;
+/** The run's numbers and what it opened in the hangar share the space between the medals and the buttons. */
+const RESULT_BLOCK_CENTRE = -168;
+const BODY_LINE = 40;
+const UNLOCK_LINE = 36;
+const UNLOCK_GAP = 16;
+/** Characters per line of the unlock list, and lines of names at most. */
+const UNLOCK_CHARS = 32;
 
 export interface HudFonts {
   /** Orbitron Bold: banners, titles, buttons. */
   title: TTFFont | null;
+}
+
+/** From the settings. */
+export interface HudOptions {
+  /** The Special button goes under the left thumb. */
+  leftHanded: boolean;
+  showFps: boolean;
 }
 
 /** What the results screen shows next to the run itself. */
@@ -69,6 +83,8 @@ export interface ResultsExtras {
   /** Wallet after the run. */
   balance: number;
   hasNext: boolean;
+  /** Ships and arsenal items the run opened (names). */
+  unlocked: string[];
 }
 
 interface Banner {
@@ -89,6 +105,11 @@ export class Hud {
   private readonly specialGfx: Graphics;
   private readonly specialLabel: Label;
   private readonly pauseNode: Node;
+  private readonly fps: Label | null;
+  /** Onboarding hint (mission 1-1), under the middle of the screen. */
+  private readonly hint: Label;
+  private fpsTime = 0;
+  private fpsFrames = 0;
   private readonly bossNode: Node;
   private readonly bossGfx: Graphics;
   private readonly bossName: Label;
@@ -103,6 +124,7 @@ export class Hud {
   private readonly resultsScore: Label;
   private readonly resultsRecord: Label;
   private readonly resultsBody: Label;
+  private readonly resultsUnlocks: Label;
   private readonly medalGfx: Graphics;
   private readonly medalNames: Label[] = [];
   private readonly retryButton: Node;
@@ -117,6 +139,7 @@ export class Hud {
   constructor(
     private readonly root: Node,
     fonts: HudFonts,
+    options: HudOptions,
   ) {
     const font = fonts.title;
     this.score = uiLabel(root, 'Score', 46, UI.white, { top: 70, centerX: true });
@@ -146,10 +169,14 @@ export class Hud {
     pauseGfx.fill();
 
     const size = SPECIAL_RADIUS * 2 + 16;
-    this.specialNode = uiNode(root, 'Special', size, size, { bottom: 70, right: 36 });
+    this.specialNode = uiNode(root, 'Special', size, size, options.leftHanded ? { bottom: 70, left: 36 } : { bottom: 70, right: 36 });
     this.specialGfx = this.specialNode.addComponent(Graphics);
     this.specialLabel = uiLabel(this.specialNode, 'SpecialLabel', 26, UI.white, {});
     this.specialLabel.node.setPosition(0, 0);
+
+    this.hint = uiLabel(root, 'Hint', 30, UI.white, { centerX: true, centerY: true, dy: -60 }, font);
+    this.hint.node.active = false;
+    this.fps = options.showFps ? uiLabel(root, 'Fps', 20, UI.dim, { top: 146, right: 24 }) : null;
 
     this.bossNode = uiNode(root, 'BossBar', BOSS_BAR_WIDTH, 60, { top: 178, centerX: true });
     this.bossGfx = this.bossNode.addComponent(Graphics);
@@ -186,7 +213,9 @@ export class Hud {
       this.medalNames.push(label);
     });
     this.resultsBody = uiLabel(p, 'ResultsBody', 28, UI.white, { centerX: true, centerY: true, dy: -150 });
-    this.resultsBody.lineHeight = 40;
+    this.resultsBody.lineHeight = BODY_LINE;
+    this.resultsUnlocks = uiLabel(p, 'ResultsUnlocks', 26, UI.gold, { centerX: true, centerY: true, dy: 0 }, font);
+    this.resultsUnlocks.lineHeight = UNLOCK_LINE;
     const button = (text: string): Node => uiButton(p, text, RESULT_BUTTON_WIDTH, 88, { centerX: true, centerY: true, dy: RESULT_BUTTON_Y }, font, 24);
     this.retryButton = button('RETRY');
     this.nextButton = button('NEXT');
@@ -253,7 +282,8 @@ export class Hud {
    * Special runs (`active` 1 → 0), the ring shows the time left instead.
    */
   setSpecial(label: string, charges: number, energy: number, active: number): void {
-    const e = Math.round(energy * 100) / 100;
+    // Energy in 2% steps: the ring is a Graphics redraw, and kills and grazes nudge it all the time.
+    const e = Math.round(energy * 50) / 50;
     const a = Math.round(active * 100) / 100;
     if (charges === this.shown.charges && e === this.shown.energy && a === this.shown.active) return;
     this.shown.charges = charges;
@@ -324,11 +354,25 @@ ${charges > 0 ? '●'.repeat(charges) : '–'}`;
   /** Banner timing and blinking. */
   tick(dt: number): void {
     this.time += dt;
+    if (this.fps) {
+      // Averaged over half a second of real frames.
+      this.fpsTime += dt;
+      this.fpsFrames++;
+      if (this.fpsTime >= 0.5) {
+        this.fps.string = `${Math.round(this.fpsFrames / this.fpsTime)} FPS`;
+        this.fpsTime = 0;
+        this.fpsFrames = 0;
+      }
+    }
     if (this.podsFlash > 0) {
       this.podsFlash -= dt;
       const on = this.podsFlash > 0 && Math.floor(this.podsFlash * 8) % 2 === 0;
       const s = on ? 1.25 : 1;
       this.pods.node.setScale(s, s, 1);
+    }
+    if (this.hint.node.active) {
+      const s = 1 + 0.05 * Math.sin(this.time * 5);
+      this.hint.node.setScale(s, s, 1);
     }
     if (this.resultsPanel.active && this.recordBlink) this.resultsRecord.node.active = Math.floor(this.time * 3) % 3 !== 0;
     const b = this.banner;
@@ -342,10 +386,17 @@ ${charges > 0 ? '●'.repeat(charges) : '–'}`;
     if (b.style === 'warning') b.title.node.active = Math.floor(this.time * 4) % 2 === 0;
   }
 
+  /** An onboarding hint, or null to clear it. */
+  showHint(text: string | null): void {
+    this.hint.node.active = text !== null;
+    if (text !== null) this.hint.string = text;
+  }
+
   /** Gameplay HUD visibility (hidden on the results screen). */
   setPlaying(playing: boolean): void {
     this.specialNode.active = playing;
     this.pauseNode.active = playing;
+    if (!playing) this.hint.node.active = false;
   }
 
   showPause(visible: boolean): void {
@@ -391,12 +442,23 @@ ${charges > 0 ? '●'.repeat(charges) : '–'}`;
       lines.push(`CREDITS  ${money(r.credits)}  ·  PRACTICE, NOT KEPT`);
     }
     lines.push(`BALANCE  ${money(extras.balance)}`);
-    lines.push(`KILLS  ${r.kills}/${r.spawned}  (${rate}%)`);
-    if (r.podsTotal > 0) lines.push(`ESCAPE PODS  ${r.pods}/${r.podsTotal}`);
+    // Paired up where they fit, so the hangar's news has room above (7 lines at most).
+    lines.push(r.podsTotal > 0 ? `KILLS  ${r.kills}/${r.spawned} (${rate}%)  ·  PODS  ${r.pods}/${r.podsTotal}` : `KILLS  ${r.kills}/${r.spawned}  (${rate}%)`);
     lines.push(`BEST COMBO  ×${r.bestMultiplier}  ·  GRAZES  ${r.grazes}`, `HULL LOST  ${r.hullLost}`);
-    if (r.shieldBonus > 0) lines.push(`SHIELD BONUS  +${r.shieldBonus.toLocaleString('en-US')}`);
-    if (r.noDamageBonus > 0) lines.push(`NO DAMAGE  +${r.noDamageBonus.toLocaleString('en-US')}`);
+    const extra: string[] = [];
+    if (r.shieldBonus > 0) extra.push(`SHIELD  +${money(r.shieldBonus)}`);
+    if (r.noDamageBonus > 0) extra.push(`NO DAMAGE  +${money(r.noDamageBonus)}`);
+    if (extra.length > 0) lines.push(extra.join('  ·  '));
     this.resultsBody.string = lines.join('\n');
+    // What the run opened in the hangar, in gold above the numbers; the two are centred together.
+    const unlocks = unlockLines(extras.unlocked);
+    this.resultsUnlocks.node.active = unlocks.length > 0;
+    this.resultsUnlocks.string = unlocks.join('\n');
+    const unlockHeight = unlocks.length > 0 ? unlocks.length * UNLOCK_LINE + UNLOCK_GAP : 0;
+    const bodyHeight = lines.length * BODY_LINE;
+    const top = RESULT_BLOCK_CENTRE + (unlockHeight + bodyHeight) / 2;
+    setCentreY(this.resultsUnlocks.node, top - (unlockHeight - UNLOCK_GAP) / 2);
+    setCentreY(this.resultsBody.node, top - unlockHeight - bodyHeight / 2);
     this.nextButton.active = extras.hasNext && r.complete;
     // Centre the row of buttons that are showing.
     const row = [this.retryButton, this.nextButton, this.hangarButton, this.menuButton].filter((b) => b.active);
@@ -517,4 +579,25 @@ function drawStatusIcons(g: Graphics): void {
   g.fill();
 
   drawCoin(g, cx, ROW_CREDITS, 16);
+}
+
+/** A node aligned by its Widget to the vertical centre: move it there now. */
+function setCentreY(node: Node, dy: number): void {
+  const widget = node.getComponent(Widget) as Widget;
+  widget.verticalCenter = dy;
+  widget.updateAlignment();
+}
+
+/** "NEW IN HANGAR: EXECUTIONER", or a heading and a line of names ("… +3 MORE" when they don't fit). */
+function unlockLines(names: readonly string[]): string[] {
+  if (names.length === 0) return [];
+  const single = `NEW IN HANGAR: ${names[0]}`;
+  if (names.length === 1 && single.length <= UNLOCK_CHARS) return [single];
+  let line = names[0];
+  for (let i = 1; i < names.length; i++) {
+    const next = `${line}  ·  ${names[i]}`;
+    if (next.length > UNLOCK_CHARS) return ['NEW IN HANGAR', `${line}  +${names.length - i} MORE`];
+    line = next;
+  }
+  return ['NEW IN HANGAR', line];
 }

@@ -66,11 +66,15 @@ export class Starfield {
     }
   }
 
+  // Indexed loops in tick and render: the build compiles for…of into an iterator that allocates
+  // an object per star, every frame.
   tick(dt: number): void {
     const rng = this.ctx.rng;
-    for (const layer of this.layers) {
+    for (let l = 0; l < this.layers.length; l++) {
+      const layer = this.layers[l];
       const dz = this.scrollSpeed * layer.speedScale * dt;
-      for (const star of layer.stars) {
+      for (let i = 0; i < layer.stars.length; i++) {
+        const star = layer.stars[i];
         star.z += dz;
         if (star.z > layer.maxZ) {
           star.z = wrap(star.z, layer.minZ, layer.maxZ);
@@ -81,8 +85,12 @@ export class Starfield {
   }
 
   render(): void {
-    for (const layer of this.layers) {
-      for (const star of layer.stars) star.node.setPosition(star.x, layer.y, star.z);
+    for (let l = 0; l < this.layers.length; l++) {
+      const layer = this.layers[l];
+      for (let i = 0; i < layer.stars.length; i++) {
+        const star = layer.stars[i];
+        star.node.setPosition(star.x, layer.y, star.z);
+      }
     }
   }
 }

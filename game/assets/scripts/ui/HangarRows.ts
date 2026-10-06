@@ -5,7 +5,7 @@
 import { Color, Graphics, Label, Node, TTFFont } from 'cc';
 import { formatUpgradeValue, nextCost, upgradeLevel, upgradeUnlocked, upgradeValue } from '../core/economy';
 import { droneSlots, isEquipped, owns } from '../core/loadout';
-import { unlockText } from '../core/progress';
+import { unlockHint } from '../core/progress';
 import type { ArsenalId, DroneId, UpgradeDef, UpgradeId } from '../data/types';
 import { SaveService } from '../services/SaveService';
 import { drawButton, drawCard, drawCoin, drawLock, onTap, placeLabel, UI, uiLabel, uiNode } from './UiKit';
@@ -83,7 +83,7 @@ function buildRow(parent: Node, def: UpgradeDef, top: number, font: TTFFont | nu
   buy.setPosition(BUY_X, 0);
   const buyGfx = buy.addComponent(Graphics);
   const price = uiLabel(buy, 'Price', 24, UI.gold, {}, font);
-  onTap(buy, () => onBuy(def.id));
+  onTap(buy, () => onBuy(def.id), null);
   return { node, card, name, hint, status, pips, buy, buyGfx, price };
 }
 
@@ -130,7 +130,7 @@ export class ArsenalRow {
     // The card left of the button equips (a separate node, so a tap on BUY doesn't equip too).
     const hit = uiNode(this.parts.node, 'Equip', CARD_WIDTH - BUY_WIDTH - 32, ROW_HEIGHT, {});
     hit.setPosition(-CARD_WIDTH / 2 + (CARD_WIDTH - BUY_WIDTH - 32) / 2, 0);
-    onTap(hit, () => onEquip(def.id as ArsenalId));
+    onTap(hit, () => onEquip(def.id as ArsenalId), null);
     this.lock = uiNode(this.parts.node, 'Lock', 0, 0, {}).addComponent(Graphics);
     this.lock.node.setPosition(BUY_X, 0);
   }
@@ -152,7 +152,7 @@ export class ArsenalRow {
     p.pips.clear();
     if (!open) {
       drawLock(this.lock, 0, 0, 40, UI.dim);
-      p.status.string = `LOCKED  ·  ${def.unlock ? unlockText(def.unlock) : ''}`;
+      p.status.string = `LOCKED  ·  ${def.unlock ? unlockHint(save.records, def.unlock) : ''}`;
       p.status.color = UI.dim;
       return;
     }

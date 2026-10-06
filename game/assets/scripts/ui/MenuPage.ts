@@ -5,7 +5,7 @@ import type { MissionPick } from '../core/progress';
 import type { PaintId, ShipId } from '../data/types';
 import { drawButton, drawChevron, onTap, UI, uiLabel, uiNode } from './UiKit';
 
-export type PageId = 'title' | 'main' | 'campaign' | 'mission' | 'hangar';
+export type PageId = 'title' | 'main' | 'campaign' | 'mission' | 'hangar' | 'settings' | 'cheats' | 'credits';
 
 export interface ShipPose {
   /** Screen row of the ship's centre, as a fraction of the screen height from the top. */
@@ -28,6 +28,8 @@ export interface MenuHost {
   /** The wallet changed (a purchase), or a purchase was refused for lack of credits. */
   walletChanged(): void;
   walletDenied(): void;
+  /** The GRAPHICS setting changed: apply it to the menu's camera now. */
+  graphicsChanged(): void;
 }
 
 export interface MenuPage {
@@ -61,7 +63,7 @@ export function pageHeader(root: Node, title: string, host: MenuHost): Label {
   const label = uiLabel(back, 'Label', 24, UI.white, {}, host.font);
   label.string = 'BACK';
   label.node.setPosition(14, 0);
-  onTap(back, () => host.back());
+  onTap(back, () => host.back(), 'uiBack');
   const caption = uiLabel(root, 'Title', 34, UI.white, { top: HEADER_TOP + 14, centerX: true }, host.font);
   caption.string = title;
   return caption;

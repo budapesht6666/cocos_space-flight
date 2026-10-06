@@ -116,6 +116,9 @@ export class PlayerSystem {
     ctx.bus.on('pickupCollected', (e) => this.applyPickup(e.kind));
   }
 
+  /** The player's Sensitivity setting, on top of the ship's own. */
+  sensitivity = 1;
+
   /** Puts the ship below the screen, ready to fly in (or straight into position with `skipIntro`). */
   reset(startPower: number, skipIntro: boolean): void {
     const field = this.ctx.playfield;
@@ -309,7 +312,7 @@ export class PlayerSystem {
     const field = this.ctx.playfield;
     // Finger travel moves the ship by the same fraction of the screen width, times the sensitivity.
     this.input.consumeDrag(this.drag);
-    const worldPerUi = ((2 * field.halfWidth(this.z)) / view.getDesignResolutionSize().width) * this.def.dragSensitivity;
+    const worldPerUi = ((2 * field.halfWidth(this.z)) / view.getDesignResolutionSize().width) * this.def.dragSensitivity * this.sensitivity;
     this.targetX += this.drag.x * worldPerUi;
     this.targetZ -= this.drag.y * worldPerUi;
     this.input.keyAxis(this.axis);

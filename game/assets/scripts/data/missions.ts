@@ -16,6 +16,8 @@ const S1M1: MissionDef = {
   id: 's1m1',
   title: 'MISSION 1-1',
   subtitle: 'OUTER RING',
+  music: 'mercury',
+  onboarding: true,
   scrollSpeed: 6,
   groundSpeed: 3.2,
   events: [
@@ -90,6 +92,7 @@ const S1M2: MissionDef = {
   id: 's1m2',
   title: 'MISSION 1-2',
   subtitle: 'MINING BELT',
+  music: 'venus',
   scrollSpeed: 6,
   groundSpeed: 3.2,
   events: [
@@ -171,6 +174,7 @@ const S1M3: MissionDef = {
   id: 's1m3',
   title: 'MISSION 1-3',
   subtitle: 'HOME STATION',
+  music: 'mars',
   scrollSpeed: 6.5,
   groundSpeed: 3.4,
   events: [
