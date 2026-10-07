@@ -41,14 +41,15 @@
 | Нет Vibration API | Вибрация только в нативной сборке |
 | Режим энергосбережения ограничивает `requestAnimationFrame` до 30 FPS | Симуляция с фиксированным шагом не ломается; в настройках подсказка |
 | Вкладку перезагружает при нехватке памяти | Бюджеты текстур, без утечек, скромный размер сборки |
-| Safe area (чёлка, Dynamic Island, home indicator) | Компонент `SafeArea` для HUD |
+| Safe area (чёлка, Dynamic Island, home indicator) | UI сцены строится в корне `UiKit.safeRoot`: Canvas минус отступы `env(safe-area-inset-*)` (`ScreenFit` меряет их скрытым элементом и обновляет на ресайзе); полноэкранные шторки рисуются с запасом и достают до краёв. Статус-бар PWA — `black`, не `black-translucent` (см. «PWA») |
 | Жесты Safari (pinch-zoom, свайп назад, bounce) | Шаблон `web-mobile` блокирует; проверяем на устройстве |
 
 ## PWA: основной релиз (с этапа 3)
 
 **Адрес:** https://spaceflight.p1gog.duckdns.org/
 
-1. **Шаблон** `game/build-templates/web-mobile/` Cocos берёт при каждой сборке `web-mobile`: свой `index.ejs` (название, `viewport-fit=cover`, `theme-color`, мета-теги Apple для «на экран „Домой“», регистрация service worker), `manifest.webmanifest` (`display: fullscreen`, portrait, иконки), `sw.js`, `icons/` (рендер Spitfire: 180 для Apple, 192, 512, maskable 512), `style.css` с тёмным фоном.
+1. **Шаблон** `game/build-templates/web-mobile/` Cocos берёт при каждой сборке `web-mobile`: свой `index.ejs` (название, `viewport-fit=cover`, `theme-color`, мета-теги Apple для «на экран „Домой“», регистрация service worker)
+   - `apple-mobile-web-app-status-bar-style` — **`black`**: страница начинается под статус-баром. С `black-translucent` установленная PWA рисуется под статус-баром (он закрывал BACK и кошелёк), а высота вьюпорта занижена на его высоту — внизу мёртвая полоса (баг WebKit, CSS-обходы на iOS 26 не помогают), `manifest.webmanifest` (`display: fullscreen`, portrait, иконки), `sw.js`, `icons/` (рендер Spitfire: 180 для Apple, 192, 512, maskable 512), `style.css` с тёмным фоном.
    - md5Cache переименовывает и шаблонные файлы (`sw.<hash>.js`, `manifest.<hash>.webmanifest`) и сам правит ссылки на них в `index.html`. Без хэша остаются только `index.html`, `icons/` и `src/effect.bin`.
    - **Service worker** (`sw.js`): страницы — сначала сеть (новая сборка подхватывается сразу), при офлайне — кэш; остальное — сначала кэш. Имя кэша штампует скрипт выкатки (коммит + время), и каждая выкатка начинает с чистого кэша. Новый worker включается, когда закрыты все вкладки игры (пока она открыта, работает прежний — он тоже берёт новую страницу из сети), и удаляет старый кэш. URL внутри `sw.js` — только абсолютные: md5Cache переписывает относительные пути в шаблонных файлах.
 2. **Сервер** — VPS пользователя по схеме скилла `vps-ops`: `ssh vps` (настройки в `~/.ssh/config`), приложение `spaceflight` типа `static` без git-репозитория. Caddy отдаёт `/srv/apps/spaceflight/repo/dist` и сам выпускает и продлевает HTTPS-сертификат. В блоке Caddyfile настроены заголовки: `no-cache` для файлов без хэша, `immutable` на год для остальных, `application/manifest+json` для манифеста.

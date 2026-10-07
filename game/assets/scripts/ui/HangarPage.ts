@@ -12,6 +12,7 @@ import type { ArsenalId, PaintId, ShipId, UpgradeId } from '../data/types';
 import { toColor } from '../fx/RenderKit';
 import { AudioService } from '../services/AudioService';
 import { SaveService } from '../services/SaveService';
+import { ScreenFit } from '../services/ScreenFit';
 import { ROW_GAP, ROW_HEIGHT, UpgradeRow } from './HangarRows';
 import { SHIP_CARD_HEIGHT, ShipCard } from './ShipCard';
 import { WeaponsPanel } from './HangarWeapons';
@@ -118,9 +119,11 @@ export class HangarPage implements MenuPage {
 
   get pose(): ShipPose | null {
     if (this.tab !== 'ship') return null;
-    // Centre the turntable between the tabs and the ship's name on any screen height.
+    // Centre the turntable between the tabs and the ship's name on any screen height (the page
+    // sits inside the safe area; the row is a fraction of the whole screen).
     const h = view.getVisibleSize().height;
-    this.shipPose.row = (CONTENT_TOP + h - SHIP_INFO_TOP) / 2 / h;
+    const { top, bottom } = ScreenFit.insets;
+    this.shipPose.row = (top + CONTENT_TOP + h - bottom - SHIP_INFO_TOP) / 2 / h;
     return this.shipPose;
   }
 

@@ -6,9 +6,10 @@
 // <body>). A frame at least as tall as 9:16 (a phone-sized window, a device in the editor preview)
 // fills as on a phone. Measured on the game's frame, not the window: the editor preview puts the
 // game in a frame of the chosen device's size.
-// It also keeps the keyboard on the game: the engine hears keys only on its canvas.
+// It also keeps the keyboard on the game: the engine hears keys only on its canvas, and it measures
+// the safe area (status bar, notch, home indicator) that the UI stays clear of.
 
-import { ResolutionPolicy, screen, sys, view } from 'cc';
+import { ResolutionPolicy, screen, sys, view, Widget } from 'cc';
 
 /** The frame must be this much wider than 9:16 for the column: no hairline bars on a near fit. */
 const SLACK = 1.02;
@@ -71,15 +72,81 @@ function anchorTextFields(): void {
   if (container) container.style.position = 'relative';
 }
 
+/** Safe-area margins in UI units. */
+export interface SafeInsets {
+  top: number;
+  bottom: number;
+}
+
+const insets: SafeInsets = { top: 0, bottom: 0 };
+let probe: HTMLElement | null = null;
+/** The current scene's UI root (UiKit.safeRoot): its Widget keeps it inside the safe area. */
+let safeWidget: Widget | null = null;
+
+/**
+ * The page's safe-area insets, read off a hidden element padded by env(safe-area-inset-*): the
+ * engine's own reading parses the --safe-* properties, which browsers may leave as unresolved
+ * env() text. Converted to UI units: the canvas is the design width wide (Fit Width).
+ */
+function measureInsets(): void {
+  insets.top = 0;
+  insets.bottom = 0;
+  if (!sys.isBrowser) return;
+  if (!probe) {
+    probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+      'padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';
+    document.body.appendChild(probe);
+  }
+  const canvas = document.getElementById('GameCanvas');
+  const width = canvas ? canvas.clientWidth : 0;
+  if (width <= 0) return;
+  const style = getComputedStyle(probe);
+  const scale = view.getVisibleSize().width / width;
+  insets.top = Math.round((parseFloat(style.paddingTop) || 0) * scale);
+  insets.bottom = Math.round((parseFloat(style.paddingBottom) || 0) * scale);
+}
+
+/** Moves the safe root to the current insets; its widgets lay out again only if they changed. */
+function applyInsets(): void {
+  measureInsets();
+  const widget = safeWidget;
+  if (!widget || !widget.isValid) return;
+  if (widget.top === insets.top && widget.bottom === insets.bottom) return;
+  widget.top = insets.top;
+  widget.bottom = insets.bottom;
+  // Children align on window resize only: changing the root's margins does not reach them.
+  const widgets = widget.node.getComponentsInChildren(Widget);
+  for (let i = 0; i < widgets.length; i++) widgets[i].setDirty();
+}
+
+function onResize(): void {
+  fit();
+  applyInsets();
+}
+
 export const ScreenFit = {
   /** Each scene's entry component calls this before laying out; the first call sets up the page. */
   init(): void {
     if (!sys.isBrowser) return;
     fit();
+    measureInsets();
     if (listening) return;
     listening = true;
-    screen.on('window-resize', fit);
+    screen.on('window-resize', onResize);
     keepKeyboard();
     anchorTextFields();
+  },
+
+  /** Safe-area margins in UI units, as of the last init or resize (zero off a notched phone). */
+  get insets(): Readonly<SafeInsets> {
+    return insets;
+  },
+
+  /** Keeps this widget (the scene's UI root) inset by the safe area from now on. */
+  trackSafeRoot(widget: Widget): void {
+    safeWidget = widget;
+    applyInsets();
   },
 };

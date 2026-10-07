@@ -34,6 +34,7 @@ import { pipelineSettings, RenderScaler } from '../fx/RenderScaler';
 import { Starfield } from '../fx/Starfield';
 import { InputService } from '../services/InputService';
 import { ScreenFade } from '../ui/ScreenFade';
+import { safeRoot } from '../ui/UiKit';
 import { AudioService } from '../services/AudioService';
 import { SaveService } from '../services/SaveService';
 import { SettingsService } from '../services/SettingsService';
@@ -118,6 +119,8 @@ export class GameWorld extends Component {
   titleFont: TTFFont | null = null;
 
   private s: Systems | null = null;
+  /** hudRoot inset by the safe area: the HUD is built in it. */
+  private ui: Node | null = null;
   private missionId: MissionId = DEFAULT_MISSION;
   private difficulty: Difficulty = 'normal';
   private loadout: Loadout | null = null;
@@ -139,8 +142,9 @@ export class GameWorld extends Component {
     ScreenFit.init();
     AudioService.init();
     game.on(Game.EVENT_HIDE, this.onHide, this);
+    if (this.hudRoot) this.ui = safeRoot(this.hudRoot);
     // Covered from the first frame until everything is loaded and built.
-    if (this.hudRoot) this.fade = new ScreenFade(this.hudRoot, this.titleFont);
+    if (this.ui) this.fade = new ScreenFade(this.ui, this.titleFont);
     this.boot()
       .then(() => {
         this.fade?.raise();
@@ -393,7 +397,7 @@ export class GameWorld extends Component {
   }
 
   private async boot(): Promise<void> {
-    if (!this.camera || !this.hudRoot || !this.unlitEffect || !this.standardEffect) {
+    if (!this.camera || !this.ui || !this.unlitEffect || !this.standardEffect) {
       throw new Error('GameWorld: camera, hudRoot and effects must be assigned in the scene');
     }
     const debug = readDebugFlags();
@@ -499,7 +503,7 @@ export class GameWorld extends Component {
     const fx = new FxSystem(ctx);
     const settings = SettingsService.current;
     player.sensitivity = settings.sensitivity;
-    const hud = new Hud(this.hudRoot, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps });
+    const hud = new Hud(this.ui, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps });
     const audio = new GameAudio(ctx, mission, weapons);
     // Mission 1-1 teaches the controls until it has been cleared once.
     const teach = mission.onboarding === true && debug.t === 0 && !isCleared(SaveService.records, missionId);

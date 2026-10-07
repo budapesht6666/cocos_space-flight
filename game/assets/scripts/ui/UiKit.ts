@@ -4,6 +4,7 @@
 import { Color, Graphics, Label, Layers, Node, TTFFont, UITransform, Vec2, Widget } from 'cc';
 import type { MedalId, SfxId } from '../data/types';
 import { AudioService } from '../services/AudioService';
+import { ScreenFit } from '../services/ScreenFit';
 
 export const UI = {
   white: new Color(235, 245, 255, 255),
@@ -178,6 +179,17 @@ export function drawChevron(g: Graphics, x: number, y: number, size: number, dir
   g.lineTo(x + dir * size * 0.25, y);
   g.lineTo(x - dir * size * 0.25, y - size * 0.5);
   g.stroke();
+}
+
+/**
+ * The scene's UI root: the canvas inset by the safe area, so buttons and numbers stay clear of the
+ * status bar, the notch and the home indicator. Full-screen covers inside it draw oversized and
+ * still reach the screen's edges.
+ */
+export function safeRoot(canvas: Node): Node {
+  const node = uiNode(canvas, 'Safe', 0, 0, { top: 0, bottom: 0, left: 0, right: 0 });
+  ScreenFit.trackSafeRoot(node.getComponent(Widget) as Widget);
+  return node;
 }
 
 /** Full-screen dimming panel. */

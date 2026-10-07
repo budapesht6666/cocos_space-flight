@@ -140,7 +140,7 @@
 | NES Shooter Music: Map (меню), Mercury, Venus, Mars (миссии 1-1…1-3), BossIntro + BossMain (босс), Intro Jingle (старт миссии), Win Jingle (победа), Warp Jingle (Time Warp) | SketchyLogic | [OpenGameArt](https://opengameart.org/content/nes-shooter-music-5-tracks-3-jingles) | CC0 | `game/assets/resources/audio/music/*.mp3`, `audio/sfx/warp_0.mp3` (`npm run build:audio`) |
 | Sci-fi Sounds, Impact Sounds, Interface Sounds: выстрелы, попадания, взрывы, щит, пикапы, Special, UI; этап 7 — заряд и выстрел вражеского лазера, взвод мины, выпуск роя | Kenney | [kenney.nl](https://kenney.nl/assets/sci-fi-sounds), [Impact](https://kenney.nl/assets/impact-sounds), [Interface](https://kenney.nl/assets/interface-sounds) | CC0 | `game/assets/resources/audio/sfx/*` (`npm run build:audio`) |
 
-Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`; своя палитра на сектор), сирена WARNING (двухтональная квадратная волна, `build-audio.mjs`), мина с шипами (`core/rock.ts: buildMine`), лёд и ледяная луна (те же процедурные камни в ледяном материале), облака газа (плоскости свечения).
+Процедурные ресурсы (свои, без сторонних лицензий): текстуры свечения, кольца и вражеских пуль (`fx/RenderKit.ts`), туманность, запекаемая при старте (`core/nebula.ts`; своя палитра на сектор), сирена WARNING (двухтональный сигнал «треугольником» NES, `build-audio.mjs`), мина с шипами (`core/rock.ts: buildMine`), лёд и ледяная луна (те же процедурные камни в ледяном материале), облака газа (плоскости свечения).
 
 Свои процедурные модели (пользователю понравились, остаются): астероиды — low-poly камень (`core/rock.ts`); кредиты — золотые кубики.
 

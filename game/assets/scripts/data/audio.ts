@@ -64,7 +64,8 @@ export const SFX: Record<SfxId, SfxDef> = {
   overdrive: sfx(1, 0.8),
   phase: sfx(1, 0.8),
   warp: sfx(1, 0.8),
-  warning: sfx(1, 0.55),
+  // A held tone: peak-normalised it is far louder than a hit. 0.34 sits ~2 dB over the boss music.
+  warning: sfx(1, 0.34),
   laserCharge: sfx(1, 0.45, 0.3),
   laserFire: sfx(1, 0.6, 0.2),
   mineArmed: sfx(1, 0.5, 0.15),

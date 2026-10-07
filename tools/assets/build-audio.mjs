@@ -5,7 +5,7 @@
 //
 // - Rapid sounds (fast guns, hits, ticks, taps) and the beam loop are mono WAV: an mp3 starts with
 //   ~25 ms of encoder delay, which smears rapid fire and clicks at a loop's seam. The rest is mono mp3.
-// - The WARNING siren is our own: a two-tone square wave like the NES music around it.
+// - The WARNING siren is our own: a two-tone alert in the NES triangle voice, like the music around it.
 // - Music: SketchyLogic's NES Shooter Music, mono mp3.
 //
 // ffmpeg decodes and encodes; the cutting and mixing happens here on raw samples.
@@ -146,23 +146,31 @@ function peak(x) {
   return p;
 }
 
-/** Two-tone alarm: square wave alternating 880 / 660 Hz every 0.18 s, 1.5 s with a fade. */
+/**
+ * Two-tone alert in the NES triangle voice (16 steps, like the 2A03's triangle channel): 587 / 440 Hz
+ * notes of 0.22 s, each swelling in, sagging and dying away before the next, three pairs. It was a
+ * 25% pulse wave: its overtones sit where the ear is most sensitive, and a held tone, peak-normalised
+ * like every effect, is far louder than a hit. Its level against the rest is set in data/audio.ts.
+ */
 function siren() {
-  const n = Math.floor(RATE * 1.5);
+  const note = 0.22;
+  const n = Math.floor(RATE * note * 6);
   const y = new Float32Array(n);
   let phase = 0;
   for (let i = 0; i < n; i++) {
     const t = i / RATE;
-    const f = Math.floor(t / 0.18) % 2 === 0 ? 880 : 660;
-    phase += f / RATE;
-    // 25% pulse wave, like the NES's second duty cycle.
-    y[i] = (phase % 1 < 0.25 ? 1 : -1) * 0.5;
+    const k = Math.floor(t / note);
+    phase = (phase + (k % 2 === 0 ? 587 : 440) / RATE) % 1;
+    const tri = Math.round((1 - Math.abs(2 * phase - 1)) * 15) / 7.5 - 1;
+    const u = t - k * note;
+    const env = Math.min(1, u / 0.012) * (1 - 0.3 * (u / note)) * Math.min(1, Math.max(0, (note - 0.025 - u) / 0.05));
+    y[i] = tri * env;
   }
   return y;
 }
 
 function render(spec) {
-  if (spec.synth === 'siren') return fade(siren(), 0.005, 0.3);
+  if (spec.synth === 'siren') return fade(siren(), 0.005, 0.35);
   let x = decode(spec.src);
   const at = Math.floor((spec.at ?? 0) * RATE);
   // Cut long enough that the pitch change still leaves `dur` seconds.

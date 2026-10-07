@@ -35,7 +35,7 @@ import type { MenuHost, MenuPage, PageId } from './MenuPage';
 import { CampaignPage, MainPage, MissionPage } from './MenuPages';
 import { ScreenFade } from './ScreenFade';
 import { SettingsPage } from './SettingsPage';
-import { drawCoin, placeLabel, UI, uiLabel, uiNode } from './UiKit';
+import { drawCoin, placeLabel, safeRoot, UI, uiLabel, uiNode } from './UiKit';
 
 const { ccclass, property } = _decorator;
 
@@ -47,7 +47,7 @@ const SHIP_SIZE = 3.4;
 const SHIP_HEIGHT = 0.4;
 const LOGO_GLOW = new Color(60, 200, 255, 255);
 const LOGO_GLOW_EDGE = new Color(40, 160, 255, 150);
-const BUILD_LABEL = 'STAGE 6 PREVIEW';
+const BUILD_LABEL = 'STAGE 7 PREVIEW';
 const WALLET_WIDTH = 240;
 
 /** One ship on the turntable: its paints (loaded on demand) and engine glows. */
@@ -300,7 +300,8 @@ export class StartScreen extends Component implements MenuHost {
     this.node.addChild(turntable);
     this.turntableRoot = turntable;
 
-    this.buildChrome(this.uiRoot);
+    // The menu is laid out inside the safe area (clear of the status bar and home indicator).
+    this.buildChrome(safeRoot(this.uiRoot));
     const ship = SaveService.shipToFly(this.unlockAll);
     this.showShip(ship, SaveService.paintOf(ship));
     input.on(Input.EventType.TOUCH_END, this.onTap, this);
