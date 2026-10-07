@@ -61,6 +61,7 @@
 | Звук: эффекты и музыка | `npm run build:audio` (`tools/assets/build-audio.mjs`, нужен `ffmpeg`; исходники паков — в `art-source/`, вне git; что из чего — таблицы `SFX`/`MUSIC` в скрипте, громкость — `data/audio.ts`) |
 | Картинки веб-страницы: заставка, стартовые экраны iPhone, фавикон | `npm run build:web-art` (`tools/assets/build-web-art.mjs` из `tools/web-art/logo.png` — рендер `logo.html`, см. его шапку) |
 | Страница игры | `site/about/` → `/about/`; в сборку и выкатку кладётся сама (`tools/lib/site.mjs`); медиа — скилл `playtest`, «Медиа для страницы игры» |
+| Ролик для YouTube Shorts | `npm run youtube:capture` → `youtube:mix` → `youtube:cut` (`youtube/`, нужна `npm run build:web`): покадровая съёмка 1080×1920 60 к/с из игры, звук игры кадр в кадр, простой Short ≤ 30 с; вирусный монтаж — в проекте `remotion-skill` (`C:/projects/claude/remotion-skill`) по `youtube/REMOTION_PROMPT.md`. Подробно — `youtube/README.md` |
 | Таблица баланса | `npm run balance` → `docs/BALANCE.md` (DPS по ситуациям, время убийства, доход, цены). Перегенерировать после правки оружия, врагов, миссий, цен; инварианты — `tests/core/balance.test.ts` |
 
 ## MCP-серверы и скиллы

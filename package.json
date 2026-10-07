@@ -16,11 +16,15 @@
     "release:web": "node tools/build-web.mjs && node tools/deploy-web.mjs --from .cache/cli-game/build/web-mobile",
     "hooks:install": "git config core.hooksPath tools/hooks",
     "serve:web": "python tools/serve_web.py",
-    "build:web-art": "node tools/assets/build-web-art.mjs"
+    "build:web-art": "node tools/assets/build-web-art.mjs",
+    "youtube:capture": "node youtube/capture.mjs",
+    "youtube:mix": "node youtube/mix.mjs",
+    "youtube:cut": "node youtube/cut.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/functions": "^4.5.1",
+    "puppeteer-core": "^25.12.0",
     "sharp": "^0.35.5",
     "typescript": "~5.9.0",
     "vitest": "^5.0.3"

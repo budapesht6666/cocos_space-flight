@@ -28,3 +28,6 @@ Thumbs.db
 
 # Raw third-party art downloads (re-fetch per docs/ASSETS.md; processed copies live in game/assets)
 art-source/
+
+# YouTube footage and sound (youtube/README.md): rebuilt by npm run youtube:*
+youtube/out/
