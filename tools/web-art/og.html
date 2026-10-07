@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!--
+  Link preview picture (Open Graph, 1200×630) for messengers: the logo, a line about the game and
+  three phone screens from site/about/media. Rendered like logo.html: serve the repo root
+  (python -m http.server 8090), open http://localhost:8090/tools/web-art/og.html at 1200×630 in
+  Playwright and screenshot the page as JPEG → site/about/media/og.jpg.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Orbitron'; font-weight: 700; src: url('../../game/assets/fonts/Orbitron-Bold.ttf') format('truetype'); }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    position: relative;
+    background-color: #03040b;
+    background-image:
+      radial-gradient(ellipse 45% 70% at 76% 50%, rgba(120, 60, 200, 0.32), rgba(120, 60, 200, 0) 70%),
+      radial-gradient(ellipse 50% 60% at 22% 45%, rgba(34, 62, 140, 0.45), rgba(34, 62, 140, 0) 72%),
+      radial-gradient(circle at 23px 41px, rgba(255, 255, 255, 0.5) 0.6px, rgba(255, 255, 255, 0) 1.3px),
+      radial-gradient(circle at 131px 97px, rgba(185, 215, 255, 0.55) 0.7px, rgba(185, 215, 255, 0) 1.5px),
+      radial-gradient(circle at 74px 168px, rgba(255, 255, 255, 0.4) 0.6px, rgba(255, 255, 255, 0) 1.2px),
+      radial-gradient(circle at 211px 29px, rgba(255, 228, 196, 0.6) 0.8px, rgba(255, 228, 196, 0) 1.7px);
+    background-size: 100% 100%, 100% 100%, 137px 137px, 181px 181px, 229px 229px, 263px 263px;
+    font-family: 'Orbitron', sans-serif;
+  }
+  .text { position: absolute; left: 56px; top: 150px; width: 560px; }
+  .text img { width: 560px; display: block; margin-left: -26px; }
+  .line { margin-top: 18px; color: #ebf5ff; font-size: 30px; font-weight: 700; line-height: 1.35; }
+  .tags { margin-top: 26px; color: #ffc45a; font-size: 21px; letter-spacing: 1px; }
+  .phone {
+    position: absolute;
+    width: 206px;
+    height: 446px;
+    border-radius: 26px;
+    border: 5px solid #1b2440;
+    box-shadow: 0 0 0 1px rgba(110, 190, 255, 0.35), 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 60px rgba(40, 140, 255, 0.25);
+    overflow: hidden;
+    background: #000;
+  }
+  .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .p1 { left: 618px; top: 120px; transform: rotate(-7deg); }
+  .p2 { left: 796px; top: 70px; transform: rotate(0deg); z-index: 2; }
+  .p3 { left: 950px; top: 125px; transform: rotate(7deg); }
+</style>
+</head>
+<body>
+  <div class="text">
+    <img src="logo.png" alt="">
+    <div class="line">A vertical space shoot 'em up<br>for your phone</div>
+    <div class="tags">FREE · NO ADS · PLAYS IN THE BROWSER</div>
+  </div>
+  <div class="phone p1"><img src="../../site/about/media/shot-hive-mother.webp" alt=""></div>
+  <div class="phone p2"><img src="../../site/about/media/shot-leviathan.webp" alt=""></div>
+  <div class="phone p3"><img src="../../site/about/media/shot-nebula-ion.webp" alt=""></div>
+</body>
+</html>

@@ -2,8 +2,9 @@
 //
 // The build is made by Cocos Creator on this machine (the server has no editor), so the server
 // app has no git repo: files go straight into /srv/apps/<app>/repo/dist and Caddy serves them.
-// Steps: stamp the service worker cache with a build id → tar.gz → ssh into dist.new → swap
-// dist.new with dist (atomic for visitors: the old build stays live until the swap).
+// Steps: add the game page (site/, tools/lib/site.mjs) → stamp the service worker cache with a
+// build id → tar.gz → ssh into dist.new → swap dist.new with dist (atomic for visitors: the old
+// build stays live until the swap).
 //
 // Usage: npm run deploy:web            deploys game/build/web-mobile (the editor's build)
 //        npm run release:web           CLI build (tools/build-web.mjs) + deploy — the post-commit hook
@@ -14,6 +15,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { copySite } from './lib/site.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 // `--from <dir>`: deploy another build (npm run release:web passes the CLI mirror's output).
@@ -34,6 +36,7 @@ if (!fs.existsSync(path.join(BUILD, 'index.html'))) fail(`no build at ${BUILD} �
 const swName = fs.readdirSync(BUILD).find((f) => /^sw(\.[0-9a-f]+)?\.js$/.test(f));
 if (!swName) fail('no sw.js in the build — is game/build-templates/web-mobile in place?');
 const sw = path.join(BUILD, swName);
+copySite(BUILD);
 
 // Build id: commit + time, so every upload gets a fresh service worker cache.
 let commit = 'nogit';

@@ -21,21 +21,22 @@
 ├─ .mcp.json              MCP проекта: playwright, cocos
 ├─ docs/                  GDD, PLAN, ARCHITECTURE, ASSETS, PLATFORMS, BALANCE (генерируется)
 ├─ tests/                 Vitest-тесты для game/assets/scripts/{core,data}
-├─ tools/                 вспомогательные скрипты: конвейеры моделей и звука (build-audio.mjs: эффекты и музыка из паков в art-source/), выкатка web-сборки (deploy-web.mjs), таблица баланса (balance.mjs → docs/BALANCE.md; lib/ts-loader.mjs даёт Node импортировать TS из core/ и data/)
+├─ site/                  страница игры (about/: описание, видео, скриншоты, установка) — кладётся рядом с игрой в каждую web-сборку (tools/lib/site.mjs)
+├─ tools/                 вспомогательные скрипты: конвейеры моделей и звука (build-audio.mjs: эффекты и музыка из паков в art-source/), картинки страницы (build-web-art.mjs: заставка, стартовые экраны iPhone, фавикон из web-art/logo.png), сборка и выкатка web-сборки (build-web.mjs, deploy-web.mjs), таблица баланса (balance.mjs → docs/BALANCE.md; lib/ts-loader.mjs даёт Node импортировать TS из core/ и data/)
 ├─ build-configs/         экспортированные конфиги сборки Cocos для CLI/CI
 ├─ .claude/               настройки и скиллы Claude Code
 └─ game/                  ПРОЕКТ COCOS CREATOR (открывать в Dashboard)
-   ├─ build-templates/web-mobile/   свой index.ejs, манифест PWA, service worker, иконки
+   ├─ build-templates/web-mobile/   свой index.ejs (HTML-заставка, Open Graph), манифест PWA, service worker, иконки, splash/ (логотип заставки, стартовые экраны iPhone)
    ├─ assets/
    │  ├─ scenes/          Menu.scene (меню и ангар), Game.scene
    │  ├─ scripts/
-   │  │  ├─ core/         чистый TS без импорта 'cc': EventBus, Pool, Rng, math, движение, след змея (trail), эмиттеры, таймлайн, щит, комбо, медали, рекорды, сохранение и миграции, экономика, снаряжение, открытия, математика оружия (arsenal), таблица баланса (balance), карточка корабля в ангаре (shipCard), читы (cheats), настройки (settings)
+   │  │  ├─ core/         чистый TS без импорта 'cc': EventBus, Pool, Rng, math, движение, след змея (trail), эмиттеры, таймлайн, щит, комбо, медали, рекорды, сохранение и миграции, экономика, снаряжение, открытия, математика оружия (arsenal), таблица баланса (balance), карточка корабля в ангаре (shipCard), читы (cheats), настройки (settings), подсказка установки (install)
    │  │  ├─ data/         типизированные конфиги: enemies, patterns, paths, missions, campaign, setPieces, pickups, difficulty, elites, medals, decor, player (корабли, расцветки), weapons, economy, audio (музыка, эффекты, звуки оружия и пикапов), cheats, settings, credits, onboarding
    │  │  ├─ game/         GameWorld и системы (Player, Weapon, Drone, Enemy, Laser, Bullet, Collision, Pickup, SetPiece, Score, MissionDirector); звук миссии (GameAudio) и подсказки миссии 1-1 (Onboarding)
    │  │  ├─ entities/     представления: EnemyView (модель корабля, пропс с поворотной частью, процедурный камень, сборка из модулей, кольцо элиты)
    │  │  ├─ fx/           камера и тряска, взрывы, туманность, звёзды, декор астероидных полей, лучи и молнии оружия (WeaponFx)
    │  │  ├─ ui/           HUD, меню (StartScreen — хост страниц, MenuPages, HangarPage с вкладкой оружия HangarWeapons и строками HangarRows, MenuPage — контракт, SettingsPage, CheatsPage, CreditsPage, карточка корабля ShipCard), общие UI-кирпичики (UiKit)
-   │  │  ├─ services/     Input, Save, SceneRouter, Settings, Audio, ScreenFit
+   │  │  ├─ services/     Input, Save, SceneRouter, Settings, Audio, ScreenFit, WebPage
    │  │  └─ debug/        оверлей, читы, URL-параметры
    │  ├─ prefabs/         ships/, enemies/, bullets/, fx/, ui/
    │  ├─ models/<source>/ импортированные glTF/glb, по источникам
@@ -56,6 +57,7 @@ Menu ⇄ Game
 ```
 
 - **Сцены Boot нет** (решение этапа 4). Сервисы — модули-синглтоны (`SaveService`, `SceneRouter`): их состояние статическое и переживает смену сцены без постоянного узла; сохранение читается лениво при первом обращении. Если сервису понадобится компонент между сценами (аудио, этап 6), он сам создаст постоянный узел (`director.addPersistRootNode`) при первом использовании.
+- **Загрузка страницы** (этап 9): с первой отрисовки — HTML-заставка из `index.ejs` (логотип и бегущая полоска, `#splash` в `style.css`), пока движок качается и стартует; заставка Cocos выключена (`useSplashScreen: false` в `build-configs/web-mobile.json`). Первая сцена, открывшая шторку (`StartScreen` или `GameWorld` при `?mission=`), гасит заставку (`WebPage.hideSplash`, 0.5 с) — меню проявляется под ней. У установленной на iPhone игры перед этим — стартовый экран iOS с той же картинкой (`splash/launch-*.png`, `npm run build:web-art`).
 - **Переходы** (`ui/ScreenFade.ts`): уходящая сцена затемняется (0.18 с), новая стартует под чёрной шторкой с первого кадра и открывается (0.3 с), когда всё загружено и построено; если загрузка дольше 0.25 с — надпись LOADING. Меню заранее подгружает модели выбранной миссии (`resources.preload` по `missionPrefabPaths` из `core/missionNeeds.ts` — тот же список, что грузит Game), туманность не перепекается (кэш в `RenderKit`).
 - **Menu** — стартовая сцена сборки. Компонент `ui/StartScreen` — хост страниц (`MenuHost` в `ui/MenuPage.ts`): фон (`Nebula`, `Starfield` через узкий `BackdropContext`), корабль на поворотном столе (модели кораблей и расцветок грузятся по требованию; где он висит, задаёт открытая страница строкой экрана — `Playfield.zAtScreen`), логотип, кошелёк, стек страниц и клавиатура. Страницы — панели одной сцены: Title, Main, Campaign, Mission (`ui/MenuPages.ts`), Hangar (`ui/HangarPage.ts`). Кнопки — узлы с `onTap` (касание началось и закончилось на узле). Title показывается один раз за загрузку страницы; из Game меню открывается на Main или сразу в ангаре (`SceneRouter.toMenu('hangar')`). Если в URL есть `?mission=`, Menu один раз за загрузку страницы сразу запускает Game (удобно для сборок на телефоне).
 - **Game.** Геймплей, HUD, пауза и результаты. Миссию и сложность передаёт `SceneRouter.play` (её же сохранение запоминает для CONTINUE); сцена Game, открытая напрямую (превью редактора), берёт их из URL-флагов. Корабль, расцветку и снаряжение `GameWorld` берёт из `SaveService` (`shipToFly`, `paintOf`, `loadout`); флаги `?primary=` и др. подменяют снаряжение (`core/loadout.ts: overrideLoadout`, прогон — practice). NEXT перезагружает Game со следующей миссией, HANGAR и MENU грузят Menu.
@@ -172,6 +174,7 @@ type LevelEvent =
 | `AudioService` (этап 6) | Модуль-синглтон с узлом `Audio`, переживающим смену сцен (`addPersistRootNode`): две музыкальные деки — новая дорожка нарастает, старая гаснет (1.2 с); не зацикленная дорожка переходит в свою `next` (интро босса → петля босса, джингл победы → меню). Эффекты грузятся все при старте (маленькие), музыка — по требованию и кэшируется; `play(id)` — случайный вариант, не чаще `gap` (скорострельные пушки не сливаются в гул); `loop` — луч Ion Laser; на паузе музыка тише. Звук ждёт первого касания (iOS Safari) — его даёт «Tap to start». Уровни — `data/audio.ts`, файлы — `npm run build:audio` |
 | `GameAudio` (этап 6, `game/`) | Звук миссии по событиям шины: выстрелы (`shot`) и петля луча — только с настройкой GUN SOUNDS, попадания, взрывы трёх размеров, щит, graze, пикапы, Special, сирена WARNING; музыка: джингл старта → трек миссии (`MissionDef.music`) → тема босса с WARNING → джингл победы; при гибели музыка гаснет, на результатах поражения — тема меню |
 | `ScreenFit` | Портретная колонка 9:16 в широком окне десктопа (§11); вызывается из `start()` компонентов обеих сцен до раскладки |
+| `WebPage` (этап 9) | HTML-страница вокруг игры: гасит заставку загрузки (`hideSplash`), сообщает, как открыта страница (`env`: user agent, запуск с экрана «Домой») — по ней титул в мобильном браузере показывает подсказку установки (`core/install.ts`: iOS — SHARE > ADD TO HOME SCREEN, Android — MENU > …; на компьютере и в установленной игре — ничего) |
 | `InputService` | Касания, мышь, клавиатура → смещение для драга, тапы и нажатия кнопок. Касание, начатое на экранной кнопке (Special, пауза), нажимает её и не двигает корабль; мультитач: одним пальцем рулить, другим жать Special. Клавиши: Space — Special, Esc/P — пауза, Enter — тап |
 
 ## 11. Рендер и визуал

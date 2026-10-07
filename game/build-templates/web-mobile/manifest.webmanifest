@@ -1,16 +1,24 @@
 {
+  "id": "./",
   "name": "Space Flight",
   "short_name": "Space Flight",
-  "description": "A vertical 2.5D shoot 'em up for your phone.",
+  "description": "A vertical 2.5D space shoot 'em up for your phone: three sectors, nine missions, bosses and an arsenal to upgrade.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#03040b",
   "theme_color": "#03040b",
+  "categories": ["games"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "about/media/shot-leviathan.webp", "sizes": "600x1297", "type": "image/webp", "form_factor": "narrow", "label": "Leviathan, the boss of Nebula Drift" },
+    { "src": "about/media/shot-hive-mother.webp", "sizes": "600x1297", "type": "image/webp", "form_factor": "narrow", "label": "Hive Mother, the boss of the Ice Moons" },
+    { "src": "about/media/shot-nebula-ion.webp", "sizes": "600x1297", "type": "image/webp", "form_factor": "narrow", "label": "The Ion Laser in Nebula Drift" },
+    { "src": "about/media/shot-hangar.webp", "sizes": "600x1297", "type": "image/webp", "form_factor": "narrow", "label": "The hangar" }
   ]
 }

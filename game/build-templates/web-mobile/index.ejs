@@ -7,8 +7,20 @@
 
   <meta name="viewport"
         content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1,viewport-fit=cover"/>
-  <meta name="description" content="Space Flight: a vertical 2.5D shoot 'em up for your phone.">
+  <meta name="description" content="A vertical 2.5D space shoot 'em up for your phone: three sectors, nine missions, bosses and an arsenal to upgrade. Free, no ads.">
   <meta name="theme-color" content="#03040b">
+
+  <!-- Link previews in messengers and social apps. Absolute URLs: the game page (/about/) is
+       deployed next to the build by tools/deploy-web.mjs. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Space Flight">
+  <meta property="og:title" content="Space Flight">
+  <meta property="og:description" content="A vertical 2.5D space shoot 'em up for your phone. Free, no ads — plays in the browser, installs to the home screen.">
+  <meta property="og:url" content="https://spaceflight.p1gog.duckdns.org/">
+  <meta property="og:image" content="https://spaceflight.p1gog.duckdns.org/about/media/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
 
   <!-- Installable web app: "Add to Home Screen" runs it full screen without the browser bars. -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -20,7 +32,22 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Space Flight">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <!-- Launch screens of the installed app on iPhones (portrait), the same picture as #splash below.
+       Made by npm run build:web-art. -->
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/launch-750x1334.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1242x2208.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1125x2436.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/launch-828x1792.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1242x2688.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1170x2532.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1284x2778.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1179x2556.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1290x2796.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1206x2622.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1320x2868.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/launch-1260x2736.png">
   <meta name="format-detection" content="telephone=no">
   <meta name="msapplication-tap-highlight" content="no">
 
@@ -28,6 +55,12 @@
 
 </head>
 <body>
+  <!-- Loading splash from the first paint until the first scene is up (services/WebPage.ts hides
+       it); the engine's own Cocos splash is off in build-configs/web-mobile.json. -->
+  <div id="splash" aria-hidden="true">
+    <img class="logo" src="splash/logo.png" alt="">
+    <div class="bar"><i></i></div>
+  </div>
   <div id="GameDiv" cc_exact_fit_screen="true">
       <div id="Cocos3dGameContainer">
         <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="99"></canvas>

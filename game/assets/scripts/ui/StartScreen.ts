@@ -5,6 +5,7 @@
 // opens the main page or the hangar directly (services/SceneRouter).
 
 import { _decorator, Camera, Color, Component, EffectAsset, EventKeyboard, Graphics, Input, KeyCode, Label, Node, Prefab, TTFFont, UIOpacity, director, input, instantiate, profiler, resources, screen } from 'cc';
+import { INSTALL_TIPS, installPlatform } from '../core/install';
 import { damp, smoothstep } from '../core/math';
 import { missionNeeds, missionPrefabPaths } from '../core/missionNeeds';
 import { continueTarget, sectorOf, type MissionPick } from '../core/progress';
@@ -28,6 +29,7 @@ import { AudioService } from '../services/AudioService';
 import { SaveService } from '../services/SaveService';
 import { SCENES, SceneRouter } from '../services/SceneRouter';
 import { ScreenFit } from '../services/ScreenFit';
+import { WebPage } from '../services/WebPage';
 import { CheatsPage } from './CheatsPage';
 import { CreditsPage } from './CreditsPage';
 import { HangarPage } from './HangarPage';
@@ -47,7 +49,7 @@ const SHIP_SIZE = 3.4;
 const SHIP_HEIGHT = 0.4;
 const LOGO_GLOW = new Color(60, 200, 255, 255);
 const LOGO_GLOW_EDGE = new Color(40, 160, 255, 150);
-const BUILD_LABEL = 'STAGE 7 PREVIEW';
+const BUILD_LABEL = 'VERSION 1.0';
 const WALLET_WIDTH = 240;
 
 /** One ship on the turntable: its paints (loaded on demand) and engine glows. */
@@ -82,6 +84,14 @@ class TitlePage implements MenuPage {
     this.sector = uiLabel(this.root, 'Sector', 26, UI.accent, { top: 250, centerX: true }, host.font);
     this.tap = uiLabel(this.root, 'Tap', 34, UI.white, { bottom: 260, centerX: true }, host.font);
     this.tap.string = 'TAP TO START';
+    // In a phone's browser: how to install the game (full screen, offline). Not once installed.
+    const env = WebPage.env();
+    const platform = env ? installPlatform(env) : null;
+    if (platform) {
+      const tip = INSTALL_TIPS[platform];
+      uiLabel(this.root, 'InstallTitle', 22, UI.shield, { bottom: 150, centerX: true }, host.font).string = tip.title;
+      uiLabel(this.root, 'InstallSteps', 20, UI.white, { bottom: 116, centerX: true }, host.font).string = tip.steps;
+    }
   }
 
   enter(): void {
@@ -188,7 +198,10 @@ export class StartScreen extends Component implements MenuHost {
     const fade = this.fade;
     if (fade) {
       // Reveal once the ship is on the turntable (or after a second without it).
-      if (fade.covering && !this.leaving && (this.ready || this.time > 1)) fade.reveal();
+      if (fade.covering && !this.leaving && (this.ready || this.time > 1)) {
+        fade.reveal();
+        WebPage.hideSplash();
+      }
       fade.tick(dt);
     }
     const playfield = this.playfield;

@@ -40,6 +40,7 @@ import { SaveService } from '../services/SaveService';
 import { SettingsService } from '../services/SettingsService';
 import { SceneRouter, type MenuEntry } from '../services/SceneRouter';
 import { ScreenFit } from '../services/ScreenFit';
+import { WebPage } from '../services/WebPage';
 import { Hud } from '../ui/Hud';
 import { BulletSystem, type BulletLook } from './BulletSystem';
 import { CollisionSystem } from './CollisionSystem';
@@ -149,6 +150,8 @@ export class GameWorld extends Component {
       .then(() => {
         this.fade?.raise();
         this.fade?.reveal();
+        // A link with `?mission=` skips the menu: the page's loading splash is still up.
+        WebPage.hideSplash();
       })
       .catch((err: unknown) => console.error('[GameWorld] boot failed', err));
   }

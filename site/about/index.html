@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<!-- The game's page: what it is, how it looks, how to install it. Deployed next to the game
+     (tools/lib/site.mjs) → https://spaceflight.p1gog.duckdns.org/about/. Media: ./media
+     (docs/PLATFORMS.md, «Страница игры»), the logo: the game build's splash/logo.png. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Space Flight — a space shoot 'em up for your phone</title>
+  <meta name="description" content="A vertical 2.5D space shoot 'em up for your phone: three sectors, nine missions, bosses and an arsenal to upgrade. Free, no ads — plays in the browser, installs to the home screen.">
+  <meta name="theme-color" content="#03040b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Space Flight">
+  <meta property="og:title" content="Space Flight">
+  <meta property="og:description" content="A vertical 2.5D space shoot 'em up for your phone. Free, no ads — plays in the browser, installs to the home screen.">
+  <meta property="og:url" content="https://spaceflight.p1gog.duckdns.org/about/">
+  <meta property="og:image" content="https://spaceflight.p1gog.duckdns.org/about/media/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/Orbitron-Bold.ttf" as="font" type="font/ttf" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'Orbitron';
+      font-weight: 700;
+      font-display: swap;
+      src: url('fonts/Orbitron-Bold.ttf') format('truetype');
+    }
+
+    :root {
+      --bg: #03040b;
+      --panel: rgba(10, 20, 40, 0.72);
+      --edge: rgba(90, 200, 255, 0.28);
+      --text: #ebf5ff;
+      --dim: #9aa6c2;
+      --accent: #5ad2ff;
+      --gold: #ffc45a;
+      --display: 'Orbitron', 'Arial Black', sans-serif;
+      --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font: 17px/1.55 var(--body);
+      background-color: var(--bg);
+      /* Deep space: a glow behind the hero and sparse stars in tiles of different sizes. */
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(34, 62, 140, 0.42), rgba(34, 62, 140, 0) 70%),
+        radial-gradient(circle at 23px 41px, rgba(255, 255, 255, 0.4) 0.5px, rgba(255, 255, 255, 0) 1.2px),
+        radial-gradient(circle at 131px 97px, rgba(185, 215, 255, 0.45) 0.6px, rgba(185, 215, 255, 0) 1.4px),
+        radial-gradient(circle at 74px 168px, rgba(255, 255, 255, 0.3) 0.5px, rgba(255, 255, 255, 0) 1.1px),
+        radial-gradient(circle at 211px 29px, rgba(255, 228, 196, 0.5) 0.7px, rgba(255, 228, 196, 0) 1.6px),
+        radial-gradient(circle at 263px 119px, rgba(200, 225, 255, 0.55) 0.7px, rgba(200, 225, 255, 0) 1.6px);
+      background-size: 100% 1100px, 137px 137px, 181px 181px, 229px 229px, 263px 263px, 353px 353px;
+      background-repeat: no-repeat, repeat, repeat, repeat, repeat, repeat;
+    }
+
+    a { color: var(--accent); }
+
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right)); }
+
+    h2 {
+      margin: 0 0 20px;
+      font: 700 22px/1.2 var(--display);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    section { padding: 44px 0; }
+
+    /* ---- Hero ------------------------------------------------------------------------------ */
+
+    .hero {
+      display: grid;
+      gap: 32px;
+      align-items: center;
+      padding: max(36px, env(safe-area-inset-top)) 0 20px;
+    }
+
+    .logo { display: block; width: min(100%, 520px); height: auto; margin: 0 0 6px -3%; }
+
+    .tagline { margin: 0 0 14px; font: 700 21px/1.35 var(--display); }
+
+    .lead { margin: 0 0 22px; color: var(--dim); max-width: 34em; }
+
+    .tags { margin: 0 0 26px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .tags li {
+      padding: 4px 11px;
+      border: 1px solid rgba(255, 196, 90, 0.4);
+      border-radius: 999px;
+      color: var(--gold);
+      font: 700 12px/1.4 var(--display);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+
+    .button {
+      display: inline-block;
+      padding: 14px 26px;
+      border-radius: 10px;
+      font: 700 16px/1 var(--display);
+      letter-spacing: 1.5px;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .button.play {
+      color: #04101e;
+      background: linear-gradient(180deg, #8de6ff, #3cb8f0);
+      box-shadow: 0 0 24px rgba(60, 190, 255, 0.45);
+    }
+
+    .button.ghost { color: var(--text); border: 1px solid var(--edge); background: var(--panel); }
+
+    .button:hover { filter: brightness(1.12); }
+
+    .button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+    /* A phone with the gameplay video. */
+    .phone {
+      position: relative;
+      width: min(78vw, 300px);
+      aspect-ratio: 540 / 1168;
+      margin: 0 auto;
+      border: 6px solid #1b2440;
+      border-radius: 34px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 0 0 1px rgba(110, 190, 255, 0.3), 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(40, 140, 255, 0.28);
+    }
+
+    .phone video { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+    /* ---- Features -------------------------------------------------------------------------- */
+
+    .features { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+
+    .card {
+      padding: 18px 20px;
+      border: 1px solid var(--edge);
+      border-radius: 14px;
+      background: var(--panel);
+    }
+
+    .card h3 { margin: 0 0 6px; font: 700 15px/1.3 var(--display); letter-spacing: 1px; text-transform: uppercase; }
+
+    .card p { margin: 0; color: var(--dim); font-size: 15.5px; }
+
+    .card strong { color: var(--text); font-weight: 600; }
+
+    /* ---- Screenshots ----------------------------------------------------------------------- */
+
+    .shots {
+      display: flex;
+      gap: 14px;
+      margin: 0 -16px;
+      padding: 4px 16px 18px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      /* Snap cards to the page gutter, not to the screen edge. */
+      scroll-padding: 0 16px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .shots figure { flex: 0 0 auto; width: 200px; margin: 0; scroll-snap-align: start; }
+
+    .shots img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 600 / 1297;
+      border: 4px solid #1b2440;
+      border-radius: 22px;
+      background: #000;
+      box-shadow: 0 0 0 1px rgba(110, 190, 255, 0.22);
+    }
+
+    .shots figcaption { margin-top: 8px; color: var(--dim); font-size: 14px; line-height: 1.35; }
+
+    /* ---- Install --------------------------------------------------------------------------- */
+
+    .install { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+
+    .install ol { margin: 0; padding-left: 22px; color: var(--dim); font-size: 15.5px; }
+
+    .install li { margin: 6px 0; }
+
+    .install li b { color: var(--text); font-weight: 600; }
+
+    .install .then { margin: 12px 0 0; color: var(--text); font-size: 15.5px; }
+
+    .icon { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
+
+    .note { margin: 18px 0 0; color: var(--dim); font-size: 15px; }
+
+    kbd {
+      padding: 1px 6px;
+      border: 1px solid var(--edge);
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      color: var(--text);
+      font: 600 13px/1.4 var(--body);
+    }
+
+    /* ---- Footer ---------------------------------------------------------------------------- */
+
+    footer {
+      padding: 30px 0 max(36px, env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(90, 200, 255, 0.14);
+      color: var(--dim);
+      font-size: 14px;
+    }
+
+    footer p { margin: 0 0 8px; }
+
+    @media (min-width: 820px) {
+      .hero { grid-template-columns: 1.25fr 1fr; gap: 48px; padding-top: 64px; }
+      .tagline { font-size: 25px; }
+      .shots figure { width: 230px; }
+      section { padding: 56px 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <div>
+        <h1 style="margin:0"><img class="logo" src="/splash/logo.png" alt="Space Flight" width="1200" height="230"></h1>
+        <p class="tagline">A vertical space shoot 'em up for your phone</p>
+        <p class="lead">Drag with one finger, your guns fire on their own. Fight through three sectors of the galaxy, take down the bosses and build your ship up in the hangar between missions.</p>
+        <ul class="tags">
+          <li>Free</li>
+          <li>No ads</li>
+          <li>No sign-up</li>
+          <li>Works offline</li>
+        </ul>
+        <div class="buttons">
+          <a class="button play" href="/">Play now</a>
+          <a class="button ghost" href="#install">Install</a>
+        </div>
+      </div>
+      <div class="phone">
+        <video src="media/gameplay.mp4" poster="media/poster.jpg" autoplay muted loop playsinline preload="auto" aria-label="Gameplay: Ice Moons, Nebula Drift and the Leviathan boss"></video>
+      </div>
+    </header>
+
+    <section aria-labelledby="game">
+      <h2 id="game">The game</h2>
+      <div class="features">
+        <div class="card">
+          <h3>One finger</h3>
+          <p>Drag anywhere to fly; the guns fire by themselves. Your thumb is free for the Special: <strong>Nova Bomb</strong>, <strong>Overdrive</strong>, <strong>Phase Shield</strong> or <strong>Time Warp</strong>.</p>
+        </div>
+        <div class="card">
+          <h3>3 sectors, 9 missions</h3>
+          <p><strong>Outer Ring</strong>, <strong>Ice Moons</strong> and <strong>Nebula Drift</strong>: asteroid fields, mines, swarms and laser wings, six mini-bosses and three bosses — <strong>Warden</strong>, <strong>Hive Mother</strong> and <strong>Leviathan</strong>.</p>
+        </div>
+        <div class="card">
+          <h3>An arsenal to build</h3>
+          <p>Six main guns from <strong>Pulse Cannon</strong> to <strong>Tesla Arc</strong>, four secondary weapons, three drones and four Specials. Power up mid-mission, upgrade for credits in the hangar.</p>
+        </div>
+        <div class="card">
+          <h3>Three ships</h3>
+          <p><strong>Spitfire</strong>, <strong>Executioner</strong> and <strong>Striker</strong> — each with its own hull, shield, speed and firepower, in three paint jobs.</p>
+        </div>
+        <div class="card">
+          <h3>Medals and difficulty</h3>
+          <p>Four medals in every mission — <strong>Hunter</strong>, <strong>Exterminator</strong>, <strong>Rescuer</strong>, <strong>Untouchable</strong> — and four difficulties up to <strong>Nightmare</strong>, where elite enemies come out.</p>
+        </div>
+        <div class="card">
+          <h3>Plays anywhere</h3>
+          <p>iPhone, Android or a computer's browser, nothing to download. Installed to the home screen it runs full screen and offline. Progress stays on your device.</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="screens">
+      <h2 id="screens">Screenshots</h2>
+      <div class="shots">
+        <figure><img src="media/shot-title.webp" alt="Title screen with the Spitfire" loading="lazy" width="600" height="1297"><figcaption>Title screen</figcaption></figure>
+        <figure><img src="media/shot-nebula-ion.webp" alt="Ion Laser beams in Nebula Drift" loading="lazy" width="600" height="1297"><figcaption>Nebula Drift: the Ion Laser cuts a wing apart</figcaption></figure>
+        <figure><img src="media/shot-hive-mother.webp" alt="The Hive Mother boss" loading="lazy" width="600" height="1297"><figcaption>Hive Mother, queen of the Ice Moons</figcaption></figure>
+        <figure><img src="media/shot-leviathan.webp" alt="The Leviathan boss firing its laser" loading="lazy" width="600" height="1297"><figcaption>Leviathan, the serpent of the nebula</figcaption></figure>
+        <figure><img src="media/shot-warden.webp" alt="The Warden station boss" loading="lazy" width="600" height="1297"><figcaption>Warden guards the Outer Ring</figcaption></figure>
+        <figure><img src="media/shot-ice-moons.webp" alt="A fight in the Ice Moons" loading="lazy" width="600" height="1297"><figcaption>Ice Moons</figcaption></figure>
+        <figure><img src="media/shot-hangar.webp" alt="The hangar with the ship card" loading="lazy" width="600" height="1297"><figcaption>Hangar: ships, systems, weapons</figcaption></figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="install">
+      <h2 id="install">Install it</h2>
+      <div class="install">
+        <div class="card">
+          <h3>iPhone and iPad</h3>
+          <ol>
+            <li>Tap <b>Play now</b> to open the game in Safari.</li>
+            <li>Tap <b>Share</b> <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg> — on iOS 26 it is under <b>···</b> next to the address bar.</li>
+            <li>Choose <b>Add to Home Screen</b> and tap <b>Add</b>.</li>
+          </ol>
+          <p class="then">Start it from the new icon: full screen, no browser bars, works offline.</p>
+        </div>
+        <div class="card">
+          <h3>Android</h3>
+          <ol>
+            <li>Tap <b>Play now</b> to open the game in Chrome.</li>
+            <li>Tap <b>⋮</b> in the top corner.</li>
+            <li>Choose <b>Add to Home screen</b> → <b>Install</b>.</li>
+          </ol>
+          <p class="then">The game gets its own icon and opens full screen.</p>
+        </div>
+        <div class="card">
+          <h3>Computer</h3>
+          <ol>
+            <li>Just press <b>Play now</b>: it runs in any modern browser.</li>
+            <li>Fly with the mouse, the arrows or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>.</li>
+            <li><kbd>Space</kbd> fires the Special, <kbd>Esc</kbd> pauses.</li>
+          </ol>
+          <p class="then">Chrome and Edge can install it as an app too: the install icon in the address bar.</p>
+        </div>
+      </div>
+      <p class="note">Progress is saved in the browser on that device. On iPhone the home-screen app keeps its own save, apart from Safari — install first, then play.</p>
+    </section>
+
+    <section aria-labelledby="feedback">
+      <h2 id="feedback">Feedback</h2>
+      <div class="card">
+        <p>Found a bug, stuck on a boss, got an idea? Write to me on Telegram — a screenshot and your phone model help a lot. The same link is under <strong>FEEDBACK</strong> in the game's menu.</p>
+        <p style="margin-top:16px"><a class="button ghost" href="https://t.me/budoPesht666" target="_blank" rel="noopener">@budoPesht666 on Telegram</a></p>
+      </div>
+    </section>
+
+    <footer>
+      <p><a class="button play" href="/">Play now</a></p>
+      <p style="margin-top:18px">Space Flight 1.0 — a free pet project. No ads, no tracking, no accounts.</p>
+      <p>Ships and pickups by Quaternius, station modules and sounds by Kenney, music by SketchyLogic (all CC0), font Orbitron (SIL OFL). Made with Cocos Creator.</p>
+    </footer>
+  </main>
+</body>
+</html>

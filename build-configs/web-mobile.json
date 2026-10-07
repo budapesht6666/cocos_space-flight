@@ -61,7 +61,7 @@
     "handleTemplateMd5Link": true
   },
   "mainBundleIsRemote": false,
-  "useSplashScreen": true,
+  "useSplashScreen": false,
   "bundleCommonChunk": false,
   "packAutoAtlas": true,
   "wasmCompressionMode": false,

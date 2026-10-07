@@ -1,15 +1,24 @@
 # Space Flight
 
-Вертикальный 2.5D shoot 'em up для iPhone: low-poly 3D-корабли с камерой сверху, управление одним пальцем, кампания из 5 секторов с медалями, четырьмя сложностями и ангаром апгрейдов.
+Вертикальный 2.5D shoot 'em up для телефона: low-poly 3D-корабли с камерой сверху, управление одним пальцем, кампания из трёх секторов с боссами, медалями, четырьмя сложностями и ангаром апгрейдов. Бесплатно, без рекламы, играется в браузере и ставится на экран «Домой».
 
-**Статус:** этап 1 — играбельный вертикальный срез (полёт, стрельба, два типа врагов, взрывы, туманность). Прогресс — в [docs/PLAN.md](docs/PLAN.md).
+**▶ Играть:** https://spaceflight.p1gog.duckdns.org/ · **Страница игры:** https://spaceflight.p1gog.duckdns.org/about/
+
+<p>
+  <img src="docs/media/gameplay.gif" width="216" alt="Геймплей: Ice Moons, Nebula Drift, босс Leviathan">
+  <img src="site/about/media/shot-hive-mother.webp" width="216" alt="Босс Hive Mother">
+  <img src="site/about/media/shot-nebula-ion.webp" width="216" alt="Ion Laser в Nebula Drift">
+  <img src="site/about/media/shot-hangar.webp" width="216" alt="Ангар">
+</p>
+
+**Статус:** версия 1.0 — этап 9, релиз PWA (этап 8, нативная iOS, отложен). Прогресс — в [docs/PLAN.md](docs/PLAN.md).
 
 ## Коротко об игре
 
-- Тянешь пальцем — корабль летит, стрельба автоматическая. Щит, корпус и спецспособности (Nova Bomb, Overdrive, Time Warp…).
-- 6 типов основного оружия, вспомогательное оружие, дроны-напарники; апгрейды за кредиты.
-- 15 миссий в 5 секторах, у каждого сектора свой босс. 4 медали на миссию: Hunter, Exterminator, Rescuer, Untouchable.
-- Сложности Normal, Hard, Insane, Nightmare.
+- Тянешь пальцем — корабль летит, стрельба автоматическая. Щит, корпус и Special: Nova Bomb, Overdrive, Phase Shield, Time Warp.
+- 6 основных пушек, 4 вспомогательных, 3 дрона; Power I–IV в миссии, апгрейды за кредиты в ангаре. Три корабля в трёх расцветках.
+- 9 миссий в 3 секторах (Outer Ring, Ice Moons, Nebula Drift): шесть мини-боссов и три босса — Warden, Hive Mother, Leviathan. 4 медали на миссию: Hunter, Exterminator, Rescuer, Untouchable.
+- Сложности Normal, Hard, Insane, Nightmare; элитные враги.
 - Вдохновлено Sky Force Reloaded и Tyrian 2000. Подробно — в [docs/GDD.md](docs/GDD.md).
 
 ## Технологии
@@ -18,7 +27,7 @@
 |---|---|
 | Движок | [Cocos Creator 3.8 LTS](https://docs.cocos.com/creator/3.8/manual/en/) |
 | Язык | TypeScript |
-| Платформы | Web / PWA (разработка и основной релиз, бесплатный хостинг) → нативная iOS на свой iPhone (облачная сборка и Sideloadly, бесплатно) |
+| Платформы | Web / PWA на своём VPS (разработка и основной релиз); нативная iOS на свой iPhone (облачная сборка и Sideloadly) — отложена |
 | Тесты | Vitest (чистая логика), Playwright (визуальные плейтесты) |
 | Ассеты | Бесплатные: CC0 и аналоги (Quaternius, Kenney…), см. [docs/ASSETS.md](docs/ASSETS.md) |
 
@@ -47,7 +56,8 @@
 docs/         документация: GDD, план, архитектура, ассеты, платформы
 game/         проект Cocos Creator (assets/, settings/, extensions/)
 tests/        unit-тесты чистой логики
-tools/        вспомогательные скрипты (баланс и т.п.)
+site/         страница игры (/about/): описание, видео, скриншоты, установка
+tools/        вспомогательные скрипты: конвейеры ассетов, баланс, сборка и выкатка web
 build-configs/ конфиги сборки Cocos для CLI и CI
 .claude/      настройки и скиллы Claude Code
 ```
@@ -77,7 +87,7 @@ build-configs/ конфиги сборки Cocos для CLI и CI
   ```
   После установки перезапустить редактор.
 
-Скиллы проекта лежат в `.claude/skills/`: `playtest`, `add-asset`.
+Скиллы проекта лежат в `.claude/skills/`: `playtest`, `add-asset`, `add-enemy`, `add-mission`, `add-weapon`.
 
 ## Лицензии
 

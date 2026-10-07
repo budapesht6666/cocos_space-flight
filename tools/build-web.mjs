@@ -5,12 +5,15 @@
 // robocopy /MIR copies the sources (assets, settings, build templates) and keeps the mirror's own
 // library/ between runs, so only changed assets get re-imported.
 //
+// The game page (site/) is copied next to the game: tools/lib/site.mjs.
+//
 // Usage: npm run build:web          → .cache/cli-game/build/web-mobile
 //        npm run release:web        → build:web + deploy:web (what the post-commit hook runs)
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { copySite } from './lib/site.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const GAME = path.join(ROOT, 'game');
@@ -46,4 +49,5 @@ const log = path.join(ROOT, '.cache/build-web.log');
 fs.writeFileSync(log, `${build.stdout ?? ''}\n${build.stderr ?? ''}`);
 const out = path.join(MIRROR, 'build/web-mobile');
 if (build.status !== BUILD_OK || !fs.existsSync(path.join(out, 'index.html'))) fail(`Cocos build failed (exit ${build.status}), log: ${log}`);
-console.log(`build-web: done in ${Math.round((Date.now() - started) / 1000)} s → ${path.relative(ROOT, out)}`);
+const pages = copySite(out);
+console.log(`build-web: done in ${Math.round((Date.now() - started) / 1000)} s → ${path.relative(ROOT, out)} (+ ${pages} files of the game page)`);

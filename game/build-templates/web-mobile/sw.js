@@ -24,6 +24,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
+  // Video on the game page: Safari fetches it in ranges, and the cache can't hold a partial
+  // response (206) — straight to the network.
+  if (request.headers.has('range') || request.destination === 'video') return;
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)

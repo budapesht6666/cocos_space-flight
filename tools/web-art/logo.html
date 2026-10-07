@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--
+  The game's logo for the web page around it, drawn like the title screen's (StartScreen: white
+  Orbitron Black over a cyan glow with a blue rim). Rendered once to a transparent PNG:
+  serve the repo root (python -m http.server 8090), open http://localhost:8090/tools/web-art/logo.html
+  in Playwright and screenshot #logo with omitBackground → tools/web-art/logo.png.
+  npm run build:web-art builds the splash, launch screens and the game page's logo from that PNG.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: 'Orbitron';
+    font-weight: 900;
+    src: url('../../game/assets/fonts/Orbitron-Black.ttf') format('truetype');
+  }
+  html, body { margin: 0; background: transparent; }
+  #logo {
+    position: relative;
+    display: inline-block;
+    padding: 50px 70px 80px;
+    font: 900 156px/1 'Orbitron', sans-serif;
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+  /* Layers, like the title screen's two labels: a cyan copy with a blue outline, which the outline
+     pushes a little lower (Widget top alignment), under the white face. The outline is a layer of
+     its own under every fill: one stroked text draws a glyph's rim over its neighbour's fill. */
+  #logo .rim, #logo .glow {
+    position: absolute;
+    left: 70px;
+    top: 64px;
+  }
+  #logo .rim {
+    color: rgb(28, 104, 184);
+    -webkit-text-stroke: 16px rgb(28, 104, 184);
+    text-shadow:
+      0 0 26px rgba(60, 190, 255, 0.85),
+      0 0 60px rgba(40, 140, 255, 0.5);
+  }
+  #logo .glow {
+    color: rgb(64, 186, 240);
+  }
+  #logo .face {
+    position: relative;
+    color: #ebf5ff;
+  }
+</style>
+</head>
+<body><div id="logo"><span class="rim">SPACE FLIGHT</span><span class="glow">SPACE FLIGHT</span><span class="face">SPACE FLIGHT</span></div></body>
+</html>

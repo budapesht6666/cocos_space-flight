@@ -1,12 +1,13 @@
-// Menu pages around the campaign: Main (CONTINUE, CAMPAIGN, HANGAR, SETTINGS · CHEATS), Campaign (a sector pager with
+// Menu pages around the campaign: Main (CONTINUE, CAMPAIGN, HANGAR, SETTINGS · CHEATS · FEEDBACK), Campaign (a sector pager with
 // its missions) and Mission (difficulties with medals and records, LAUNCH). The hangar has its own
 // file. Layout is in design units (720 wide, at least 1280 tall), anchored to the screen edges.
 
-import { Graphics, KeyCode, Label, Node } from 'cc';
+import { Graphics, KeyCode, Label, Node, sys } from 'cc';
 import { hasMedal, medalCount } from '../core/medals';
 import { continueTarget, difficultyUnlocked, missionUnlocked, sectorMedals, sectorOf, sectorState, type SectorState } from '../core/progress';
 import { CAMPAIGN_DIFFICULTIES, SECTORS } from '../data/campaign';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../data/difficulty';
+import { FEEDBACK_URL } from '../data/links';
 import { MEDALS } from '../data/medals';
 import { MISSIONS } from '../data/missions';
 import type { Difficulty, MissionId } from '../data/types';
@@ -15,6 +16,8 @@ import { SaveService } from '../services/SaveService';
 import { pageHeader, pageRoot, type MenuHost, type MenuPage } from './MenuPage';
 import { drawButton, drawCard, drawChevron, drawLock, drawMedal, onTap, placeLabel, UI, uiLabel, uiNode } from './UiKit';
 
+/** Label size of the main page's bottom row: SETTINGS fits a third of the row. */
+const SMALL_BUTTON_TEXT = 22;
 const CARD_WIDTH = 640;
 const LEFT = -CARD_WIDTH / 2 + 26;
 const RIGHT = CARD_WIDTH / 2 - 26;
@@ -49,8 +52,12 @@ export class MainPage implements MenuPage {
     onTap(play, () => host.launch(), null);
     this.button('CAMPAIGN', 296, 560, 0, () => host.open('campaign'));
     this.button('HANGAR', 184, 560, 0, () => host.open('hangar'));
-    this.button('SETTINGS', 72, 272, -144, () => host.open('settings'));
-    this.button('CHEATS', 72, 272, 144, () => host.open('cheats'));
+    // Three small buttons in the bottom row, as wide together as the big ones.
+    this.button('SETTINGS', 72, 176, -192, () => host.open('settings'), SMALL_BUTTON_TEXT);
+    this.button('CHEATS', 72, 176, 0, () => host.open('cheats'), SMALL_BUTTON_TEXT);
+    // Opened from the tap itself (the engine dispatches touches inside the DOM handler), so
+    // browsers treat it as the player's gesture and don't block the new tab.
+    this.button('FEEDBACK', 72, 176, 192, () => sys.openURL(FEEDBACK_URL), SMALL_BUTTON_TEXT);
   }
 
   enter(): void {
@@ -76,10 +83,10 @@ export class MainPage implements MenuPage {
     return false;
   }
 
-  private button(text: string, bottom: number, width: number, dx: number, fn: () => void): void {
+  private button(text: string, bottom: number, width: number, dx: number, fn: () => void, size = 32): void {
     const node = uiNode(this.root, text, width, 96, { bottom, centerX: true, dx });
     drawButton(node.addComponent(Graphics), width, 96, false);
-    const label = uiLabel(node, 'Label', 32, UI.white, {}, this.host.font);
+    const label = uiLabel(node, 'Label', size, UI.white, {}, this.host.font);
     label.string = text;
     placeLabel(label, 0, 0);
     onTap(node, fn);
