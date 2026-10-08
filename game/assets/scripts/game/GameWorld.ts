@@ -16,6 +16,7 @@ import { Rng } from '../core/Rng';
 import { SECTORS } from '../data/campaign';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_MISSION, MISSIONS, nextMission } from '../data/missions';
+import { demoMission, nextDemoDifficulty } from '../core/demo';
 import { DEMO } from '../data/demo';
 import { DEFAULT_PAINT, SHIPS, shipModel } from '../data/player';
 import { propPath } from '../data/props';
@@ -206,7 +207,7 @@ export class GameWorld extends Component {
     if (phase === 'results') {
       this.specialQueued = false;
       this.input.consumeTap();
-      if (this.input.consumePress('retry')) this.restart();
+      if (this.input.consumePress('retry')) this.retry(s);
       else if (this.input.consumePress('next')) this.playNext();
       else if (this.input.consumePress('hangar')) this.toMenu('hangar');
       else if (this.input.consumePress('menu')) this.toMenu('main');
@@ -314,7 +315,7 @@ export class GameWorld extends Component {
     s.hud.setPlaying(false);
     s.hud.showResults(r, {
       mission: MISSIONS[this.missionId].title,
-      difficulty: d.demo ? 'demo' : practice ? `${this.difficulty} · practice` : this.difficulty,
+      difficulty: d.demo ? (this.difficulty === DEMO.ramp[0] ? 'demo' : `demo · ${this.difficulty}`) : practice ? `${this.difficulty} · practice` : this.difficulty,
       best: report ? report.update.record.score : SaveService.record(this.missionId, this.difficulty)?.score ?? 0,
       newBest: report ? report.update.newBest : false,
       newMedals: report ? report.update.newMedals : 0,
@@ -328,7 +329,7 @@ export class GameWorld extends Component {
     this.input.flush();
   }
 
-  /** Back to the menu: its main page, or straight into the hangar. The demo has no menu (its MENU is a link, ui/Hud.ts). */
+  /** Back to the menu: its main page, or straight into the hangar. The demo has no menu. */
   private toMenu(entry: MenuEntry): void {
     if (this.leaving || this.s?.ctx.debug.demo) return;
     this.leaving = true;
@@ -339,6 +340,18 @@ export class GameWorld extends Component {
   private leave(fn: () => void): void {
     if (this.fade) this.fade.leave(fn);
     else fn();
+  }
+
+  /** RETRY on the results. The demo ramps up after a win (data/demo.ts): the scene reloads harder. */
+  private retry(s: Systems): void {
+    const next = s.ctx.debug.demo ? nextDemoDifficulty(this.difficulty, s.mission.result?.complete === true) : this.difficulty;
+    if (next === this.difficulty) {
+      this.restart();
+      return;
+    }
+    if (this.leaving) return;
+    this.leaving = true;
+    this.leave(() => SceneRouter.play(this.missionId, next, false));
   }
 
   /** Reloads the scene with the next mission of the sector (same difficulty). */
@@ -424,7 +437,7 @@ export class GameWorld extends Component {
     const ship = SHIPS[shipId];
     const loadout = overrideLoadout(SaveService.loadout(shipId), debug.loadout);
     this.loadout = loadout;
-    const mission = MISSIONS[missionId];
+    const mission = debug.demo ? demoMission() : MISSIONS[missionId];
     const needs = missionNeeds(mission);
     for (const d of loadout.drones) needs.props.add(DRONES[d.id].prop);
     const enemyIds = Array.from(needs.enemies.keys());
@@ -510,7 +523,7 @@ export class GameWorld extends Component {
     const fx = new FxSystem(ctx);
     const settings = SettingsService.current;
     player.sensitivity = settings.sensitivity;
-    const hud = new Hud(this.ui, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps, menuLink: debug.demo ? { label: DEMO.cta, url: DEMO.fullGameUrl } : null });
+    const hud = new Hud(this.ui, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps, demo: debug.demo });
     const audio = new GameAudio(ctx, mission, weapons);
     // Mission 1-1 teaches the controls until it has been cleared once.
     const teach = mission.onboarding === true && debug.t === 0 && !isCleared(SaveService.records, missionId);

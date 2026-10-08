@@ -2,14 +2,14 @@
 // escape pods, the Special and pause buttons, the boss bar, banners, and the pause and results
 // panels. Setters only touch labels and redraw graphics when the shown value changes.
 
-import { Color, Graphics, Label, Node, sys, TTFFont, UITransform, Widget } from 'cc';
+import { Color, Graphics, Label, Node, TTFFont, UITransform, Widget } from 'cc';
 import type { RunRewards } from '../core/economy';
 import { hasMedal, MEDAL_BITS } from '../core/medals';
 import { MEDALS } from '../data/medals';
 import type { BannerStyle } from '../game/GameContext';
 import type { MissionResult } from '../game/MissionDirector';
 import type { ButtonId } from '../services/InputService';
-import { contains, drawCoin, drawMedal, onTap, UI, uiButton, uiLabel, uiNode, uiPanel } from './UiKit';
+import { contains, drawCoin, drawMedal, UI, uiButton, uiLabel, uiNode, uiPanel } from './UiKit';
 
 const SPECIAL_READY = new Color(30, 90, 140, 220);
 const SPECIAL_ACTIVE = new Color(60, 120, 170, 235);
@@ -49,8 +49,6 @@ const MEDAL_SPACING = 168;
 const MEDAL_RADIUS = 46;
 const RESULT_BUTTON_Y = -440;
 const RESULT_BUTTON_WIDTH = 160;
-/** The demo's FULL GAME: a longer word on one of only two buttons. */
-const RESULT_WIDE_BUTTON_WIDTH = 250;
 const RESULT_BUTTON_GAP = 14;
 /** The run's numbers and what it opened in the hangar share the space between the medals and the buttons. */
 const RESULT_BLOCK_CENTRE = -168;
@@ -70,11 +68,8 @@ export interface HudOptions {
   /** The Special button goes under the left thumb. */
   leftHanded: boolean;
   showFps: boolean;
-  /**
-   * The demo: MENU is a link to the full game (opened from the touch itself, so the browser doesn't
-   * take it for a pop-up), and there is no HANGAR. Null in the game itself.
-   */
-  menuLink: { label: string; url: string } | null;
+  /** The demo: no MENU or HANGAR (there is no menu, and feeds forbid links out), only RETRY. */
+  demo: boolean;
 }
 
 /** What the results screen shows next to the run itself. */
@@ -206,8 +201,7 @@ export class Hud {
     uiLabel(this.pausePanel, 'PausedTitle', 60, UI.white, { centerX: true, centerY: true, dy: 220 }, font).string = 'PAUSED';
     this.resumeButton = uiButton(this.pausePanel, 'RESUME', 360, 92, { centerX: true, centerY: true, dy: 60 }, font);
     this.restartButton = uiButton(this.pausePanel, 'RESTART', 360, 92, { centerX: true, centerY: true, dy: -60 }, font);
-    const link = options.menuLink;
-    this.quitButton = uiButton(this.pausePanel, link ? link.label : 'MENU', 360, 92, { centerX: true, centerY: true, dy: -180 }, font);
+    this.quitButton = uiButton(this.pausePanel, 'MENU', 360, 92, { centerX: true, centerY: true, dy: -180 }, font);
     this.pausePanel.active = false;
 
     this.resultsPanel = uiPanel(root, 'ResultsPanel');
@@ -230,9 +224,8 @@ export class Hud {
     this.retryButton = button('RETRY');
     this.nextButton = button('NEXT');
     this.hangarButton = button('HANGAR');
-    this.hangarButton.active = link === null;
-    this.menuButton = link ? button(link.label, RESULT_WIDE_BUTTON_WIDTH) : button('MENU');
-    if (link) for (const b of [this.quitButton, this.menuButton]) onTap(b, () => sys.openURL(link.url));
+    this.menuButton = button('MENU');
+    this.quitButton.active = this.hangarButton.active = this.menuButton.active = !options.demo;
     this.resultsPanel.active = false;
   }
 

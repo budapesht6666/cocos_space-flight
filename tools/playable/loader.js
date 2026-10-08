@@ -144,6 +144,19 @@
     });
   }
 
+  // Portrait lock, from a user gesture as the gamic spec asks (most browsers refuse it: harmless).
+  document.addEventListener(
+    'pointerdown',
+    function () {
+      try {
+        if (screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(function () {});
+      } catch (e) {
+        // Not supported.
+      }
+    },
+    { once: true },
+  );
+
   if (typeof DecompressionStream === 'undefined' || typeof TextDecoder === 'undefined') {
     fail('This browser is too old for the demo. Play it at spaceflight.p1gog.duckdns.org');
     return;

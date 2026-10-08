@@ -19,6 +19,13 @@
     "cocos": {
       "type": "http",
       "url": "http://127.0.0.1:28456/"
+    },
+    "bingeplay": {
+      "type": "http",
+      "url": "https://api.funizzle.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${BINGEPLAY_TOKEN}"
+      }
     }
   }
 }

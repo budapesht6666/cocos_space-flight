@@ -116,7 +116,7 @@ export function parseDebugFlags(search: string): DebugFlags {
 export function demoFlags(): DebugFlags {
   return Object.assign(parseDebugFlags(''), {
     mission: DEMO.mission,
-    difficulty: DEMO.difficulty,
+    difficulty: DEMO.ramp[0],
     power: DEMO.power,
     loadout: { primary: DEMO.primary, secondary: DEMO.secondary, drones: DEMO.drones.slice(), special: DEMO.special, level: DEMO.level },
     ship: DEMO.ship,
