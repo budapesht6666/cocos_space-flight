@@ -231,8 +231,9 @@ type LevelEvent =
 | `?credits=50000` | Кошелёк разработчика: кредиты = N, записывается в сохранение. Один раз за загрузку страницы (меню грузится заново после каждой миссии) |
 | `?reset=1` | Стереть прогресс (новое сохранение), один раз за загрузку страницы; вместе с `credits` — сначала стирает |
 | `?primary=ion&secondary=rail&drones=gunDrone,guardian&special=warp&level=5` | Любое снаряжение без покупки (`secondary=none` — пустой слот; `level` — уровень всех пушек 1–5 и дронов 1–3). Ids: primary — pulse, scatter, ion, seeker, plasma, tesla; secondary — swarm, wing, rail, rear; drones — gunDrone, guardian, collector; special — nova, overdrive, phase, warp |
+| `?ship=executioner` | Лететь этим кораблём (spitfire, executioner, striker), открыт он или нет |
 
-Прогоны с `god`, `t`, `power`, `elite`, `slowmo`, `unlock` или флагами снаряжения — practice: экран результатов показывает их, но рекорды, медали и кредиты не записываются. В сцене Menu `?mission=` сразу запускает игру (один раз за загрузку страницы), так что те же ссылки работают и на релизной сборке.
+Прогоны с `god`, `t`, `power`, `elite`, `slowmo`, `unlock`, `ship` или флагами снаряжения — practice: экран результатов показывает их, но рекорды, медали и кредиты не записываются. В сцене Menu `?mission=` сразу запускает игру (один раз за загрузку страницы), так что те же ссылки работают и на релизной сборке.
 
 **Чит-коды** (этап 6, страница CHEATS в меню, `data/cheats.ts`): `p1gog.weapon` — арсенал открыт навсегда и каждое оружие, дрон и Special куплены на LV1 (Drone Bay — 1 слот; уровни выше покупаются как обычно), `p1gog.credits` — +50 000 кредитов. Пишутся в сохранение (v4, поле `cheats`), прогоны с ними не practice.
 

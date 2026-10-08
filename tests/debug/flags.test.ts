@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseDebugFlags } from '../../game/assets/scripts/debug/DebugFlags';
+import { demoFlags, parseDebugFlags } from '../../game/assets/scripts/debug/DebugFlags';
+import { DEMO } from '../../game/assets/scripts/data/demo';
 
 describe('parseDebugFlags', () => {
   it('defaults to a normal game', () => {
@@ -22,6 +23,8 @@ describe('parseDebugFlags', () => {
       bloom: null,
       fxaa: null,
       loadout: { primary: null, secondary: null, drones: null, special: null, level: null },
+      ship: null,
+      demo: false,
     });
   });
 
@@ -45,6 +48,8 @@ describe('parseDebugFlags', () => {
       bloom: false,
       fxaa: false,
       loadout: { primary: null, secondary: null, drones: null, special: null, level: null },
+      ship: null,
+      demo: false,
     });
   });
 
@@ -80,5 +85,24 @@ describe('parseDebugFlags', () => {
     expect(parseDebugFlags('?elite=Volatile').elite).toBe('volatile');
     expect(parseDebugFlags('?elite=1').elite).toBe('random');
     expect(parseDebugFlags('?elite=0').elite).toBeNull();
+  });
+
+  it('picks a ship by id', () => {
+    expect(parseDebugFlags('?ship=striker').ship).toBe('striker');
+    expect(parseDebugFlags('?ship=falcon').ship).toBeNull();
+  });
+});
+
+describe('demoFlags', () => {
+  it('plays the demo mission with its arsenal, and nothing else changes', () => {
+    const d = demoFlags();
+    expect(d.demo).toBe(true);
+    expect(d.mission).toBe(DEMO.mission);
+    expect(d.ship).toBe(DEMO.ship);
+    expect(d.power).toBe(DEMO.power);
+    expect(d.loadout).toEqual({ primary: DEMO.primary, secondary: DEMO.secondary, drones: DEMO.drones, special: DEMO.special, level: DEMO.level });
+    expect(d.god).toBe(false);
+    expect(d.t).toBe(0);
+    expect(d.slowmo).toBe(1);
   });
 });

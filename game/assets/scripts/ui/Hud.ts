@@ -2,14 +2,14 @@
 // escape pods, the Special and pause buttons, the boss bar, banners, and the pause and results
 // panels. Setters only touch labels and redraw graphics when the shown value changes.
 
-import { Color, Graphics, Label, Node, TTFFont, UITransform, Widget } from 'cc';
+import { Color, Graphics, Label, Node, sys, TTFFont, UITransform, Widget } from 'cc';
 import type { RunRewards } from '../core/economy';
 import { hasMedal, MEDAL_BITS } from '../core/medals';
 import { MEDALS } from '../data/medals';
 import type { BannerStyle } from '../game/GameContext';
 import type { MissionResult } from '../game/MissionDirector';
 import type { ButtonId } from '../services/InputService';
-import { contains, drawCoin, drawMedal, UI, uiButton, uiLabel, uiNode, uiPanel } from './UiKit';
+import { contains, drawCoin, drawMedal, onTap, UI, uiButton, uiLabel, uiNode, uiPanel } from './UiKit';
 
 const SPECIAL_READY = new Color(30, 90, 140, 220);
 const SPECIAL_ACTIVE = new Color(60, 120, 170, 235);
@@ -49,6 +49,8 @@ const MEDAL_SPACING = 168;
 const MEDAL_RADIUS = 46;
 const RESULT_BUTTON_Y = -440;
 const RESULT_BUTTON_WIDTH = 160;
+/** The demo's FULL GAME: a longer word on one of only two buttons. */
+const RESULT_WIDE_BUTTON_WIDTH = 250;
 const RESULT_BUTTON_GAP = 14;
 /** The run's numbers and what it opened in the hangar share the space between the medals and the buttons. */
 const RESULT_BLOCK_CENTRE = -168;
@@ -68,6 +70,11 @@ export interface HudOptions {
   /** The Special button goes under the left thumb. */
   leftHanded: boolean;
   showFps: boolean;
+  /**
+   * The demo: MENU is a link to the full game (opened from the touch itself, so the browser doesn't
+   * take it for a pop-up), and there is no HANGAR. Null in the game itself.
+   */
+  menuLink: { label: string; url: string } | null;
 }
 
 /** What the results screen shows next to the run itself. */
@@ -85,6 +92,8 @@ export interface ResultsExtras {
   hasNext: boolean;
   /** Ships and arsenal items the run opened (names). */
   unlocked: string[];
+  /** The demo's pitch for the full game, in place of the wallet and the record; null otherwise. */
+  pitch: string | null;
 }
 
 interface Banner {
@@ -197,7 +206,8 @@ export class Hud {
     uiLabel(this.pausePanel, 'PausedTitle', 60, UI.white, { centerX: true, centerY: true, dy: 220 }, font).string = 'PAUSED';
     this.resumeButton = uiButton(this.pausePanel, 'RESUME', 360, 92, { centerX: true, centerY: true, dy: 60 }, font);
     this.restartButton = uiButton(this.pausePanel, 'RESTART', 360, 92, { centerX: true, centerY: true, dy: -60 }, font);
-    this.quitButton = uiButton(this.pausePanel, 'MENU', 360, 92, { centerX: true, centerY: true, dy: -180 }, font);
+    const link = options.menuLink;
+    this.quitButton = uiButton(this.pausePanel, link ? link.label : 'MENU', 360, 92, { centerX: true, centerY: true, dy: -180 }, font);
     this.pausePanel.active = false;
 
     this.resultsPanel = uiPanel(root, 'ResultsPanel');
@@ -216,11 +226,13 @@ export class Hud {
     this.resultsBody.lineHeight = BODY_LINE;
     this.resultsUnlocks = uiLabel(p, 'ResultsUnlocks', 26, UI.gold, { centerX: true, centerY: true, dy: 0 }, font);
     this.resultsUnlocks.lineHeight = UNLOCK_LINE;
-    const button = (text: string): Node => uiButton(p, text, RESULT_BUTTON_WIDTH, 88, { centerX: true, centerY: true, dy: RESULT_BUTTON_Y }, font, 24);
+    const button = (text: string, width = RESULT_BUTTON_WIDTH): Node => uiButton(p, text, width, 88, { centerX: true, centerY: true, dy: RESULT_BUTTON_Y }, font, 24);
     this.retryButton = button('RETRY');
     this.nextButton = button('NEXT');
     this.hangarButton = button('HANGAR');
-    this.menuButton = button('MENU');
+    this.hangarButton.active = link === null;
+    this.menuButton = link ? button(link.label, RESULT_WIDE_BUTTON_WIDTH) : button('MENU');
+    if (link) for (const b of [this.quitButton, this.menuButton]) onTap(b, () => sys.openURL(link.url));
     this.resultsPanel.active = false;
   }
 
@@ -414,7 +426,7 @@ ${charges > 0 ? '●'.repeat(charges) : '–'}`;
     this.resultsMission.string = `${extras.mission}  ·  ${extras.difficulty.toUpperCase()}`;
     this.resultsScore.string = r.score.toLocaleString('en-US');
     this.recordBlink = extras.newBest;
-    this.resultsRecord.node.active = true;
+    this.resultsRecord.node.active = extras.pitch === null;
     this.resultsRecord.string = extras.newBest ? 'NEW RECORD' : `BEST  ${extras.best.toLocaleString('en-US')}`;
     this.resultsRecord.color = extras.newBest ? UI.gold : UI.dim;
 
@@ -438,10 +450,12 @@ ${charges > 0 ? '●'.repeat(charges) : '–'}`;
       if (pay.clear > 0) bonus.push(`CLEAR +${money(pay.clear)}`);
       if (pay.medals > 0) bonus.push(`MEDALS +${money(pay.medals)}`);
       if (bonus.length > 0) lines.push(bonus.join('  ·  '));
-    } else {
+    } else if (extras.pitch === null) {
       lines.push(`CREDITS  ${money(r.credits)}  ·  PRACTICE, NOT KEPT`);
+    } else {
+      lines.push(`CREDITS  ${money(r.credits)}`);
     }
-    lines.push(`BALANCE  ${money(extras.balance)}`);
+    if (extras.pitch === null) lines.push(`BALANCE  ${money(extras.balance)}`);
     // Paired up where they fit, so the hangar's news has room above (7 lines at most).
     lines.push(r.podsTotal > 0 ? `KILLS  ${r.kills}/${r.spawned} (${rate}%)  ·  PODS  ${r.pods}/${r.podsTotal}` : `KILLS  ${r.kills}/${r.spawned}  (${rate}%)`);
     lines.push(`BEST COMBO  ×${r.bestMultiplier}  ·  GRAZES  ${r.grazes}`, `HULL LOST  ${r.hullLost}`);
@@ -450,8 +464,9 @@ ${charges > 0 ? '●'.repeat(charges) : '–'}`;
     if (r.noDamageBonus > 0) extra.push(`NO DAMAGE  +${money(r.noDamageBonus)}`);
     if (extra.length > 0) lines.push(extra.join('  ·  '));
     this.resultsBody.string = lines.join('\n');
-    // What the run opened in the hangar, in gold above the numbers; the two are centred together.
-    const unlocks = unlockLines(extras.unlocked);
+    // What the run opened in the hangar (or the demo's pitch), in gold above the numbers; the two
+    // are centred together.
+    const unlocks = extras.pitch !== null ? extras.pitch.split('\n') : unlockLines(extras.unlocked);
     this.resultsUnlocks.node.active = unlocks.length > 0;
     this.resultsUnlocks.string = unlocks.join('\n');
     const unlockHeight = unlocks.length > 0 ? unlocks.length * UNLOCK_LINE + UNLOCK_GAP : 0;
@@ -462,10 +477,13 @@ ${charges > 0 ? '●'.repeat(charges) : '–'}`;
     this.nextButton.active = extras.hasNext && r.complete;
     // Centre the row of buttons that are showing.
     const row = [this.retryButton, this.nextButton, this.hangarButton, this.menuButton].filter((b) => b.active);
+    const widths = row.map((b) => (b.getComponent(UITransform) as UITransform).width);
+    let x = -(widths.reduce((sum, w) => sum + w, 0) + RESULT_BUTTON_GAP * (row.length - 1)) / 2;
     row.forEach((b, i) => {
       const widget = b.getComponent(Widget) as Widget;
-      widget.horizontalCenter = (i - (row.length - 1) / 2) * (RESULT_BUTTON_WIDTH + RESULT_BUTTON_GAP);
+      widget.horizontalCenter = x + widths[i] / 2;
       widget.updateAlignment();
+      x += widths[i] + RESULT_BUTTON_GAP;
     });
   }
 

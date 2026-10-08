@@ -2,7 +2,9 @@
 // Engine-free so it can be unit-tested; the caller passes `location.search`.
 
 import type { LoadoutOverride } from '../core/loadout';
-import type { Difficulty, DroneId, EliteId, PrimaryId, QualityId, SecondaryId, SpecialId } from '../data/types';
+import { DEMO } from '../data/demo';
+import { SHIPS } from '../data/player';
+import type { Difficulty, DroneId, EliteId, PrimaryId, QualityId, SecondaryId, ShipId, SpecialId } from '../data/types';
 import { QUALITY } from '../data/visuals';
 import { DRONES, PRIMARIES, SECONDARIES, SPECIALS } from '../data/weapons';
 
@@ -45,6 +47,10 @@ export interface DebugFlags {
   fxaa: boolean | null;
   /** Try any arsenal without buying it: `?primary=ion&secondary=rail&drones=gunDrone,guardian&special=warp&level=5`. */
   loadout: LoadoutOverride;
+  /** Fly this ship (`?ship=striker`), open or not, or null for the hangar's. */
+  ship: ShipId | null;
+  /** The playable demo (data/demo.ts): set by its page, never by the URL. */
+  demo: boolean;
 }
 
 export function parseDebugFlags(search: string): DebugFlags {
@@ -101,10 +107,25 @@ export function parseDebugFlags(search: string): DebugFlags {
       special: pick<SpecialId>('special', SPECIALS),
       level: Number.isFinite(level) ? Math.round(level) : null,
     },
+    ship: pick<ShipId>('ship', SHIPS),
+    demo: false,
   };
 }
 
+/** The playable demo's flags: its mission and arsenal, whatever the URL of the page around it. */
+export function demoFlags(): DebugFlags {
+  return Object.assign(parseDebugFlags(''), {
+    mission: DEMO.mission,
+    difficulty: DEMO.difficulty,
+    power: DEMO.power,
+    loadout: { primary: DEMO.primary, secondary: DEMO.secondary, drones: DEMO.drones.slice(), special: DEMO.special, level: DEMO.level },
+    ship: DEMO.ship,
+    demo: true,
+  });
+}
+
 export function readDebugFlags(): DebugFlags {
+  if (typeof window !== 'undefined' && (window as unknown as { SPACEFLIGHT_DEMO?: boolean }).SPACEFLIGHT_DEMO === true) return demoFlags();
   const search = typeof window !== 'undefined' && window.location ? window.location.search : '';
   return parseDebugFlags(search);
 }

@@ -16,7 +16,8 @@ import { Rng } from '../core/Rng';
 import { SECTORS } from '../data/campaign';
 import { DIFFICULTIES } from '../data/difficulty';
 import { DEFAULT_MISSION, MISSIONS, nextMission } from '../data/missions';
-import { SHIPS, shipModel } from '../data/player';
+import { DEMO } from '../data/demo';
+import { DEFAULT_PAINT, SHIPS, shipModel } from '../data/player';
 import { propPath } from '../data/props';
 import type { BoltId, Difficulty, EnemyBulletId, EnemyId, Loadout, MissionId, PropId } from '../data/types';
 import { BOSS_FX, NOVA_FX, POST_FX } from '../data/visuals';
@@ -305,7 +306,7 @@ export class GameWorld extends Component {
     // Runs with debug cheats (god mode, seeking, forced Power or elites, slow motion, everything
     // unlocked, a borrowed loadout) are practice: no records, no credits.
     const d = s.ctx.debug;
-    const practice = d.god || d.t > 0 || d.power !== null || d.elite !== null || d.slowmo !== 1 || d.unlock || hasOverride(d.loadout);
+    const practice = d.god || d.t > 0 || d.power !== null || d.elite !== null || d.slowmo !== 1 || d.unlock || hasOverride(d.loadout) || d.ship !== null;
     const run = { complete: r.complete, score: r.score, medals: r.medals, killRate: r.killRate };
     const report = practice ? null : SaveService.submitRun(this.missionId, this.difficulty, run, r.credits);
     const next = nextMission(this.missionId);
@@ -313,22 +314,23 @@ export class GameWorld extends Component {
     s.hud.setPlaying(false);
     s.hud.showResults(r, {
       mission: MISSIONS[this.missionId].title,
-      difficulty: practice ? `${this.difficulty} · practice` : this.difficulty,
+      difficulty: d.demo ? 'demo' : practice ? `${this.difficulty} · practice` : this.difficulty,
       best: report ? report.update.record.score : SaveService.record(this.missionId, this.difficulty)?.score ?? 0,
       newBest: report ? report.update.newBest : false,
       newMedals: report ? report.update.newMedals : 0,
       rewards: report ? report.rewards : null,
       balance: report ? report.balance : SaveService.credits,
-      hasNext: next !== null && (d.unlock || missionUnlocked(SaveService.records, next)),
+      hasNext: !d.demo && next !== null && (d.unlock || missionUnlocked(SaveService.records, next)),
       unlocked: report ? report.unlocked : [],
+      pitch: d.demo ? DEMO.pitch : null,
     });
     // Presses queued during the fight (Enter = retry) must not skip the results screen.
     this.input.flush();
   }
 
-  /** Back to the menu: its main page, or straight into the hangar. */
+  /** Back to the menu: its main page, or straight into the hangar. The demo has no menu (its MENU is a link, ui/Hud.ts). */
   private toMenu(entry: MenuEntry): void {
-    if (this.leaving) return;
+    if (this.leaving || this.s?.ctx.debug.demo) return;
     this.leaving = true;
     this.leave(() => SceneRouter.toMenu(entry));
   }
@@ -416,7 +418,9 @@ export class GameWorld extends Component {
     }
     this.missionId = missionId;
     this.difficulty = difficulty;
-    const shipId = SaveService.shipToFly(debug.unlock);
+    const shipId = debug.ship ?? SaveService.shipToFly(debug.unlock);
+    // The demo's page carries one paint of its ship (tools/build-playable.mjs keeps only that model).
+    const paint = debug.demo ? DEFAULT_PAINT : SaveService.paintOf(shipId);
     const ship = SHIPS[shipId];
     const loadout = overrideLoadout(SaveService.loadout(shipId), debug.loadout);
     this.loadout = loadout;
@@ -427,7 +431,7 @@ export class GameWorld extends Component {
     const propIds = Array.from(needs.props);
     // Assemblies and rocks are built from props / procedural meshes: no prefab of their own.
     const [shipPrefab, enemyPrefabs, propPrefabs] = await Promise.all([
-      loadPrefab(shipModel(shipId, SaveService.paintOf(shipId))),
+      loadPrefab(shipModel(shipId, paint)),
       Promise.all(enemyIds.map((id) => {
         const path = enemyPrefabPath(id);
         return path ? loadPrefab(path) : Promise.resolve(null);
@@ -506,7 +510,7 @@ export class GameWorld extends Component {
     const fx = new FxSystem(ctx);
     const settings = SettingsService.current;
     player.sensitivity = settings.sensitivity;
-    const hud = new Hud(this.ui, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps });
+    const hud = new Hud(this.ui, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps, menuLink: debug.demo ? { label: DEMO.cta, url: DEMO.fullGameUrl } : null });
     const audio = new GameAudio(ctx, mission, weapons);
     // Mission 1-1 teaches the controls until it has been cleared once.
     const teach = mission.onboarding === true && debug.t === 0 && !isCleared(SaveService.records, missionId);

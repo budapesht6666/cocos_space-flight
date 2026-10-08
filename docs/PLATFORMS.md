@@ -131,6 +131,17 @@ Windows: скачать .ipa ─▶ Sideloadly + обычный Apple ID ─▶ 
 - В терминале VS Code (и в Claude Code внутри него) выставлена `ELECTRON_RUN_AS_NODE=1`: с ней `CocosCreator.exe` стартует как голый Node и падает с `bad option: --project`. Перед запуском снять: PowerShell `Remove-Item Env:ELECTRON_RUN_AS_NODE`, bash `env -u ELECTRON_RUN_AS_NODE …`.
 - На одном проекте одновременно редактор и CLI не запускаем; при открытом редакторе собираем через builder из редактора или из копии проекта.
 
+## Демо одним файлом: BingePlay (Funizzle)
+
+[BingePlay](https://funizzle.com) — лента играбельных демо («TikTok для игр»), бесплатно для издателя (платный только тег Sponsored). Кабинет — app.funizzle.com/publisher, вход через Google. Формат как у playable-рекламы: **один HTML-файл**, желательно 3–6 MB. Ссылки App Store / Google Play в форме необязательны (проверяются, только если заполнены: `apps.apple.com` / `play.google.com`), ссылку на PWA туда не вписать — на полную игру ведёт кнопка FULL GAME в самой демке. Заявка проходит модерацию (Pending → Approved / Rejected). Ссылка на условия в форме никуда не ведёт.
+
+- **Что в демке** — `data/demo.ts`: миссия 1-1 сразу, без меню, Executioner с Tesla Arc + Swarm Rockets на LV5, Gun Drone и Guardian, Power IV; подсказки управления каждый раз; ничего не сохраняется. На паузе и в результатах MENU → FULL GAME (открывает сайт в новой вкладке), HANGAR и NEXT скрыты, вместо рекорда и кошелька — строка про полную игру.
+- **Включение** — страница ставит `window.SPACEFLIGHT_DEMO = true`, `readDebugFlags()` отдаёт тогда `demoFlags()` (URL-параметры в демке не действуют: адрес страницы — чужой).
+- **Сборка** (`tools/build-playable.mjs`): своё зеркало `.cache/playable-game` без моделей и музыки, которые демке не нужны (всё из `resources/` попадает в сборку, нужно оно или нет; список считается из данных миссии), музыка перекодирована в 64 kbps моно; `build-configs/playable.json` — только сцена Game, без md5. Потом все файлы сборки (кроме PWA-обвязки шаблона) — одним gzip-пакетом в base64 внутри страницы, рядом `tools/playable/loader.js`.
+- **Загрузчик:** распаковывает пакет (`DecompressionStream`: Safari 16.4+, Chrome 80+) и отвечает на запросы движка blob-ссылками из пакета — `src` у script/img/audio, XHR, fetch, `<style>` с `@font-face` и FontFace. Все относительные адреса страницы идут от `<base href="https://spaceflight.p1gog.duckdns.org/demo/">` (такой папки на сервере нет): так одинаково работает и с адреса, и из `srcdoc`/blob, и видно, что запрос мимо пакета (ошибка CORS к этому адресу в консоли).
+- **Превью формы** (Test Gamic) грузит файл в iframe с blob-адреса, `sandbox="allow-scripts allow-same-origin"` — без `allow-popups`, так что FULL GAME там ничего не откроет; поэтому адрес сайта ещё и написан на экране результатов. Ссылка открывается прямо из касания (`onTap`), иначе мобильные браузеры считают её всплывающим окном.
+- Размер: 263 файла, 8.4 MB → gzip 4.0 MB → страница 5.4 MB. Больше всего — движок `cc.js` (0.5 MB в gzip), музыка, скайбокс.
+
 ## Android (если понадобится)
 
 - Android Studio, SDK и NDK на Windows, сборка прямо из Cocos.
