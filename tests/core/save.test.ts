@@ -17,7 +17,7 @@ import {
 import { applyRun, type RecordMap } from '../../game/assets/scripts/core/records';
 import { defaultEquip, loadSave, newSave, SAVE_VERSION, serializeSave } from '../../game/assets/scripts/core/save';
 import { SECTORS } from '../../game/assets/scripts/data/campaign';
-import { REWARDS, UPGRADES } from '../../game/assets/scripts/data/economy';
+import { REWARDS, UPGRADES, WALLET_CAP } from '../../game/assets/scripts/data/economy';
 import { ENERGY, SHIPS } from '../../game/assets/scripts/data/player';
 import type { Difficulty, MissionId } from '../../game/assets/scripts/data/types';
 
@@ -424,5 +424,34 @@ describe('progress', () => {
     // The end of the built campaign.
     clear(r, 's1m3', 'normal');
     expect(continueTarget(r, { mission: 's1m3', difficulty: 'normal' })).toEqual({ mission: 's1m3', difficulty: 'normal' });
+  });
+
+  it('survives a hostile save: extreme numbers, a __proto__ key, junk record keys', () => {
+    const json =
+      '{"version":4,"credits":1.7e308,"earned":1e999,"upgrades":{"__proto__":{"x":1},"hull":2},"ship":"__proto__",' +
+      '"records":{"__proto__":{"score":1e300,"medals":99,"killRate":5,"clears":1e20},"s1m1:normal":{"score":1e300,"medals":15,"killRate":1,"clears":1e20},' +
+      '"junk:key":{"score":1},"s9m9:normal":{"score":1},"s1m1:zzz":{"score":1},"s1m1":{"score":1},":normal":{"score":1}},"cheats":["__proto__","arsenal"]}';
+    const s = loadSave(json, null).save;
+    expect(s.credits).toBe(WALLET_CAP);
+    expect(s.earned).toBe(WALLET_CAP);
+    expect(s.ship).toBe('spitfire');
+    expect(s.upgrades).toEqual({ hull: 2 });
+    expect(Object.keys(s.records)).toEqual(['s1m1:normal']);
+    expect(Object.getPrototypeOf(s.records)).toBe(Object.prototype);
+    expect(s.records['s1m1:normal'].score).toBeLessThan(1e10);
+    expect(s.cheats).toEqual(['arsenal']);
+    expect(({} as { score?: number }).score).toBeUndefined();
+    // And what comes back out is plain, finite JSON.
+    expect(loadSave(serializeSave(s), null).save).toEqual(s);
+  });
+
+  it('stops the wallet at its cap', () => {
+    const save = newSave();
+    setWallet(save, 1e12);
+    expect(save.credits).toBe(WALLET_CAP);
+    save.credits = WALLET_CAP - 10;
+    grantCredits(save, 1000);
+    expect(save.credits).toBe(WALLET_CAP);
+    expect(save.earned).toBeLessThanOrEqual(WALLET_CAP);
   });
 });

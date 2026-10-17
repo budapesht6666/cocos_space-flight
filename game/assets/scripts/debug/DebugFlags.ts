@@ -3,6 +3,7 @@
 
 import type { LoadoutOverride } from '../core/loadout';
 import { DEMO } from '../data/demo';
+import { WALLET_CAP } from '../data/economy';
 import { SHIPS } from '../data/player';
 import type { Difficulty, DroneId, EliteId, PrimaryId, QualityId, SecondaryId, ShipId, SpecialId } from '../data/types';
 import { QUALITY } from '../data/visuals';
@@ -31,9 +32,9 @@ export interface DebugFlags {
   elite: EliteId | 'random' | null;
   /** Every sector, mission, difficulty and ship is open (`?unlock=1`); nothing is saved as earned. */
   unlock: boolean;
-  /** Developer wallet: set the credits to this once per page load (`?credits=50000`), or null. */
+  /** Developer wallet: set the credits to this once per page load (`?credits=50000`), or null. Dev hosts only. */
   credits: number | null;
-  /** Wipe the save once per page load (`?reset=1`), before `credits`. */
+  /** Wipe the save once per page load (`?reset=1`), before `credits`. Dev hosts only. */
   reset: boolean;
   /**
    * Graphics quality tier for the page (`?quality=high`) instead of the one in the settings, or null.
@@ -53,7 +54,23 @@ export interface DebugFlags {
   demo: boolean;
 }
 
-export function parseDebugFlags(search: string): DebugFlags {
+/**
+ * A machine of the developer's: localhost, loopback, the home network, file://. The flags that
+ * rewrite the saved progress (`credits`, `reset`) work only there — on the public site a link
+ * (`/?reset=1`) must not be able to wipe or enrich somebody's save. The other flags only make
+ * practice runs (no records, no credits), so they stay everywhere.
+ */
+export function isDevHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === '' || h === 'localhost' || h === '::1' || h.endsWith('.localhost') || h.endsWith('.local')) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(h);
+  if (!m) return false;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 169 && b === 254);
+}
+
+export function parseDebugFlags(search: string, devHost = true): DebugFlags {
   const params = new URLSearchParams(search);
   const num = (key: string, fallback: number): number => {
     const raw = params.get(key);
@@ -93,8 +110,8 @@ export function parseDebugFlags(search: string): DebugFlags {
     difficulty: DIFFICULTIES.indexOf(difficulty as Difficulty) >= 0 ? (difficulty as Difficulty) : null,
     elite: ELITES.indexOf(elite as EliteId) >= 0 ? (elite as EliteId) : flag('elite') ? 'random' : null,
     unlock: flag('unlock'),
-    credits: Number.isFinite(credits) ? Math.min(1e9, Math.max(0, Math.floor(credits))) : null,
-    reset: flag('reset'),
+    credits: devHost && Number.isFinite(credits) ? Math.min(WALLET_CAP, Math.max(0, Math.floor(credits))) : null,
+    reset: devHost && flag('reset'),
     quality: QUALITY.tiers.some((t) => t.id === quality) ? (quality as QualityId) : null,
     scale: Number.isFinite(scale) ? Math.min(1, Math.max(0.3, scale)) : null,
     msaa: toggle('msaa'),
@@ -127,5 +144,6 @@ export function demoFlags(): DebugFlags {
 export function readDebugFlags(): DebugFlags {
   if (typeof window !== 'undefined' && (window as unknown as { SPACEFLIGHT_DEMO?: boolean }).SPACEFLIGHT_DEMO === true) return demoFlags();
   const search = typeof window !== 'undefined' && window.location ? window.location.search : '';
-  return parseDebugFlags(search);
+  const host = typeof window !== 'undefined' && window.location ? window.location.hostname : '';
+  return parseDebugFlags(search, isDevHost(host));
 }

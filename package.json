@@ -15,6 +15,7 @@
     "build:web": "node tools/build-web.mjs",
     "build:playable": "node tools/build-playable.mjs",
     "stats:web": "node tools/web-stats.mjs",
+    "pentest": "node tools/security/pentest.mjs",
     "release:web": "node tools/build-web.mjs && node tools/deploy-web.mjs --from .cache/cli-game/build/web-mobile",
     "hooks:install": "git config core.hooksPath tools/hooks",
     "serve:web": "python tools/serve_web.py",

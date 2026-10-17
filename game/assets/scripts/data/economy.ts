@@ -159,6 +159,9 @@ export const UPGRADE_ORDER: readonly UpgradeId[] = [
   'nova', 'overdrive', 'phase', 'warp',
 ];
 
+/** The most credits a wallet (and the lifetime total) can hold: keeps the numbers printable and finite. */
+export const WALLET_CAP = 1000000000;
+
 /** Credits on top of what the run collected, times the difficulty's credit multiplier. */
 export const REWARDS = {
   /** Every completed mission. */

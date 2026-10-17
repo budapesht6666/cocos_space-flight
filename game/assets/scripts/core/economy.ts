@@ -1,6 +1,6 @@
 // Hangar purchases and mission rewards (GDD §14). Engine-free; works on the save document.
 
-import { REWARDS, UPGRADES } from '../data/economy';
+import { REWARDS, UPGRADES, WALLET_CAP } from '../data/economy';
 import type { UpgradeDef, UpgradeId } from '../data/types';
 import { clamp } from './math';
 import { medalCount } from './medals';
@@ -70,15 +70,15 @@ export function runRewards(complete: boolean, collected: number, newMedals: numb
 
 /** Developer wallet (`?credits=`): sets the credits, keeping the lifetime total consistent. */
 export function setWallet(save: SaveData, amount: number): void {
-  save.credits = Math.max(0, Math.floor(amount));
+  save.credits = clamp(Math.floor(amount), 0, WALLET_CAP);
   save.earned = Math.max(save.earned, save.credits);
 }
 
-/** Adds credits to the wallet and the lifetime total (mutates the save). */
+/** Adds credits to the wallet and the lifetime total (mutates the save); both stop at WALLET_CAP. */
 export function grantCredits(save: SaveData, amount: number): void {
   const n = Math.max(0, Math.floor(amount));
-  save.credits += n;
-  save.earned += n;
+  save.credits = Math.min(save.credits + n, WALLET_CAP);
+  save.earned = Math.min(save.earned + n, WALLET_CAP);
 }
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];

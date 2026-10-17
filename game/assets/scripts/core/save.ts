@@ -9,10 +9,12 @@
 //   4 — stage 6: cheat codes with a lasting effect (the arsenal opened for good).
 // A new version adds a step to MIGRATIONS that turns the previous document into the next one.
 
-import { UPGRADE_ORDER, UPGRADES } from '../data/economy';
+import { DIFFICULTY_ORDER } from '../data/difficulty';
+import { UPGRADE_ORDER, UPGRADES, WALLET_CAP } from '../data/economy';
+import { MISSION_ORDER } from '../data/missions';
 import { CHEATS } from '../data/cheats';
 import { DEFAULT_SHIP, PAINTS, SHIPS } from '../data/player';
-import type { CheatId, DroneId, PaintId, PrimaryId, SecondaryId, ShipId, SpecialId } from '../data/types';
+import type { CheatId, Difficulty, DroneId, MissionId, PaintId, PrimaryId, SecondaryId, ShipId, SpecialId } from '../data/types';
 import { DRONES, PRIMARIES, SECONDARIES, SPECIALS } from '../data/weapons';
 import { clamp } from './math';
 import { int, sanitizeRecords, type RecordMap } from './records';
@@ -112,8 +114,8 @@ export function serializeSave(save: SaveData): string {
 /** Builds a valid current-version save from a document of the right shape but untrusted values. */
 function sanitize(raw: Raw): SaveData {
   const save = newSave();
-  save.credits = int(raw.credits);
-  save.earned = Math.max(int(raw.earned), save.credits);
+  save.credits = Math.min(int(raw.credits), WALLET_CAP);
+  save.earned = Math.min(Math.max(int(raw.earned), save.credits), WALLET_CAP);
   const upgrades = (raw.upgrades && typeof raw.upgrades === 'object' ? raw.upgrades : {}) as Raw;
   for (const id of UPGRADE_ORDER) {
     const level = clamp(int(upgrades[id]), 0, UPGRADES[id].costs.length);
@@ -126,7 +128,7 @@ function sanitize(raw: Raw): SaveData {
     if (typeof paint === 'string' && Object.prototype.hasOwnProperty.call(PAINTS, paint)) save.paints[ship] = paint as PaintId;
   }
   save.equip = sanitizeEquip(raw.equip);
-  save.records = sanitizeRecords(raw.records);
+  save.records = sanitizeRecords(raw.records, isRecordKey);
   if (Array.isArray(raw.cheats)) {
     for (const id of raw.cheats) {
       if (typeof id === 'string' && Object.prototype.hasOwnProperty.call(CHEATS, id) && save.cheats.indexOf(id as CheatId) < 0) save.cheats.push(id as CheatId);
@@ -135,6 +137,12 @@ function sanitize(raw: Raw): SaveData {
   const last = raw.last as Raw | null | undefined;
   if (last && typeof last.mission === 'string' && typeof last.difficulty === 'string') save.last = { mission: last.mission, difficulty: last.difficulty };
   return save;
+}
+
+/** `mission:difficulty` of a mission and a difficulty the game has; any other key in a save is junk. */
+function isRecordKey(key: string): boolean {
+  const colon = key.indexOf(':');
+  return colon > 0 && MISSION_ORDER.indexOf(key.slice(0, colon) as MissionId) >= 0 && DIFFICULTY_ORDER.indexOf(key.slice(colon + 1) as Difficulty) >= 0;
 }
 
 function sanitizeEquip(value: unknown): EquipState {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { earnedMedals, hasMedal, killRate, medalCount, MEDAL_BITS, type MedalStats } from '../../game/assets/scripts/core/medals';
-import { applyRun, getRecord, sanitizeRecords, type RecordMap } from '../../game/assets/scripts/core/records';
+import { applyRun, getRecord, RECORD_LIMITS, sanitizeRecords, type RecordMap } from '../../game/assets/scripts/core/records';
 import { pickWeighted } from '../../game/assets/scripts/core/weighted';
 
 const perfect: MedalStats = { complete: true, kills: 50, spawned: 50, pods: 3, podsTotal: 3, hullLost: 0 };
@@ -68,6 +68,29 @@ describe('records', () => {
     expect(sanitizeRecords('x')).toEqual({});
     const dirty = sanitizeRecords({ a: { score: -5, medals: 255, killRate: 7, clears: 'x' }, b: null, c: { score: 12.7, clears: 2.9 } });
     expect(dirty).toEqual({ a: { score: 0, medals: 15, killRate: 1, clears: 0 }, c: { score: 12, medals: 0, killRate: 0, clears: 2 } });
+  });
+
+  it('keeps only the keys the caller accepts, and never a __proto__ key', () => {
+    const raw = JSON.parse('{"__proto__":{"score":9},"s1m1:normal":{"score":5},"junk":{"score":6}}');
+    const out = sanitizeRecords(raw, (key) => key.indexOf(':') > 0);
+    expect(Object.keys(out)).toEqual(['s1m1:normal']);
+    expect(Object.getPrototypeOf(out)).toBe(Object.prototype);
+    // Without a validator the prototype key is still refused.
+    const open = sanitizeRecords(raw);
+    expect(Object.getPrototypeOf(open)).toBe(Object.prototype);
+    expect(Object.keys(open).sort()).toEqual(['junk', 's1m1:normal']);
+  });
+
+  it('bounds scores and clears, stored or earned', () => {
+    const out = sanitizeRecords({ a: { score: 1e300, clears: 1e20, medals: 1, killRate: 1 } });
+    expect(out.a.score).toBe(RECORD_LIMITS.score);
+    expect(out.a.clears).toBe(RECORD_LIMITS.clears);
+    const records: RecordMap = {};
+    const u = applyRun(records, 's1m1', 'normal', { complete: true, score: 2e9, medals: 15, killRate: 5 });
+    expect(u.record.score).toBe(RECORD_LIMITS.score);
+    expect(u.record.killRate).toBe(1);
+    records['s1m1:normal'].clears = RECORD_LIMITS.clears;
+    expect(applyRun(records, 's1m1', 'normal', { complete: true, score: 1, medals: 0, killRate: 1 }).record.clears).toBe(RECORD_LIMITS.clears);
   });
 });
 

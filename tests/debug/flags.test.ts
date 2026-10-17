@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { demoFlags, parseDebugFlags } from '../../game/assets/scripts/debug/DebugFlags';
+import { demoFlags, isDevHost, parseDebugFlags } from '../../game/assets/scripts/debug/DebugFlags';
 import { DEMO } from '../../game/assets/scripts/data/demo';
 
 describe('parseDebugFlags', () => {
@@ -90,6 +90,24 @@ describe('parseDebugFlags', () => {
   it('picks a ship by id', () => {
     expect(parseDebugFlags('?ship=striker').ship).toBe('striker');
     expect(parseDebugFlags('?ship=falcon').ship).toBeNull();
+  });
+});
+
+describe('flags that rewrite the save', () => {
+  it('work on developer hosts and are ignored on the public site', () => {
+    expect(parseDebugFlags('?reset=1&credits=500', true)).toMatchObject({ reset: true, credits: 500 });
+    expect(parseDebugFlags('?reset=1&credits=500', false)).toMatchObject({ reset: false, credits: null });
+    // The practice-run flags stay available everywhere.
+    expect(parseDebugFlags('?god=1&unlock=1&mission=s1m1', false)).toMatchObject({ god: true, unlock: true, mission: 's1m1' });
+  });
+
+  it('knows a developer host from a public one', () => {
+    for (const host of ['', 'localhost', 'LOCALHOST', '127.0.0.1', '127.1.2.3', '[::1]', '::1', '192.168.1.43', '10.0.0.5', '172.16.0.1', '172.31.255.1', '169.254.1.1', 'pc.local', 'game.localhost']) {
+      expect(isDevHost(host), host).toBe(true);
+    }
+    for (const host of ['spaceflight.p1gog.duckdns.org', 'example.com', '8.8.8.8', '172.32.0.1', '172.15.0.1', '192.169.1.1', '11.0.0.1', 'localhost.evil.com', '127.0.0.1.evil.com', 'xlocal']) {
+      expect(isDevHost(host), host).toBe(false);
+    }
   });
 });
 
