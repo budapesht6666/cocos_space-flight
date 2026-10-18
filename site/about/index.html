@@ -206,6 +206,12 @@
 
     .note { margin: 18px 0 0; color: var(--dim); font-size: 15px; }
 
+    .install h3 small { color: var(--dim); font-size: 14px; font-weight: 400; }
+
+    .install .download { margin: 4px 0 14px; }
+
+    h2.sub { margin-top: 40px; font-size: 22px; }
+
     kbd {
       padding: 1px 6px;
       border: 1px solid var(--edge);
@@ -286,7 +292,7 @@
         </div>
         <div class="card">
           <h3>Plays anywhere</h3>
-          <p>iPhone, Android or a computer's browser, nothing to download. Installed to the home screen it runs full screen and offline. Progress stays on your device.</p>
+          <p>iPhone, Android or a computer's browser, nothing to download. Installed to the home screen it runs full screen and offline; for Android and iPhone there are <a href="#apps">apps</a> too. Progress stays on your device.</p>
         </div>
       </div>
     </section>
@@ -336,6 +342,32 @@
         </div>
       </div>
       <p class="note">Progress is saved in the browser on that device. On iPhone the home-screen app keeps its own save, apart from Safari — install first, then play.</p>
+
+      <h2 class="sub" id="apps">Or get the app</h2>
+      <p class="lead">The same game built as a real app: drawn by the phone's own graphics engine instead of the browser's, so it runs smoother and looks sharper. Not in the stores — the files come straight from here.</p>
+      <div class="install">
+        <div class="card">
+          <h3>Android app</h3>
+          <p class="download"><a class="button play" href="https://github.com/budapesht6666/cocos_space-flight/releases/download/android-latest/SpaceFlight.apk">Download APK</a></p>
+          <ol>
+            <li>Download it on the phone and open the file.</li>
+            <li>If asked, allow your browser to <b>install unknown apps</b>.</li>
+            <li>Tap <b>Install</b>. If Play Protect warns about an unknown developer, choose <b>More details</b> → <b>Install anyway</b>.</li>
+          </ol>
+          <p class="then">For a new version, download and install it over the old one: the progress stays.</p>
+        </div>
+        <div class="card">
+          <h3>iPhone app <small>for tinkerers</small></h3>
+          <p class="download"><a class="button ghost" href="https://github.com/budapesht6666/cocos_space-flight/releases/download/ios-latest/SpaceFlight.ipa">Download .ipa</a></p>
+          <ol>
+            <li>On a Windows PC or a Mac, install <a href="https://sideloadly.io/" target="_blank" rel="noopener">Sideloadly</a>; on Windows also iTunes and iCloud from Apple's site (not the Microsoft Store).</li>
+            <li>Connect the iPhone by cable, drop the .ipa into Sideloadly, enter an Apple ID and press <b>Start</b>.</li>
+            <li>On the iPhone: <b>Settings → General → VPN &amp; Device Management</b> → trust your Apple ID, and turn on <b>Developer Mode</b> when asked.</li>
+          </ol>
+          <p class="then">Without a paid Apple account the app runs for 7 days, then Sideloadly installs it again. A separate free Apple ID just for this is a good idea. Easier: the home-screen version above.</p>
+        </div>
+      </div>
+      <p class="note">The apps keep their own progress, apart from the browser version. They ask for no permissions, show no ads and collect nothing.</p>
     </section>
 
     <section aria-labelledby="feedback">
