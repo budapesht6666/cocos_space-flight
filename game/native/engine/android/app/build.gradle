@@ -5,6 +5,10 @@ apply plugin: 'com.android.application'
 RES_PATH = RES_PATH.replace("\\", "/")
 COCOS_ENGINE_PATH = COCOS_ENGINE_PATH.replace("\\", "/")
 
+// CI passes its run number (tools/ci/build-android.sh, -PVERSION_CODE): each build updates the
+// one installed. Read here, outside the android DSL, where findProperty is the project's.
+def ciVersionCode = (findProperty("VERSION_CODE") ?: "1").toString().toInteger()
+
 buildDir = "${RES_PATH}/proj/build/${project.name ==~ /^[_a-zA-Z0-9-]+$/ ? project.name : 'CocosGame'}"
 android {
     compileSdkVersion PROP_COMPILE_SDK_VERSION.toInteger()
@@ -21,9 +25,8 @@ android {
         applicationId APPLICATION_ID
         minSdkVersion PROP_MIN_SDK_VERSION
         targetSdkVersion PROP_TARGET_SDK_VERSION
-        // CI passes its run number (tools/ci/build-android.sh): each build updates the one installed.
-        versionCode (project.findProperty("VERSION_CODE") ?: "1").toInteger()
-        versionName "1.0.${project.findProperty("VERSION_CODE") ?: "0"}"
+        versionCode ciVersionCode
+        versionName "1.0.${ciVersionCode}"
 
         externalNativeBuild {
             cmake {
