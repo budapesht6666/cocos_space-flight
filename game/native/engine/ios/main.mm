@@ -24,12 +24,26 @@
 ****************************************************************************/
 
 #include <iostream>
+#include <cstdio>
+#include <unistd.h>
 
 #include "platform/BasePlatform.h"
 #include "AppDelegate.h"
 
+// The engine prints its log (script errors included) to stdout, which goes nowhere for an app
+// started from the home screen. Keep the last launch's log in Documents/log.txt instead:
+// Info.plist shares the folder, so the Files app shows it (On My iPhone > Space Flight).
+static void logToFile() {
+    NSString *dir = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+    NSString *path = [dir stringByAppendingPathComponent:@"log.txt"];
+    if (freopen(path.fileSystemRepresentation, "w", stdout) == nullptr) return;
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    dup2(fileno(stdout), fileno(stderr));
+}
+
 int main(int argc, const char * argv[]) {
-    cc::BasePlatform* platform = cc::BasePlatform::getPlatform(); 
+    logToFile();
+    cc::BasePlatform* platform = cc::BasePlatform::getPlatform();
     if (platform->init()) { 
         return -1;                                                
     }                                                            
