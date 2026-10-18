@@ -88,7 +88,8 @@ jobs:
           key: ios-library-${{ hashFiles('game/assets/**/*.meta') }}
 
       - name: Report the failure
-        if: failure()
+        # Not when it failed before the checkout (no scripts yet).
+        if: failure() && hashFiles('tools/ci/annotate-tail.sh') != ''
         run: |
           bash tools/ci/annotate-tail.sh "$RUNNER_TEMP/out/xcode.log" xcodebuild 60
           bash tools/ci/annotate-tail.sh "$RUNNER_TEMP/out/cocos.log" cocos 60
