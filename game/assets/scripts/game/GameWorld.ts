@@ -49,6 +49,7 @@ import { CollisionSystem } from './CollisionSystem';
 import { DroneSystem } from './DroneSystem';
 import { EnemySystem } from './EnemySystem';
 import { GameAudio } from './GameAudio';
+import { GameHaptics } from './GameHaptics';
 import { LaserSystem } from './LaserSystem';
 import type { GameContext, GameEvents } from './GameContext';
 import { MissionDirector } from './MissionDirector';
@@ -525,6 +526,7 @@ export class GameWorld extends Component {
     player.sensitivity = settings.sensitivity;
     const hud = new Hud(this.ui, { title: this.titleFont }, { leftHanded: settings.handedness === 'left', showFps: settings.showFps, demo: debug.demo });
     const audio = new GameAudio(ctx, mission, weapons);
+    new GameHaptics(ctx);
     // Mission 1-1 teaches the controls until it has been cleared once.
     const teach = mission.onboarding === true && debug.t === 0 && !isCleared(SaveService.records, missionId);
     const onboarding = teach ? new Onboarding(ctx, player, pickups, enemyBullets, hud, !sys.isMobile) : null;

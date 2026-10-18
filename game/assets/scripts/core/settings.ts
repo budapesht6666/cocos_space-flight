@@ -6,7 +6,7 @@ import type { DeviceKind, QualityId, Settings } from '../data/types';
 import { QUALITY } from '../data/visuals';
 import { clamp } from './math';
 
-export type SettingId = 'music' | 'sfx' | 'gunSounds' | 'sensitivity' | 'handedness' | 'quality' | 'showFps';
+export type SettingId = 'music' | 'sfx' | 'gunSounds' | 'sensitivity' | 'handedness' | 'quality' | 'showFps' | 'vibration';
 
 /** Defaults for this kind of device: its graphics tier (QUALITY.devices), the rest the same everywhere. */
 export function defaultSettings(device: DeviceKind = 'desktop'): Settings {
@@ -49,6 +49,7 @@ export function parseSettings(json: string | null, device: DeviceKind = 'desktop
   if (typeof raw.quality === 'string' && qualityChoices().indexOf(raw.quality as QualityId) >= 0) s.quality = raw.quality as QualityId;
   if (typeof raw.showFps === 'boolean') s.showFps = raw.showFps;
   if (typeof raw.gunSounds === 'boolean') s.gunSounds = raw.gunSounds;
+  if (typeof raw.vibration === 'boolean') s.vibration = raw.vibration;
   return s;
 }
 
@@ -58,7 +59,7 @@ export function serializeSettings(s: Settings): string {
 
 /**
  * One step of a setting (◀ dir −1, ▶ dir 1): volumes and sensitivity stop at their ends, the
- * choices (gun sounds, hand, graphics, FPS) wrap around. Returns a new object.
+ * choices (gun sounds, hand, graphics, FPS, vibration) wrap around. Returns a new object.
  */
 export function stepSetting(s: Settings, id: SettingId, dir: number): Settings {
   const next = Object.assign({}, s);
@@ -87,6 +88,9 @@ export function stepSetting(s: Settings, id: SettingId, dir: number): Settings {
       break;
     case 'gunSounds':
       next.gunSounds = !s.gunSounds;
+      break;
+    case 'vibration':
+      next.vibration = !s.vibration;
       break;
   }
   return next;

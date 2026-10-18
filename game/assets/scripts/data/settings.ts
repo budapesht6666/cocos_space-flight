@@ -15,5 +15,6 @@ export const SETTINGS = {
     /** Replaced by the device's tier (QUALITY.devices) in core/settings.ts. */
     quality: 'ultra',
     showFps: false,
+    vibration: true,
   } as Settings,
 };

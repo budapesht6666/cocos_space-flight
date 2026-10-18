@@ -94,7 +94,9 @@ push в main (game/**, build-configs/ios.json, tools/ci/**) или вручну�
 - **Логи прогона без входа в GitHub не читаются**, поэтому при падении `tools/ci/annotate-tail.sh` выкладывает хвост логов Cocos и Xcode аннотациями: их отдаёт публичный API (`/repos/…/check-runs/<id>/annotations`).
 - **Код игры в нативе:** веб-код закрыт проверками `sys.isBrowser` (HTML-заставка, колонка, клавиатура, подсказка установки); URL-флагов нет: `window.location` в нативе **есть, но без `search` и `hostname`** (первая сборка падала на старте сцены — `hostname.toLowerCase()`), `URLSearchParams` нет вовсе — `readDebugFlags` проверяет типы; safe area — из `sys.getSafeAreaRect()` (`ScreenFit`); ссылка FEEDBACK — `sys.openURL`; сохранение — `sys.localStorage` приложения, **отдельное от PWA**. `PipelineFix` в нативе ничего не делает (рендер на C++, `resourceUses` нет).
 - **Запасной macOS** — Codemagic, personal account: 500 минут/месяц на M2 ([тарифы](https://docs.codemagic.io/billing/pricing/)), если репозиторий станет приватным (у приватного бесплатные минуты GitHub на macOS идут с множителем).
-- **Вибрация:** `Vibrator::vibrate` движка на iOS — пустая заглушка. Нужен свой код в `ViewController`/`AppDelegate` (`UIImpactFeedbackGenerator`) и мост `native.bridge` — отдельный шаг.
+- **Вибрация:** `Vibrator::vibrate` движка на iOS — пустая заглушка, поэтому своя: `services/HapticsService.ts` шлёт `native.bridge.sendToNative('haptic', style)`, `AppDelegate.mm` шаблона играет `UIImpactFeedbackGenerator`/`UINotificationFeedbackGenerator`. Шаблон собирается **без ARC** (`main.mm` с `NSAutoreleasePool`), а `JsbBridge` хранит блок колбэка без копии — блок без захвата и `copy`, генераторы — статические. Что вибрирует — `data/haptics.ts`, настройка VIBRATION — только в нативе.
+- **Качество по умолчанию в нативе — ULTRA** (тип устройства `nativePhone`): на iPhone 15 Plus стабильные 60 FPS в Секторе 3 и бою с Leviathan, телефон не греется; PWA на том же телефоне — MEDIUM (3D×0.7).
+- **Аудиосессия** — движок ставит `AVAudioSessionCategoryAmbient`: игра молчит при беззвучном режиме и не глушит музыку других приложений, как и положено игре. Не трогаем.
 
 ### Установка на телефон: Sideloadly и бесплатный Apple ID
 
@@ -106,8 +108,8 @@ push в main (game/**, build-configs/ios.json, tools/ci/**) или вручну�
 
 ### Что даёт нативная сборка по сравнению с PWA
 
-- Производительность обычно лучше: нативный рендер (Metal) вместо WebGL в Safari — проверить на телефоне.
-- Вибрация (haptics) — после доработки, см. выше.
+- Производительность: Metal вместо WebGL в Safari — на iPhone 15 Plus 60 FPS на ULTRA против MEDIUM у PWA.
+- Вибрация (Taptic Engine).
 - Полный экран PWA и так даёт.
 
 Минусы: переподпись раз в 7 дней (Sideloadly), только свой телефон; друзьям — PWA.

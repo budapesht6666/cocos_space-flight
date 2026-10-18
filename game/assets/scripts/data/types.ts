@@ -871,7 +871,8 @@ export interface QualityTier {
 }
 
 /** What a device is, as far as its GPU goes. */
-export type DeviceKind = 'desktop' | 'mobile' | 'software';
+/** `nativePhone`: the native app (Metal, no browser) on a phone or tablet. */
+export type DeviceKind = 'desktop' | 'mobile' | 'nativePhone' | 'software';
 
 // ---------------------------------------------------------------------------------------------
 // Cheat codes and settings
@@ -908,7 +909,15 @@ export interface Settings {
   /** Graphics tier (data/visuals.ts QUALITY); it never changes by itself. */
   quality: QualityId;
   showFps: boolean;
+  /** Haptic feedback on hits, bombs and kills; only the native iOS app has it (Safari can't vibrate). */
+  vibration: boolean;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Haptics (data/haptics.ts, services/HapticsService.ts): the iPhone's Taptic Engine in the native app.
+
+/** UIImpactFeedbackGenerator styles and UINotificationFeedbackGenerator types. */
+export type HapticStyle = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error';
 
 // ---------------------------------------------------------------------------------------------
 // Audio (data/audio.ts, services/AudioService.ts)

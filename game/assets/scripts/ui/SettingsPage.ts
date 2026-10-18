@@ -1,5 +1,6 @@
 // Settings (GDD §17): music and effects volume, the ship's gun sounds (off by default), finger sensitivity, which hand holds the Special
-// button, graphics quality (a tier; it never changes by itself) and an FPS counter; CREDITS at the bottom.
+// button, graphics quality (a tier; it never changes by itself), an FPS counter and, in the native iOS app,
+// vibration; CREDITS at the bottom.
 // Each row steps with ◀ ▶ (keys: ↑/↓ pick a row, ←/→ change it). Changes save at once and apply
 // to the menu (volume, graphics); the rest takes effect in the next mission.
 
@@ -8,6 +9,7 @@ import { stepSetting, type SettingId } from '../core/settings';
 import { SETTINGS } from '../data/settings';
 import type { Settings } from '../data/types';
 import { AudioService } from '../services/AudioService';
+import { HapticsService } from '../services/HapticsService';
 import { SettingsService } from '../services/SettingsService';
 import { HEADER_TOP, pageHeader, pageRoot, type MenuHost, type MenuPage } from './MenuPage';
 import { drawButton, drawCard, drawChevron, onTap, placeLabel, UI, uiLabel, uiNode } from './UiKit';
@@ -33,7 +35,13 @@ const ROWS: readonly { id: SettingId; name: string; hint: string }[] = [
   { id: 'handedness', name: 'CONTROLS', hint: 'Special button side' },
   { id: 'quality', name: 'GRAPHICS', hint: 'Lower it if the phone heats' },
   { id: 'showFps', name: 'SHOW FPS', hint: 'Counter in flight' },
+  { id: 'vibration', name: 'VIBRATION', hint: 'Hits, bombs and kills' },
 ];
+
+/** Rows this build can use: vibration only where the device can vibrate (the native iOS app). */
+function visibleRows(): typeof ROWS {
+  return ROWS.filter((r) => r.id !== 'vibration' || HapticsService.available);
+}
 
 interface Row {
   id: SettingId;
@@ -53,7 +61,7 @@ export class SettingsPage implements MenuPage {
     const font = host.font;
     this.root = pageRoot(parent, 'SettingsPage');
     pageHeader(this.root, 'SETTINGS', host);
-    ROWS.forEach((r, i) => {
+    visibleRows().forEach((r, i) => {
       const node = uiNode(this.root, `Row-${r.id}`, CARD_WIDTH, ROW_HEIGHT, { top: ROWS_TOP + i * (ROW_HEIGHT + ROW_GAP), centerX: true });
       const gfx = node.addComponent(Graphics);
       const name = uiLabel(node, 'Name', 26, UI.white, {}, font);
@@ -92,7 +100,8 @@ export class SettingsPage implements MenuPage {
 
   key(code: KeyCode): boolean {
     if (code === KeyCode.ARROW_UP || code === KeyCode.ARROW_DOWN) {
-      this.selected = (this.selected + (code === KeyCode.ARROW_UP ? -1 : 1) + ROWS.length) % ROWS.length;
+      const n = this.rows.length;
+      this.selected = (this.selected + (code === KeyCode.ARROW_UP ? -1 : 1) + n) % n;
       this.refresh();
       return true;
     }
@@ -111,6 +120,8 @@ export class SettingsPage implements MenuPage {
     // The click is heard at the new volume.
     AudioService.play('uiTap');
     if (id === 'quality') this.host.graphicsChanged();
+    // Turning vibration on is felt at once.
+    if (id === 'vibration') HapticsService.play('medium');
     this.refresh();
   }
 
@@ -152,6 +163,8 @@ function valueText(s: Readonly<Settings>, id: SettingId): string {
       return s.showFps ? 'ON' : 'OFF';
     case 'gunSounds':
       return s.gunSounds ? 'ON' : 'OFF';
+    case 'vibration':
+      return s.vibration ? 'ON' : 'OFF';
     default:
       return '';
   }

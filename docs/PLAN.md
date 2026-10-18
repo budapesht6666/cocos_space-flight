@@ -3,7 +3,7 @@
 > Отмечаем прогресс по ходу работы. «Готово, когда» — критерий приёмки этапа.
 > **👤** — шаг делает пользователь, остальное делает Claude.
 
-**Сейчас:** этап 8 — нативная iOS на свой iPhone: шаблон приложения, конфиг и облачная сборка на GitHub Actions готовы, `.ipa` собирается в CI (пре-релиз `ios-latest`); ждёт 👤 установки через Sideloadly и теста на iPhone. Этап 9 (релиз PWA) сделан и проверен пользователем.
+**Сейчас:** этап 8 — нативная iOS на свой iPhone: шаблон приложения, конфиг и облачная сборка на GitHub Actions готовы, `.ipa` из CI работает на iPhone: 60 FPS на Ultra; добавлены вибрация и ULTRA по умолчанию — ждёт 👤 проверки вибрации на iPhone. Этап 9 (релиз PWA) сделан и проверен пользователем.
 
 ---
 
@@ -199,9 +199,13 @@
 - [x] Шаблон приложения в git (`game/native/engine`), `build-configs/ios.json`, workflow `.github/workflows/ios.yml` + `tools/ci/build-ios.sh`: Cocos CLI → `xcodebuild` без подписи → `SpaceFlight.ipa` (артефакт и пре-релиз `ios-latest`)
 - [x] Иконки и экран запуска (`build:web-art`), портрет, safe area из `sys.getSafeAreaRect()`, флаги без `URLSearchParams`
 - [x] Первый зелёный прогон CI (второй запуск: первый упал на имени схемы Xcode — она называется по `executableName`). `SpaceFlight.ipa` 17.8 MB (приложение 43 MB: движок 29 MB, ассеты 13 MB), arm64, iOS 15+
-- [ ] Вибрация (своя, `UIImpactFeedbackGenerator` + `native.bridge`: у движка на iOS заглушка), аудиосессия (беззвучный режим)
-- [ ] 👤 Установить [Sideloadly](https://sideloadly.io/) на Windows и поставить `.ipa` на iPhone со своим Apple ID
-- [ ] Тест на iPhone, сравнение с PWA, проход по производительности
+- [x] Качество по умолчанию в нативе — ULTRA (тип устройства `nativePhone`)
+- [x] Вибрация: `HapticsService` + `native.bridge` → `AppDelegate.mm` (`UIImpactFeedbackGenerator`/`UINotificationFeedbackGenerator`; у движка на iOS заглушка), события — `data/haptics.ts`, настройка VIBRATION только в нативе
+- [x] Аудиосессия: движок ставит Ambient (беззвучный режим и чужая музыка уважаются) — менять не нужно
+- [ ] 👤 Проверить вибрацию на iPhone
+- [x] 👤 Sideloadly (веб-версии iTunes и iCloud, не из Microsoft Store) и установка `.ipa` со своим Apple ID
+- [x] Чёрный экран первой сборки: `window.location` в нативе без `hostname` → `readDebugFlags` падал на старте меню. Найдено по `Documents/log.txt` (лог движка в файл, виден в «Файлах»)
+- [x] 👤 Тест на iPhone: safe area в порядке (Dynamic Island, полоска Home), звук после первого касания, **стабильные 60 FPS на Ultra** в Секторе 3 и в бою с Leviathan, телефон не греется (PWA на iPhone — Medium, 3D×0.7)
 
 ## Этап 9 — Релиз
 

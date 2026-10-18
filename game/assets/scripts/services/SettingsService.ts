@@ -33,9 +33,9 @@ function load(): Settings {
     // Defaults.
   }
   // The device decides the default graphics tier. Phones and tablets go by their OS (an iPad's
-  // Safari presents itself as a Mac); a GPU-less WebGL by its renderer string.
+  // Safari presents itself as a Mac); a GPU-less WebGL by its renderer string; the native app by itself.
   const mobileOs = sys.isMobile || sys.os === sys.OS.IOS || sys.os === sys.OS.ANDROID;
-  current = parseSettings(json, deviceKind(mobileOs, director.root?.device.renderer ?? ''));
+  current = parseSettings(json, deviceKind(mobileOs, director.root?.device.renderer ?? '', sys.isNative));
   return current;
 }
 

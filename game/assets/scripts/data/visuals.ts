@@ -134,6 +134,11 @@ export const QUALITY = {
      * look at blurry graphics turns players away, a warm phone sends them to the settings.
      */
     mobile: 'medium',
+    /**
+     * The native iOS app renders with Metal, without Safari: steady 60 FPS at ultra on iPhone 15 Plus
+     * in Sector 3 and the Leviathan fight, and the phone stays cool.
+     */
+    nativePhone: 'ultra',
     /** No GPU (Chrome on SwiftShader, llvmpipe): as light as it gets. */
     software: 'lowest',
   } as Record<DeviceKind, QualityId>,

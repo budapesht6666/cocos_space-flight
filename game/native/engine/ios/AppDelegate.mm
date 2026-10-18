@@ -32,6 +32,51 @@
 #include "platform/ios/IOSPlatform.h"
 #import "platform/ios/AppDelegateBridge.h"
 #import "service/SDKWrapper.h"
+#import "platform/apple/JsbBridge.h"
+
+// Haptic feedback for the game (services/HapticsService.ts): the script sends ("haptic", style)
+// over the engine's bridge; the engine's own vibrate() does nothing on iOS. Script and UIKit both
+// run on the main thread. The generators live as long as the app (this file is not ARC).
+static UIImpactFeedbackGenerator *hapticLight;
+static UIImpactFeedbackGenerator *hapticMedium;
+static UIImpactFeedbackGenerator *hapticHeavy;
+static UINotificationFeedbackGenerator *hapticNotice;
+
+static void playHaptic(NSString *style) {
+    if ([style isEqualToString:@"success"]) {
+        [hapticNotice notificationOccurred:UINotificationFeedbackTypeSuccess];
+    } else if ([style isEqualToString:@"warning"]) {
+        [hapticNotice notificationOccurred:UINotificationFeedbackTypeWarning];
+    } else if ([style isEqualToString:@"error"]) {
+        [hapticNotice notificationOccurred:UINotificationFeedbackTypeError];
+    } else {
+        UIImpactFeedbackGenerator *g = [style isEqualToString:@"heavy"] ? hapticHeavy : [style isEqualToString:@"medium"] ? hapticMedium : hapticLight;
+        [g impactOccurred];
+        [g prepare];
+        return;
+    }
+    [hapticNotice prepare];
+}
+
+static void setUpHaptics() {
+    hapticLight = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    hapticMedium = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
+    hapticHeavy = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleHeavy];
+    hapticNotice = [[UINotificationFeedbackGenerator alloc] init];
+    // The bridge keeps the block as is: copy it to the heap (it captures nothing, so it is global anyway).
+    [[JsbBridge sharedInstance] setCallback:[^(NSString *event, NSString *arg) {
+        if (![event isEqualToString:@"haptic"]) return;
+        if ([NSThread isMainThread]) {
+            playHaptic(arg);
+        } else {
+            NSString *style = [arg copy];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                playHaptic(style);
+                [style release];
+            });
+        }
+    } copy]];
+}
 
 @implementation AppDelegate
 @synthesize window;
@@ -56,6 +101,7 @@
     [self.window setRootViewController:_viewController];
 
     [self.window makeKeyAndVisible];
+    setUpHaptics();
     [appDelegateBridge application:application didFinishLaunchingWithOptions:launchOptions];
     return YES;
 }

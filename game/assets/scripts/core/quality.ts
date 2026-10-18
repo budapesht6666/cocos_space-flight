@@ -12,7 +12,8 @@ const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i
  * tells little more: iOS Safari reports every model as "Apple GPU", and a desktop's name says
  * nothing reliable about its speed. It does tell when there is no GPU at all.
  */
-export function deviceKind(mobileOs: boolean, renderer: string): DeviceKind {
+export function deviceKind(mobileOs: boolean, renderer: string, native = false): DeviceKind {
   if (SOFTWARE_RENDERER.test(renderer)) return 'software';
-  return mobileOs ? 'mobile' : 'desktop';
+  if (mobileOs) return native ? 'nativePhone' : 'mobile';
+  return 'desktop';
 }

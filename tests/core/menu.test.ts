@@ -10,6 +10,7 @@ import { openHangarItems, shipUnlocked, unlockHint } from '../../game/assets/scr
 import { applyRun, type RecordMap } from '../../game/assets/scripts/core/records';
 import { loadSave, newSave, SAVE_VERSION, serializeSave } from '../../game/assets/scripts/core/save';
 import { defaultSettings, parseSettings, qualityChoices, stepSetting, volumeGain } from '../../game/assets/scripts/core/settings';
+import { HAPTICS } from '../../game/assets/scripts/data/haptics';
 import { formatFactor, shipStats, shipTraits, statCeilings, statDelta } from '../../game/assets/scripts/core/shipCard';
 import { MUSIC, musicPath, PICKUP_SFX, SFX, sfxPath, WEAPON_SFX } from '../../game/assets/scripts/data/audio';
 import { CHEATS } from '../../game/assets/scripts/data/cheats';
@@ -236,5 +237,26 @@ describe('gun sounds setting', () => {
     expect(on.gunSounds).toBe(true);
     expect(parseSettings(JSON.stringify(on)).gunSounds).toBe(true);
     expect(parseSettings(JSON.stringify({ gunSounds: 'yes' })).gunSounds).toBe(false);
+  });
+});
+
+describe('vibration setting', () => {
+  it('on by default, toggled by a step, kept when stored; settings from before it get the default', () => {
+    expect(defaultSettings().vibration).toBe(true);
+    const off = stepSetting(defaultSettings(), 'vibration', -1);
+    expect(off.vibration).toBe(false);
+    expect(parseSettings(JSON.stringify(off)).vibration).toBe(false);
+    expect(parseSettings(JSON.stringify({ music: 3 })).vibration).toBe(true);
+    expect(parseSettings(JSON.stringify({ vibration: 0 })).vibration).toBe(true);
+  });
+
+  it('haptics name only styles the app plays, and repeat at most every few frames', () => {
+    const styles = ['light', 'medium', 'heavy', 'success', 'warning', 'error'];
+    const { pickups, repeat, ...events } = HAPTICS;
+    for (const style of Object.values(events)) expect(styles).toContain(style);
+    for (const style of Object.values(pickups)) expect(styles).toContain(style);
+    expect(pickups.credit).toBeUndefined();
+    expect(repeat).toBeGreaterThan(0);
+    expect(repeat).toBeLessThanOrEqual(0.25);
   });
 });
