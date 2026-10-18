@@ -35,9 +35,10 @@ if [ -z "$XCODEPROJ" ]; then
   ls -la "$EXPORT" "$EXPORT/proj" || true
   exit 1
 fi
-# CMake names the app target <name>-mobile (game/native/engine/ios/CMakeLists.txt).
-SCHEME="$(xcodebuild -list -project "$XCODEPROJ" | sed -n 's/^ *\(.*-mobile\)$/\1/p' | head -n 1)"
+# The app's target (and its scheme) is named after packages.ios.executableName in the config.
+SCHEME="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["packages"]["ios"]["executableName"])' "$CONFIG")"
 echo "== xcodebuild: $XCODEPROJ, scheme $SCHEME"
+xcodebuild -list -project "$XCODEPROJ" | sed -n '/Schemes:/,$p' | head -n 20
 
 set +e
 xcodebuild build \

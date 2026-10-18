@@ -23,4 +23,6 @@ node_modules/
 #//////////////////////////
 # WebStorm
 #//////////////////////////
-.idea/
+.idea/# Written by the iOS build plugin on every build; the app uses LaunchScreenBackground.png
+native/engine/ios/LaunchScreenBackgroundPortrait.png
+native/engine/ios/LaunchScreenBackgroundLandscape.png

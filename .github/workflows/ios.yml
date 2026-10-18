@@ -34,9 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Cocos Creator
+      # Caches are restored and saved by hand: actions/cache saves only when the whole job
+      # succeeds, so a failed build downloaded the editor (8 min) again on every run.
+      - name: Restore Cocos Creator
         id: creator-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/cocos/${{ env.CREATOR_VERSION }}
           key: cocos-creator-mac-${{ env.CREATOR_VERSION }}
@@ -50,6 +52,13 @@ jobs:
           ditto -x -k "$RUNNER_TEMP/creator.zip" ~/cocos/$CREATOR_VERSION
           rm "$RUNNER_TEMP/creator.zip"
 
+      - name: Save Cocos Creator
+        if: steps.creator-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/cocos/${{ env.CREATOR_VERSION }}
+          key: cocos-creator-mac-${{ env.CREATOR_VERSION }}
+
       - name: Locate Cocos Creator
         run: |
           APP="$(find ~/cocos/$CREATOR_VERSION -maxdepth 2 -name 'CocosCreator.app' | head -n 1)"
@@ -60,8 +69,9 @@ jobs:
           xcodebuild -version
           cmake --version | head -n 1
 
-      - name: Cache imported assets
-        uses: actions/cache@v4
+      - name: Restore imported assets
+        id: library-cache
+        uses: actions/cache/restore@v4
         with:
           path: game/library
           key: ios-library-${{ hashFiles('game/assets/**/*.meta') }}
@@ -69,6 +79,13 @@ jobs:
 
       - name: Build
         run: bash tools/ci/build-ios.sh "$CREATOR_APP" "$RUNNER_TEMP/out"
+
+      - name: Save imported assets
+        if: always() && steps.library-cache.outputs.cache-hit != 'true' && hashFiles('game/library/**') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: game/library
+          key: ios-library-${{ hashFiles('game/assets/**/*.meta') }}
 
       - name: Report the failure
         if: failure()
