@@ -129,6 +129,8 @@ export class InputService {
         break;
       case KeyCode.ESCAPE:
       case KeyCode.KEY_P:
+      // Android's system Back.
+      case KeyCode.MOBILE_BACK:
         this.pressed.add('pause');
         break;
       case KeyCode.ENTER:

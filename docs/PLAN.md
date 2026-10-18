@@ -3,7 +3,7 @@
 > Отмечаем прогресс по ходу работы. «Готово, когда» — критерий приёмки этапа.
 > **👤** — шаг делает пользователь, остальное делает Claude.
 
-**Сейчас:** этап 8 — нативная iOS на свой iPhone: шаблон приложения, конфиг и облачная сборка на GitHub Actions готовы, `.ipa` из CI работает на iPhone: 60 FPS на Ultra; добавлены вибрация и ULTRA по умолчанию — ждёт 👤 проверки вибрации на iPhone. Этап 9 (релиз PWA) сделан и проверен пользователем.
+**Сейчас:** этап 11 — Android-приложение (APK из CI) и раздел скачивания на `/about/`. Этап 8 — нативная iOS на свой iPhone: шаблон приложения, конфиг и облачная сборка на GitHub Actions готовы, `.ipa` из CI работает на iPhone: 60 FPS на Ultra; добавлены вибрация и ULTRA по умолчанию — ждёт 👤 проверки вибрации на iPhone. Этап 9 (релиз PWA) сделан и проверен пользователем.
 
 ---
 
@@ -237,3 +237,18 @@
 - [ ] 👤 Решение по заголовкам сервера (CSP, HSTS, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `frame-ancestors`): готовый блок для Caddy, проверенный на игре и `/about/`, — SECURITY_REPORT §7; боевой прокси не менялся. Перед включением — проверка на iPhone (service worker под CSP не проверялся)
 - [ ] (Принято как есть, §6 отчёта) клиентская подделка результатов, доступ к `cc`/`System`, чит-коды в бандле. Появится онлайн-таблица — результаты придётся валидировать на сервере
 - [x] Коммит этапа в `main` с выкаткой исправлений на сайт (хук) и push
+
+## Этап 11 — Скачивание приложений со страницы игры
+
+Решение пользователя: раздел на `/about/` — установка для Android и iOS со скачиванием файлов; App Store и Google Play вне рамок (платно).
+
+- [x] Android-сборка в CI: `.github/workflows/android.yml` + `tools/ci/build-android.sh` (macOS: Cocos CLI → Gradle → подпись → `apksigner verify`), пре-релиз `android-latest`
+- [x] Шаблон `game/native/engine/android`: «Space Flight», adaptive icon из maskable-иконки PWA, `versionCode` = номер прогона; конфиг `build-configs/android.json` (arm64, GLES3, targetSdk 34)
+- [x] Ключ подписи (PKCS12, до 2056) в `.secrets/android/`, вне git
+- [x] Кнопка «Назад» Android — как Esc (пауза / назад в меню)
+- [x] Раздел «Or get the app» на `/about/`: APK (3 шага, Play Protect) и `.ipa` для энтузиастов (Sideloadly, 7 дней, отдельный Apple ID) — выкатывается после проверки APK на телефоне
+- [ ] 👤 Секреты `ANDROID_KEYSTORE_BASE64` и `ANDROID_KEYSTORE_PASSWORD` в репозитории; резервная копия `.secrets/android`
+- [ ] Первый зелёный прогон Android CI
+- [ ] 👤 Проверка APK на Android-телефоне: запуск, safe area, звук, кнопка «Назад», FPS
+- [ ] Выкатка страницы с разделом скачивания
+

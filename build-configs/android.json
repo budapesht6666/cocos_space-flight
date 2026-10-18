@@ -1,0 +1,90 @@
+{
+  "platform": "android",
+  "taskName": "android",
+  "outputName": "android",
+  "buildPath": "project://build",
+  "name": "SpaceFlight",
+  "debug": false,
+  "md5Cache": false,
+  "sourceMaps": false,
+  "startScene": "ebbcce14-b58f-41c1-a7d2-3e89e1dfe927",
+  "scenes": [
+    {
+      "url": "db://assets/scenes/Menu.scene",
+      "uuid": "ebbcce14-b58f-41c1-a7d2-3e89e1dfe927"
+    },
+    {
+      "url": "db://assets/scenes/Game.scene",
+      "uuid": "d694bcb3-3c7a-4ef1-bc3d-a9cc5776f9f2"
+    }
+  ],
+  "mainBundleCompressionType": "merge_dep",
+  "packages": {
+    "android": {
+      "packageName": "org.p1gog.spaceflight",
+      "resizeableActivity": true,
+      "maxAspectRatio": "2.4",
+      "orientation": {
+        "landscapeRight": false,
+        "landscapeLeft": false,
+        "portrait": true,
+        "upsideDown": false
+      },
+      "apiLevel": 34,
+      "appABIs": [
+        "arm64-v8a"
+      ],
+      "useDebugKeystore": false,
+      "keystorePath": "",
+      "keystorePassword": "",
+      "keystoreAlias": "spaceflight",
+      "keystoreAliasPassword": "",
+      "isSoFileCompressed": true,
+      "appBundle": false,
+      "androidInstant": false,
+      "inputSDK": false,
+      "remoteUrl": "",
+      "sdkPath": "",
+      "ndkPath": "",
+      "swappy": false,
+      "renderBackEnd": {
+        "vulkan": false,
+        "gles3": true,
+        "gles2": false
+      }
+    },
+    "native": {
+      "encrypted": false,
+      "compressZip": false,
+      "JobSystem": "none"
+    }
+  },
+  "server": "",
+  "engineModulesConfigKey": "defaultConfig",
+  "buildMode": "normal",
+  "mangleProperties": false,
+  "skipCompressTexture": false,
+  "overwriteProjectSettings": {
+    "includeModules": {
+      "physics": "inherit-project-setting",
+      "physics-2d": "inherit-project-setting"
+    },
+    "macroConfig": {
+      "cleanupImageCache": "inherit-project-setting"
+    }
+  },
+  "nativeCodeBundleMode": "both",
+  "polyfills": {
+    "asyncFunctions": true
+  },
+  "experimentalEraseModules": false,
+  "startSceneAssetBundle": false,
+  "bundleConfigs": [],
+  "inlineEnum": true,
+  "useBuiltinServer": false,
+  "mainBundleIsRemote": false,
+  "useSplashScreen": false,
+  "bundleCommonChunk": false,
+  "packAutoAtlas": true,
+  "wasmCompressionMode": false
+}

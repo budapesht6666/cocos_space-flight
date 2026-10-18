@@ -10,6 +10,10 @@
 //   Images.xcassets/AppIcon.appiconset/*.png   the app icon at every size its Contents.json lists;
 //   LaunchScreenBackground.png                 the launch screen (LaunchScreen.storyboard fills the
 //                                              screen with it, cropping the edges off other sizes).
+// Into game/native/engine/android (the native Android app's template):
+//   res/mipmap-*/ic_launcher.png               the icon before Android 8 (the plain one);
+//   res/mipmap-*/ic_launcher_background.png    the adaptive icon's layer (the maskable one: the
+//                                              launcher crops it to its shape; res/mipmap-anydpi-v26).
 //
 // Usage: npm run build:web-art
 
@@ -22,6 +26,11 @@ const TEMPLATE = path.join(ROOT, 'game/build-templates/web-mobile');
 const LOGO = path.join(ROOT, 'tools/web-art/logo.png');
 const ICON = path.join(TEMPLATE, 'icons/icon-512.png');
 const IOS = path.join(ROOT, 'game/native/engine/ios');
+const ANDROID = path.join(ROOT, 'game/native/engine/android');
+const MASKABLE = path.join(TEMPLATE, 'icons/icon-maskable-512.png');
+
+/** Android densities: the legacy icon is 48 dp, an adaptive icon's layer 108 dp. */
+const ANDROID_DENSITIES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 
 /** The splash's layout in CSS pixels, as in style.css #splash. */
 const SPLASH = {
@@ -122,6 +131,16 @@ for (const [name, size] of iconSizes) {
 }
 const [lw, lh, lr] = IOS_LAUNCH;
 written.push(await launchScreen(lw, lh, lr, LOGO, path.join(IOS, 'LaunchScreenBackground.png')));
+
+for (const [density, k] of Object.entries(ANDROID_DENSITIES)) {
+  const dir = path.join(ANDROID, `res/mipmap-${density}`);
+  await fs.mkdir(dir, { recursive: true });
+  const icon = path.join(dir, 'ic_launcher.png');
+  await sharp(ICON).resize(48 * k, 48 * k, { kernel: 'lanczos3' }).png({ compressionLevel: 9 }).toFile(icon);
+  const layer = path.join(dir, 'ic_launcher_background.png');
+  await sharp(MASKABLE).resize(108 * k, 108 * k, { kernel: 'lanczos3' }).png({ compressionLevel: 9 }).toFile(layer);
+  written.push(icon, layer);
+}
 
 for (const file of written) {
   const { size } = await fs.stat(file);

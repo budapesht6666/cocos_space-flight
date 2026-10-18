@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon (Android 8+): the launcher crops it to its own shape. The whole picture is the
+     background layer (the PWA's maskable icon, the ship inside the safe zone); nothing on top. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@android:color/transparent" />
+</adaptive-icon>

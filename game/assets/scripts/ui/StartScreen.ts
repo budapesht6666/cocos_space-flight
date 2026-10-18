@@ -422,7 +422,8 @@ export class StartScreen extends Component implements MenuHost {
     }
     const page = this.pages.get(id);
     if (page && page.key(event.keyCode)) return;
-    if (event.keyCode === KeyCode.ESCAPE || event.keyCode === KeyCode.BACKSPACE) this.back();
+    // Android's system Back works as Esc.
+    if (event.keyCode === KeyCode.ESCAPE || event.keyCode === KeyCode.BACKSPACE || event.keyCode === KeyCode.MOBILE_BACK) this.back();
   }
 
   /** Loads (once) the model of a ship in a paint, with the ship's engine glows. */

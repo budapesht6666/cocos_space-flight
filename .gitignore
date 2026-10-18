@@ -31,3 +31,6 @@ art-source/
 
 # YouTube footage and sound (youtube/README.md): rebuilt by npm run youtube:*
 youtube/out/
+
+# Signing keys (Android release keystore): never in git, back them up (PLATFORMS.md "Android")
+.secrets/

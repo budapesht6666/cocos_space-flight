@@ -21,7 +21,7 @@
 | **PWA на своём сервере** — основной релиз | Web-сборка на Windows → `npm run deploy:web` на VPS | Сервер уже есть; «Добавить на экран „Домой“» | С этапа 3 |
 | **iOS нативно на свой iPhone** (sideload) | Облачный macOS → неподписанный `.ipa` → Sideloadly на Windows | Бесплатно: обычный Apple ID | Этап 8 |
 | iOS в App Store / TestFlight | macOS + Xcode | $99/год за Apple Developer | **Вне рамок** (бюджет $0) |
-| Android (APK на свои устройства) | Windows (Android Studio, NDK) | Бесплатно; Google Play стоит $25 — не нужен | Опционально |
+| Android (APK для всех, со страницы игры) | GitHub Actions, macOS (Cocos CLI + Gradle) | Бесплатно; Google Play ($25 и закрытый тест 12 человек × 14 дней) не нужен | Этап 11 |
 | Windows / macOS desktop (нативные сборки) | Соответствующая ОС | — | Не планируем: на ПК играют в браузере |
 
 ## Тест на iPhone без Mac (с первого дня)
@@ -148,7 +148,20 @@ push в main (game/**, build-configs/ios.json, tools/ci/**) или вручну�
 - **MCP `bingeplay`** (`.mcp.json`, токен — переменная окружения `BINGEPLAY_TOKEN`, страница AI Connect): статус, показы и тапы по сторам, спецификация. Вопреки обещанию «read-only» у него есть и `upload_gamic`, `edit_gamic`, `unpublish_gamic`, `delete_gamic` — только по просьбе пользователя. `edit_gamic` меняет лишь описание и теги; новый файл через MCP — только удаление и `upload_gamic` с HTML текстом в вызове (5 MB так не передать), поэтому файл меняем в кабинете: Gamics → Edit → Change File.
 - Размер: 263 файла, 8.4 MB → gzip 4.0 MB → страница 5.4 MB. Больше всего — движок `cc.js` (0.5 MB в gzip), музыка, скайбокс.
 
-## Android (если понадобится)
+## Android: APK со страницы игры (этап 11)
 
-- Android Studio, SDK и NDK на Windows, сборка прямо из Cocos.
-- Главный риск — производительность на слабых устройствах. Пресет качества Low это закрывает.
+```
+push в main (game/**, build-configs/android.json, tools/ci/**) или вручную (Actions → Android build → Run workflow)
+  ─▶ GitHub Actions, macos-15                                           .github/workflows/android.yml
+       Cocos Creator 3.8.8 (тот же кэш, что у iOS) → game/build/android (Gradle-проект из game/native/engine/android)
+       → ./gradlew SpaceFlight:assembleRelease, подпись ключом из секретов → apksigner verify   tools/ci/build-android.sh
+       → артефакт + пре-релиз android-latest
+  ─▶ телефон: https://github.com/budapesht6666/cocos_space-flight/releases/download/android-latest/SpaceFlight.apk
+```
+
+- **Почему macOS, а не Linux:** у Cocos Creator нет редактора под Linux. На macOS-раннере уже есть Android SDK, NDK (`ANDROID_NDK_HOME`) и `cmake 3.22.1`; JDK 17 ставит `actions/setup-java` (AGP 8.10, Gradle 8.11 — шаблон Cocos 3.8.8).
+- **Ключ подписи** — один на всё время жизни игры: телефон ставит обновление только поверх приложения с тем же ключом. PKCS12 (`openssl`, Java на машине нет), алиас `spaceflight`, пароль один на хранилище и ключ, действует до 2056. Лежит в `.secrets/android/` (в `.gitignore`; **резервная копия — у пользователя**), в CI — секреты репозитория `ANDROID_KEYSTORE_BASE64` и `ANDROID_KEYSTORE_PASSWORD`. Скрипт пишет их в копию `build-configs/android.json` вне репозитория (в самом конфиге путей и паролей нет). Потерян ключ — новые версии ставятся только после удаления старой (с прогрессом).
+- **Конфиг** `build-configs/android.json`: `org.p1gog.spaceflight`, портрет, только `arm64-v8a`, GLES3 (Vulkan выключен — шейдеры проверены на WebGL2), `apiLevel` 34 (targetSdk; 35 включил бы принудительный edge-to-edge Android 15). `versionCode` — номер прогона CI (`-PVERSION_CODE`, `app/build.gradle` шаблона): каждая сборка — обновление поверх прежней.
+- **Шаблон** `game/native/engine/android` (из `templates/android/template` редактора): название «Space Flight» (`res/values/strings.xml` — тогда сборщик не подставляет имя проекта), иконки — `npm run build:web-art`: обычная `ic_launcher` до Android 8 и adaptive icon (`mipmap-anydpi-v26`: фон — maskable-иконка PWA, корабль в безопасной зоне, передний слой пустой).
+- **Код игры:** системная кнопка «Назад» (`KeyCode.MOBILE_BACK`) — как Esc: пауза в бою, назад в меню. Safe area — тот же нативный путь `ScreenFit` (`sys.getSafeAreaRect`). Вибрации на Android пока нет (`HapticsService.available` — только iOS). Качество по умолчанию — тип `nativePhone` (ULTRA), на слабом телефоне игрок опустит GRAPHICS.
+- **Правила Google для APK не из магазина:** с 30.09.2026 проверка разработчика действует только в Бразилии, Индонезии, Сингапуре и Таиланде; глобально — 2027. Тогда APK непроверенного разработчика ставится через «расширенную установку» (ожидание 24 ч) или бесплатный аккаунт любителя (до 20 устройств, без пошлины и документов) — [Google](https://developer.android.com/developer-verification), [справка](https://support.google.com/android-developer-console/answer/16561738?hl=en).
