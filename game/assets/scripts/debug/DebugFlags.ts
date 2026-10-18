@@ -146,7 +146,9 @@ export function demoFlags(): DebugFlags {
 
 export function readDebugFlags(): DebugFlags {
   if (typeof window !== 'undefined' && (window as unknown as { SPACEFLIGHT_DEMO?: boolean }).SPACEFLIGHT_DEMO === true) return demoFlags();
-  const search = typeof window !== 'undefined' && window.location ? window.location.search : '';
-  const host = typeof window !== 'undefined' && window.location ? window.location.hostname : '';
+  // The native app's script engine has a `window.location` without the URL's parts.
+  const loc: Partial<Location> | undefined = typeof window !== 'undefined' ? window.location : undefined;
+  const search = loc && typeof loc.search === 'string' ? loc.search : '';
+  const host = loc && typeof loc.hostname === 'string' ? loc.hostname : '';
   return parseDebugFlags(search, isDevHost(host));
 }

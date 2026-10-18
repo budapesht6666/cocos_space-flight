@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { demoFlags, isDevHost, parseDebugFlags } from '../../game/assets/scripts/debug/DebugFlags';
+import { demoFlags, isDevHost, parseDebugFlags, readDebugFlags } from '../../game/assets/scripts/debug/DebugFlags';
 import { DEMO } from '../../game/assets/scripts/data/demo';
 
 describe('parseDebugFlags', () => {
@@ -11,6 +11,17 @@ describe('parseDebugFlags', () => {
       expect(parseDebugFlags('').mission).toBeNull();
     } finally {
       globalThis.URLSearchParams = saved;
+    }
+  });
+
+  it("reads the native app's window.location, which has no URL parts", () => {
+    const g = globalThis as { window?: unknown };
+    const saved = g.window;
+    try {
+      g.window = { location: {} };
+      expect(readDebugFlags()).toEqual(parseDebugFlags(''));
+    } finally {
+      g.window = saved;
     }
   });
 
