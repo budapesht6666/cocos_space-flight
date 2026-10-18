@@ -3,7 +3,7 @@
 > Отмечаем прогресс по ходу работы. «Готово, когда» — критерий приёмки этапа.
 > **👤** — шаг делает пользователь, остальное делает Claude.
 
-**Сейчас:** этап 9 — релиз PWA: заставка, стартовые экраны iPhone, подсказка установки, страница игры с видео и скриншотами — сделано; канал фидбека — Telegram (кнопка FEEDBACK), правило кэша на сервере работает; ждёт проверки на iPhone и рассылки ссылки друзьям. Этап 8 (нативная iOS) отложен по решению пользователя. Этапы 6–7 ждут проверки на iPhone (звук, PWA с экрана «Домой»).
+**Сейчас:** этап 8 — нативная iOS на свой iPhone: шаблон приложения, конфиг и облачная сборка на GitHub Actions готовы, ждёт первого прогона CI; потом 👤 Sideloadly и тест на iPhone. Этап 9 (релиз PWA) сделан и проверен пользователем.
 
 ---
 
@@ -191,13 +191,15 @@
 
 ## Этап 8 — Нативная iOS на свой iPhone (бесплатно)
 
-> **Отложен** (решение пользователя: сначала релиз PWA, этап 9). Можно вернуться в любой момент; репозиторий публичный — облачную macOS-сборку даёт и GitHub Actions.
+> Был отложен ради релиза PWA (этап 9); начат 2026-10-18. App Store и Google Play — вне рамок: [$99/год](https://developer.apple.com/programs/enroll/) у Apple (освобождение — только организациям, [fee-waiver](https://developer.apple.com/support/fee-waiver/)), у Google [$25](https://support.google.com/googleplay/android-developer/answer/6112435) и [закрытый тест на 12 человек × 14 дней](https://support.google.com/googleplay/android-developer/answer/14151465).
 
 См. [PLATFORMS.md](PLATFORMS.md#нативная-ios-на-свой-iphone--бесплатно-этап-8).
 
-- [ ] Выбор облачного macOS: Codemagic (500 мин/мес) или GitHub Actions (если репозиторий публичный)
-- [ ] CI: Cocos CLI (`platform=ios`) → `xcodebuild` без подписи → `.ipa` как артефакт
-- [ ] Иконки, launch screen, safe area, вибрация, аудиосессия
+- [x] Облачный macOS — GitHub Actions `macos-15` (репозиторий публичный, минуты бесплатны); Codemagic — запасной
+- [x] Шаблон приложения в git (`game/native/engine`), `build-configs/ios.json`, workflow `.github/workflows/ios.yml` + `tools/ci/build-ios.sh`: Cocos CLI → `xcodebuild` без подписи → `SpaceFlight.ipa` (артефакт и пре-релиз `ios-latest`)
+- [x] Иконки и экран запуска (`build:web-art`), портрет, safe area из `sys.getSafeAreaRect()`, флаги без `URLSearchParams`
+- [ ] Первый зелёный прогон CI
+- [ ] Вибрация (своя, `UIImpactFeedbackGenerator` + `native.bridge`: у движка на iOS заглушка), аудиосессия (беззвучный режим)
 - [ ] 👤 Установить [Sideloadly](https://sideloadly.io/) на Windows и поставить `.ipa` на iPhone со своим Apple ID
 - [ ] Тест на iPhone, сравнение с PWA, проход по производительности
 

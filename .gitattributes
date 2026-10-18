@@ -1,2 +1,4 @@
 # Git hooks run under sh: CRLF line endings would break them on checkout.
 tools/hooks/* text eol=lf
+# CI scripts run under bash on macOS runners.
+*.sh text eol=lf

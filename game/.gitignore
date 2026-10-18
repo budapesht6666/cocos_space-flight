@@ -7,7 +7,9 @@ temp/
 local/
 build/
 profiles/
-native
+# native/engine is the native app's template (icons, Info.plist): kept in git, PLATFORMS.md
+native/*
+!native/engine/
 #//////////////////////////
 # NPM
 #//////////////////////////

@@ -70,8 +70,11 @@ export function isDevHost(hostname: string): boolean {
   return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 169 && b === 254);
 }
 
+/** Stands in for URLSearchParams with no query: the native app's script engine has no URL API. */
+const NO_PARAMS: Pick<URLSearchParams, 'get'> = { get: () => null };
+
 export function parseDebugFlags(search: string, devHost = true): DebugFlags {
-  const params = new URLSearchParams(search);
+  const params = search ? new URLSearchParams(search) : NO_PARAMS;
   const num = (key: string, fallback: number): number => {
     const raw = params.get(key);
     const value = raw === null ? NaN : Number(raw);

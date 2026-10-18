@@ -1,0 +1,92 @@
+# Native iOS app for the user's own iPhone, without a paid Apple account (PLATFORMS.md "Native iOS").
+# A macOS runner (free for a public repository) exports the project with Cocos Creator, compiles it
+# unsigned and publishes SpaceFlight.ipa: as the run's artifact and on the `ios-latest` prerelease.
+# Sideloadly on Windows signs it with a free Apple ID while installing it on the phone.
+
+name: iOS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'game/**'
+      - 'build-configs/ios.json'
+      - 'tools/ci/**'
+      - '.github/workflows/ios.yml'
+
+concurrency:
+  group: ios-build
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  CREATOR_VERSION: '3.8.8'
+  # From https://creator-api.cocos.com/api/cocoshub/editor_version_list (the "darwin" link).
+  CREATOR_URL: 'https://download.cocos.com/CocosCreator/v3.8.8/CocosCreator-v3.8.8-mac-121518.zip'
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Cocos Creator
+        id: creator-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/cocos/${{ env.CREATOR_VERSION }}
+          key: cocos-creator-mac-${{ env.CREATOR_VERSION }}
+
+      - name: Download Cocos Creator
+        if: steps.creator-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/cocos/$CREATOR_VERSION
+          curl -fL --retry 3 -o "$RUNNER_TEMP/creator.zip" "$CREATOR_URL"
+          # ditto keeps the app's framework symlinks, which unzip can break.
+          ditto -x -k "$RUNNER_TEMP/creator.zip" ~/cocos/$CREATOR_VERSION
+          rm "$RUNNER_TEMP/creator.zip"
+
+      - name: Locate Cocos Creator
+        run: |
+          APP="$(find ~/cocos/$CREATOR_VERSION -maxdepth 2 -name 'CocosCreator.app' | head -n 1)"
+          test -n "$APP"
+          xattr -cr "$APP" || true
+          echo "CREATOR_APP=$APP" >> "$GITHUB_ENV"
+          file "$APP/Contents/MacOS/CocosCreator"
+          xcodebuild -version
+          cmake --version | head -n 1
+
+      - name: Cache imported assets
+        uses: actions/cache@v4
+        with:
+          path: game/library
+          key: ios-library-${{ hashFiles('game/assets/**/*.meta') }}
+          restore-keys: ios-library-
+
+      - name: Build
+        run: bash tools/ci/build-ios.sh "$CREATOR_APP" "$RUNNER_TEMP/out"
+
+      - name: Report the failure
+        if: failure()
+        run: |
+          bash tools/ci/annotate-tail.sh "$RUNNER_TEMP/out/xcode.log" xcodebuild 60
+          bash tools/ci/annotate-tail.sh "$RUNNER_TEMP/out/cocos.log" cocos 60
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SpaceFlight-ipa
+          path: ${{ runner.temp }}/out/SpaceFlight.ipa
+          if-no-files-found: error
+
+      - name: Publish the ios-latest prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete ios-latest --cleanup-tag --yes || true
+          gh release create ios-latest "$RUNNER_TEMP/out/SpaceFlight.ipa" \
+            --prerelease --target "$GITHUB_SHA" --title "iOS build (unsigned)" \
+            --notes "Unsigned build of ${GITHUB_SHA::7} for sideloading with Sideloadly and a free Apple ID (docs/PLATFORMS.md, \"Native iOS\")."

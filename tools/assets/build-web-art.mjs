@@ -6,6 +6,10 @@
 //   splash/launch-WxH.png    iPhone launch screens of the installed app: the splash's picture —
 //                            background, glow, logo and the loading bar's track — at each screen size;
 //   icons/favicon-32.png     the browser tab icon.
+// Into game/native/engine/ios (the native iOS app's template, PLATFORMS.md "Native iOS"):
+//   Images.xcassets/AppIcon.appiconset/*.png   the app icon at every size its Contents.json lists;
+//   LaunchScreenBackground.png                 the launch screen (LaunchScreen.storyboard fills the
+//                                              screen with it, cropping the edges off other sizes).
 //
 // Usage: npm run build:web-art
 
@@ -17,6 +21,7 @@ const ROOT = path.resolve(import.meta.dirname, '../..');
 const TEMPLATE = path.join(ROOT, 'game/build-templates/web-mobile');
 const LOGO = path.join(ROOT, 'tools/web-art/logo.png');
 const ICON = path.join(TEMPLATE, 'icons/icon-512.png');
+const IOS = path.join(ROOT, 'game/native/engine/ios');
 
 /** The splash's layout in CSS pixels, as in style.css #splash. */
 const SPLASH = {
@@ -64,7 +69,10 @@ function backdrop(width, height) {
 </svg>`);
 }
 
-async function launchScreen(cssWidth, cssHeight, ratio, logoSource) {
+/** The native app's launch screen in CSS pixels and pixel ratio: the tallest iPhone's (1290×2796). */
+const IOS_LAUNCH = [430, 932, 3];
+
+async function launchScreen(cssWidth, cssHeight, ratio, logoSource, file = null) {
   const width = cssWidth * ratio;
   const height = cssHeight * ratio;
   const meta = await sharp(logoSource).metadata();
@@ -79,7 +87,7 @@ async function launchScreen(cssWidth, cssHeight, ratio, logoSource) {
   const bar = Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${barW}" height="${barH}"><rect width="100%" height="100%" rx="${barH * 0.66}" fill="${SPLASH.barColor}" fill-opacity="${SPLASH.barOpacity}"/></svg>`,
   );
-  const file = path.join(TEMPLATE, `splash/launch-${width}x${height}.png`);
+  file ??= path.join(TEMPLATE, `splash/launch-${width}x${height}.png`);
   await sharp(backdrop(width, height))
     .composite([
       { input: logo, left: Math.round((width - logoW) / 2), top },
@@ -102,6 +110,18 @@ for (const [w, h, ratio] of IPHONES) written.push(await launchScreen(w, h, ratio
 const favicon = path.join(TEMPLATE, 'icons/favicon-32.png');
 await sharp(ICON).resize(32, 32).png({ compressionLevel: 9 }).toFile(favicon);
 written.push(favicon);
+
+// The native icons have no alpha channel: iOS shows transparent pixels black.
+const iconSet = path.join(IOS, 'Images.xcassets/AppIcon.appiconset');
+const { images } = JSON.parse(await fs.readFile(path.join(iconSet, 'Contents.json'), 'utf8'));
+const iconSizes = new Map(images.map((image) => [image.filename, Number(image['expected-size'])]));
+for (const [name, size] of iconSizes) {
+  const file = path.join(iconSet, name);
+  await sharp(ICON).resize(size, size, { kernel: 'lanczos3' }).removeAlpha().png({ compressionLevel: 9 }).toFile(file);
+  written.push(file);
+}
+const [lw, lh, lr] = IOS_LAUNCH;
+written.push(await launchScreen(lw, lh, lr, LOGO, path.join(IOS, 'LaunchScreenBackground.png')));
 
 for (const file of written) {
   const { size } = await fs.stat(file);

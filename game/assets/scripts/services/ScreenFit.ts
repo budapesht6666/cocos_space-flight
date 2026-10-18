@@ -91,6 +91,13 @@ let safeWidget: Widget | null = null;
 function measureInsets(): void {
   insets.top = 0;
   insets.bottom = 0;
+  if (sys.isNative) {
+    // The native app has no page: the engine reads the insets off the OS, in UI units already.
+    const safe = sys.getSafeAreaRect(false);
+    insets.top = Math.max(0, Math.round(view.getVisibleSize().height - (safe.y + safe.height)));
+    insets.bottom = Math.max(0, Math.round(safe.y));
+    return;
+  }
   if (!sys.isBrowser) return;
   if (!probe) {
     probe = document.createElement('div');
@@ -129,6 +136,7 @@ function onResize(): void {
 export const ScreenFit = {
   /** Each scene's entry component calls this before laying out; the first call sets up the page. */
   init(): void {
+    if (sys.isNative) measureInsets();
     if (!sys.isBrowser) return;
     fit();
     measureInsets();

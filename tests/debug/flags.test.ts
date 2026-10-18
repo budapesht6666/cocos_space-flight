@@ -3,6 +3,17 @@ import { demoFlags, isDevHost, parseDebugFlags } from '../../game/assets/scripts
 import { DEMO } from '../../game/assets/scripts/data/demo';
 
 describe('parseDebugFlags', () => {
+  it('needs no URL API without a query (the native app has none)', () => {
+    const saved = globalThis.URLSearchParams;
+    try {
+      (globalThis as { URLSearchParams?: unknown }).URLSearchParams = undefined;
+      expect(parseDebugFlags('')).toEqual(parseDebugFlags('', false));
+      expect(parseDebugFlags('').mission).toBeNull();
+    } finally {
+      globalThis.URLSearchParams = saved;
+    }
+  });
+
   it('defaults to a normal game', () => {
     expect(parseDebugFlags('')).toEqual({
       overlay: false,

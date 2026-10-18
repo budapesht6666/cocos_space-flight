@@ -74,27 +74,26 @@
 ### Схема
 
 ```
-GitHub push ─▶ облачный macOS (бесплатные минуты)
-                 1. скачать Cocos Creator 3.8.x (mac)
-                 2. CocosCreator --project game --build "platform=ios;configPath=build-configs/ios.json"
-                 3. xcodebuild … CODE_SIGNING_ALLOWED=NO   (без подписи)
-                 4. упаковать .app в Payload/ → SpaceFlight.ipa → артефакт сборки
-                         │
-                         ▼
-Windows: скачать .ipa ─▶ Sideloadly + обычный Apple ID ─▶ iPhone по кабелю или Wi‑Fi
+push в main (game/**, build-configs/ios.json, tools/ci/**) или вручную (Actions → iOS build → Run workflow)
+  ─▶ GitHub Actions, macos-15 (бесплатно: репозиторий публичный)      .github/workflows/ios.yml
+       1. Cocos Creator 3.8.8 для Mac — zip по ссылке из API Cocos, кэш actions/cache
+       2. CocosCreator --project game --build "configPath=build-configs/ios.json"   → game/build/ios
+          (ассеты, скрипты и Xcode-проект, который CMake генерирует из game/native/engine/ios)
+       3. xcodebuild -sdk iphoneos CODE_SIGNING_ALLOWED=NO                          (без подписи)
+       4. .app → Payload/ → SpaceFlight.ipa                                          tools/ci/build-ios.sh
+       5. артефакт прогона + пре-релиз ios-latest (заменяется каждой сборкой)
+  ─▶ Windows: скачать SpaceFlight.ipa ─▶ Sideloadly + обычный Apple ID ─▶ iPhone по кабелю или Wi‑Fi
 ```
 
-- Неподписанный `.ipa` на облачном macOS — распространённая схема ([пример: ipa-builder](https://github.com/kamenovsw/ipa-builder)). Подпись не нужна, поэтому не нужен и Apple Developer Program.
-- Для шага 1–2 есть готовый action [Cocos Creator Build](https://github.com/marketplace/actions/cocos-creator-build) (работает только на Mac).
+Скачать последнюю сборку: https://github.com/budapesht6666/cocos_space-flight/releases/tag/ios-latest (без входа в GitHub).
 
-### Где взять бесплатный macOS
-
-| Вариант | Бесплатно | Комментарий |
-|---|---|---|
-| **GitHub Actions**, macOS runner | Для **публичного** репозитория. Для приватного бесплатные минуты ограничены, macOS расходует их с повышенным множителем | Всё в одном месте с кодом |
-| **Codemagic**, personal account | **500 минут/месяц** на macOS M2, обнуляются 1-го числа ([тарифы](https://docs.codemagic.io/billing/pricing/)) | Хватает на десятки сборок; репозиторий может быть приватным |
-
-**Рекомендация:** Codemagic, если репозиторий приватный; GitHub Actions, если публичный. Решаем на этапе 8.
+**Устройство:**
+- **Шаблон нативного приложения — `game/native/engine/`** (в git; `game/.gitignore` пропускает только `native/engine`). Скопирован из шаблонов редактора (`resources/3d/engine/templates/{common,ios}`), сборщик берёт его как есть, если папка существует. Наши правки в `ios/`: `Info.plist` (название «Space Flight», только портрет, `arm64` + `metal` вместо `opengles-1`), `LaunchScreen.storyboard` (портрет, тёмный фон вместо белого), иконки `Images.xcassets/AppIcon.appiconset` и `LaunchScreenBackground.png` — их делает `npm run build:web-art` из тех же исходников, что у PWA. Китайская локализация шаблона удалена. Системные жесты у краёв экрана отложены (`preferredScreenEdgesDeferringSystemGestures` в `ViewController.mm` шаблона): свайп снизу при драге корабля не сворачивает игру с первого раза.
+- **Конфиг сборки — `build-configs/ios.json`:** bundle id `org.p1gog.spaceflight`, iOS 15+, Metal, `md5Cache` выключен, заставка Cocos выключена. Формат `packages.ios` — из типов плагина iOS в `app.asar` редактора (`executableName`, `packageName`, `orientation`, `renderBackEnd`, `osTarget`, `developerTeam`, `targetVersion`). Стадия `make` сборщика с `iphoneos` без team id падает, поэтому компилируем своим вызовом `xcodebuild`.
+- **Логи прогона без входа в GitHub не читаются**, поэтому при падении `tools/ci/annotate-tail.sh` выкладывает хвост логов Cocos и Xcode аннотациями: их отдаёт публичный API (`/repos/…/check-runs/<id>/annotations`).
+- **Код игры в нативе:** веб-код закрыт проверками `sys.isBrowser` (HTML-заставка, колонка, клавиатура, подсказка установки); URL-флагов нет (`URLSearchParams` в V8 без браузера нет — без строки запроса он не вызывается); safe area — из `sys.getSafeAreaRect()` (`ScreenFit`); ссылка FEEDBACK — `sys.openURL`; сохранение — `sys.localStorage` приложения, **отдельное от PWA**. `PipelineFix` в нативе ничего не делает (рендер на C++, `resourceUses` нет).
+- **Запасной macOS** — Codemagic, personal account: 500 минут/месяц на M2 ([тарифы](https://docs.codemagic.io/billing/pricing/)), если репозиторий станет приватным (у приватного бесплатные минуты GitHub на macOS идут с множителем).
+- **Вибрация:** `Vibrator::vibrate` движка на iOS — пустая заглушка. Нужен свой код в `ViewController`/`AppDelegate` (`UIImpactFeedbackGenerator`) и мост `native.bridge` — отдельный шаг.
 
 ### Установка на телефон: Sideloadly и бесплатный Apple ID
 
@@ -106,11 +105,11 @@ Windows: скачать .ipa ─▶ Sideloadly + обычный Apple ID ─▶ 
 
 ### Что даёт нативная сборка по сравнению с PWA
 
-- Вибрация (haptics).
-- Полный экран без панелей Safari.
-- Производительность обычно лучше: нативный рендер вместо WebGL.
+- Производительность обычно лучше: нативный рендер (Metal) вместо WebGL в Safari — проверить на телефоне.
+- Вибрация (haptics) — после доработки, см. выше.
+- Полный экран PWA и так даёт.
 
-Если PWA устраивает по ощущениям, этап 8 можно делать в любой момент или пропустить. **Пока пропущен** (решение пользователя: сначала релиз PWA, этап 9). Репозиторий публичный — для облачной macOS-сборки подходит и GitHub Actions.
+Минусы: переподпись раз в 7 дней (Sideloadly), только свой телефон; друзьям — PWA.
 
 ### Если когда-нибудь захочется App Store
 
